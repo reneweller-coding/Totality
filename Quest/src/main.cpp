@@ -76,6 +76,7 @@
 #include "umb/Cue.h"
 #include "umb/Engine.h"
 #include "umb/Leveler.h"
+#include "umb/Presets.h"
 #include "umb/compose/Composer.h"
 #include "umb/compose/Set.h"
 
@@ -1325,6 +1326,15 @@ private:
         text(sectionAt(deck, beat), 0.93f, 0.78f, 0.55f, 0.9f);
         std::snprintf(line, sizeof(line), "%s %s %s", kKeyNames[info.key], kScaleNames[info.scale], info.camelot.c_str());
         text(line, 0.70f, 0.85f, 1.00f, 0.9f);
+        // The composer's presets (Presets.h) of the kick and the ping, as the plugin's pages name them.
+        for (const auto& [m, label] : { std::pair<Module, const char*>{ Module::Kick, "KICK" }, std::pair<Module, const char*>{ Module::Ping, "PING" } }) {
+            int index = -1;
+            for (const SoundPick& k : deck.sounds)
+                if (k.module == static_cast<int>(m) && k.instance == 0 && k.beat <= beat + 1.0) index = k.preset;
+            if (index < 0) continue;
+            std::snprintf(line, sizeof(line), "%s %s", label, factoryPresets(m)[static_cast<size_t>(index)].name.c_str());
+            text(line, 0.62f, 0.75f, 0.44f, 0.8f);
+        }
         const TempoMap& tm = now.set.decks[0].tempo;
         const double sec = player_.seconds(), total = tm.secondsAt(now.set.lengthBeats);
         std::snprintf(line, sizeof(line), "%02d:%02d/%02d:%02d %.0f BPM", static_cast<int>(sec) / 60, static_cast<int>(sec) % 60,

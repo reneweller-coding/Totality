@@ -20,6 +20,42 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, später in der Nacht: Presets.** Auf die nachgereichte Bitte ("Presets für die einzelnen Synth, ähnlich wie
+für Ephemeris ... 1024 pro Synth-Engine ... vom Composer ausgewählt und beim Abspielen angezeigt ... Knöpfe/Encoder/
+Mixer-Züge auf die absoluten Preset-Werte setzen").
+
+- **Die Bibliothek** (`Presets.h/.cpp`, Bauweise aus Ephemeris): 1024 je Engine für Kick, Rumble, Sub, eine Kit-Lane,
+  Ping, Bass, 303, Dub-Chord, Drone und Textur, zusammen 10 240 mit eindeutigen Namen. Je Engine sechzehn Gruppen
+  ("Berlin 909", "Hypnotic Thud", "Dub Sine", "Raw Distorted"; "Berghain Roll", "Cathedral Low"; "909 Closed Hat",
+  "Ride Bell", "Rimshot", "Conga Skin"; "Classic 303", "Screamer"; "Basic Channel", "Dub Chord", "Tape Chord" ...) zu je
+  64 auf einem 8×8-Raster: Adjektiv von dunkel nach hell (die Helligkeitsachse: Ton, Cutoff, Band), Nomen der Gruppe
+  (die Formachse: Decay, Resonanz, Drive), der Rest gezogen. Ein Preset ist der Klang, nicht der Mix: Pegel, Pan,
+  Sends, Ducking, Oktaven, die Rolle und die Pattern-Knöpfe einer Lane bleiben. Jede Gruppe sagt, wie gut sie zu
+  Hypnotic, Ostgut, Dub und Raw passt; Kit-Gruppen nennen ihre Rollen (`testPresets`).
+- **Die Wahl des Komponisten** (`compose.pick_sounds`, Strom `sounds`): je Track und Synth eine Gruppe nach ihrer
+  Passung zur Stilmischung des Profils (kubisch gewichtet; `StyleProfile::styleMix` morpht mit), eine Lane nur unter
+  den Presets ihrer Rolle, in der Gruppe die Reihe dreiecksverteilt zur Mitte (die hellsten und dunkelsten seltener).
+  Die Rezepte der Stile sind jetzt nur noch Mix; was sie an Klangknöpfen setzten, ist ein Bereich, in dem der Stil den
+  Preset-Wert hält (Dubs weicher Klick und heller Chord, Raws harter Clip), wo er ihn nicht ohnehin trifft.
+- **Absolute Werte je Deck** (`Score::knobs`, `KnobSet`): alles, was ein Track an seinem Anfang setzt -- Presets, Mix des
+  Stils, Tonart --, ist kein Gesten-Offset mehr, sondern ein absoluter Wert. Jedes Deck spielt aus den Werten seines
+  Tracks; die Engine schreibt die Werte des zuletzt begonnenen Tracks (Deck A oder B) auf die Knöpfe
+  (`Engine::soundsVersion`, das Plugin sagt es dem Host), und wo eine Hand einen Knopf von dort wegdreht, folgt der Klang um
+  so viel. Im Blend zeigen die Knöpfe den kommenden Track, das gehende Deck spielt weiter seinen (`testKnobs`).
+  Automationsgesten laufen relativ zum Wert des Tracks.
+- **Anzeige:** jede Synth-Seite hat oben ein Preset-Feld (Menü der 1024 in ihren Gruppen, zurück/vor, "this track:
+  Punchy Drum Hall (Hypnotic Thud)"), die Arrange-Seite listet die Sounds des Tracks, die Quest zeigt Kick und Ping,
+  `umb_render` druckt alle.
+
+Die Kalibrierung mit Presets (dieselben 12 Tracks wie in Phase 4): 10 bis 14 von 96 Werten außerhalb des 10.–90.-
+Perzentils der Referenzen, je nach gezogenen Presets (vorher 10; bei gleicher Verteilung wären etwa 19 zu erwarten).
+Zwei Befunde behoben: Die Textur-Presets drehten Knistern und Brummen bis +12 dB über den Standard -- ihre Mengen sind
+jetzt so bemessen, dass die Textur etwa so laut bleibt; und beim Peak nahm der Komponist den Block nach der Rückkehr als
+den lautesten, obwohl danach noch Lagen einsetzen -- jetzt den dichtesten ab der Rückkehr. Raw bleibt am Rand: breiter
+und dynamischer als die schmalen, flachen Referenzen (schon vor den Presets knapp).
+
+`ctest` 31 von 31 (dazu pluginval Strenge 10: bestanden), `vst3test` 30/30, APK neu gebaut.
+
 **28.09.2026, nachts: Phasen 5 bis 7, Plugin, Quest, Release 1.0.0 (lokal).** Auf "Bitte baue die restlichen Phasen
 und was noch fehlt nacheinander in dieser Nacht" hin, ohne Agenten; alles lokal committet, nichts veröffentlicht.
 
@@ -81,7 +117,7 @@ unteren Rand des Schwerpunkts -- bleiben), Veröffentlichung auf GitHub (morgen,
 | Standalone und VST3 bedienbar | 11 Tabs, Screenshots aller Seiten (`docs/screenshots`), `vst3test` 30/30 |
 | pluginval Strenge 10 | bestanden |
 | Quest-APK | gebaut; Gerätetest und CPU-Messung offen |
-| `ctest` | 29 von 29 (dazu pluginval: 30) |
+| `ctest` | 29 von 29 (dazu pluginval: 30); mit den Presets 31 von 31 |
 
 **27.09.2026, spät: Phase 4, Komponist und Set.** Der Komponist (`compose/Composer`) schreibt Tracks in den drei Formen von
 7.2 aus vier Stilprofilen (`compose/Style`, designierte Initialisierer wie Ephemeris, Morph und die Achsen Dub/Hypnotic);

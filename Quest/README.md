@@ -57,7 +57,8 @@ controls are smoothed over 0.15 s, the filter has a dead zone round the middle, 
 ended and its rooms have rung out, the next one follows by itself.
 
 The panel is head-locked (yaw only) and drawn as points: the logo, the track (or the set and its track), style and
-form, the block, key, scale and Camelot label, the time and the tempo, the level, the filter and the throw, KICK OUT
+form, the block, key, scale and Camelot label, the kick's and the ping's preset (the composer chooses one of 1024 per
+synth for every track, as in the plugin), the time and the tempo, the level, the filter and the throw, KICK OUT
 while the kick is out, four beat lamps.
 
 **The Eclipse in the room** (PLAN 10.2): 3 m ahead and 1.3 m above the eyes where the session began, tilted towards the

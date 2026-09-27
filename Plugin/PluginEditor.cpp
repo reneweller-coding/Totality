@@ -6,6 +6,7 @@
 #include "EditorEclipse.h"
 #include "EditorPerform.h"
 #include "EditorStyle.h"
+#include "umb/Presets.h"
 #include <cstdlib>
 
 using namespace umb;
@@ -31,6 +32,68 @@ juce::Colour blockColour(const juce::String& name)
 juce::File documents() { return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Umbra"); }
 
 } // namespace
+
+// ---------------------------------------------------------------------------------------------------
+
+PresetBar::PresetBar(UmbraProcessor& p, Module m, int instance) : proc_(p), module_(m), instance_(instance)
+{
+    const std::vector<SoundPreset>& list = factoryPresets(m);
+    juce::PopupMenu* root = menu_.getRootMenu();
+    for (size_t g = 0; g < list.size(); g += 64) {
+        juce::PopupMenu sub;
+        for (size_t i = g; i < g + 64 && i < list.size(); ++i) sub.addItem(static_cast<int>(i) + 1, list[i].name);
+        root->addSubMenu(list[g].group, sub);
+    }
+    menu_.setTextWhenNothingSelected(juce::String(static_cast<int>(list.size())) + " presets");
+    menu_.onChange = [this] { if (menu_.getSelectedId() > 0) proc_.applyPreset(module_, instance_, menu_.getSelectedId() - 1); };
+    prev_.onClick = [this] { const int n = static_cast<int>(factoryPresets(module_).size()); choose(((std::max(1, menu_.getSelectedId()) - 2) + n) % n); };
+    next_.onClick = [this] { const int n = static_cast<int>(factoryPresets(module_).size()); choose(menu_.getSelectedId() % n); };
+    prev_.setTooltip("the preset before");
+    next_.setTooltip("the next preset");
+    composed_.setColour(juce::Label::textColourId, umbui::colour::dim);
+    composed_.setTooltip("The preset the composer chose for this synth in the track that plays (compose.pick_sounds; reroll sounds "
+                         "draws others). Its values stand on the knobs; turn one and the sound follows.");
+    for (juce::Component* c : { static_cast<juce::Component*>(&menu_), static_cast<juce::Component*>(&prev_), static_cast<juce::Component*>(&next_),
+                                static_cast<juce::Component*>(&composed_) })
+        addAndMakeVisible(c);
+    startTimerHz(4);
+}
+
+void PresetBar::choose(int index)
+{
+    menu_.setSelectedId(index + 1, juce::dontSendNotification);
+    proc_.applyPreset(module_, instance_, index);
+}
+
+void PresetBar::timerCallback()
+{
+    const int index = proc_.composedPreset(module_, instance_);
+    if (index == shown_) return;
+    shown_ = index;
+    const std::vector<SoundPreset>& list = factoryPresets(module_);
+    if (index >= 0 && index < static_cast<int>(list.size())) {
+        composed_.setText("this track: " + juce::String(list[static_cast<size_t>(index)].name) + " (" + list[static_cast<size_t>(index)].group + ")",
+                          juce::dontSendNotification);
+        menu_.setSelectedId(index + 1, juce::dontSendNotification);   // what plays, until another is chosen
+    } else {
+        composed_.setText("this track: the knobs' own sound", juce::dontSendNotification);
+    }
+}
+
+void PresetBar::resized()
+{
+    auto r = getLocalBounds().reduced(4, 0);
+    auto row = r.removeFromTop(28);
+    prev_.setBounds(row.removeFromLeft(28));
+    row.removeFromLeft(4);
+    menu_.setBounds(row.removeFromLeft(280));
+    row.removeFromLeft(4);
+    next_.setBounds(row.removeFromLeft(28));
+    row.removeFromLeft(10);
+    composed_.setBounds(row);
+}
+
+void PresetBar::paint(juce::Graphics&) {}
 
 // ---------------------------------------------------------------------------------------------------
 
@@ -110,6 +173,22 @@ void ParamPage::build()
             keys[static_cast<size_t>(i)] = k.substr(k.find('.') + 1);
         }
         std::vector<bool> placed(static_cast<size_t>(count), false);
+        // A synth's presets first (Presets.h): the 1024 and the one the composer chose for the track that plays.
+        if (hasPresets(g.first)) {
+            Box box;
+            const std::string& k0 = s.key(s.id(g.first, instance, 0));
+            box.title = juce::String(k0.substr(0, k0.find('.'))) + " preset";
+            box.colour = umbui::familyColour(umbui::Family::Source);
+            auto* bar = new PresetBar(proc_, g.first, instance);
+            controls_.add(bar);
+            addAndMakeVisible(bar);
+            addChildComponent(labels_.add(new juce::Label()));
+            Cell c;
+            c.kind = 4;
+            c.control = controls_.size() - 1;
+            box.cells.push_back(c);
+            boxes_.push_back(std::move(box));
+        }
         // A module with instances shown beside others (the decks): its groups carry the instance's name.
         const juce::String suffix = instances_ <= 1 && g.first == Module::Deck ? juce::String(" ") + juce::String::charToString(static_cast<juce::juce_wchar>('A' + instance)) : juce::String();
         for (const umbui::GroupSpec& spec : umbui::layoutOf(g.first)) {
@@ -152,6 +231,7 @@ int ParamPage::layoutBoxes(juce::Rectangle<int> area, bool apply)
         switch (c.kind) {
         case 1: return juce::Point<int>(c.narrow ? 112 : 140, 100);
         case 2: return juce::Point<int>(92, 100);
+        case 4: return juce::Point<int>(720, 34);
         default: return c.big ? juce::Point<int>(108, 136) : juce::Point<int>(82, 100);
         }
     };
@@ -194,8 +274,9 @@ int ParamPage::layoutBoxes(juce::Rectangle<int> area, bool apply)
                 juce::Component* comp = controls_[c.control];
                 juce::Label* label = labels_[c.control];
                 const auto r = c.bounds.reduced(3, 2);
-                label->setBounds(r.getX(), r.getY(), r.getWidth(), 16);
-                if (c.kind == 0) comp->setBounds(r.withTrimmedTop(16));
+                label->setBounds(r.getX(), r.getY(), r.getWidth(), c.kind == 4 ? 0 : 16);
+                if (c.kind == 4) comp->setBounds(c.bounds);
+                else if (c.kind == 0) comp->setBounds(r.withTrimmedTop(16));
                 else comp->setBounds(r.getX() + 2, r.getCentreY() - 12, r.getWidth() - 4, 24);
             }
         }
@@ -398,6 +479,9 @@ ArrangePage::ArrangePage(UmbraProcessor& p) : proc_(p), view_(p, true)
     addAndMakeVisible(view_);
     which_.setColour(juce::Label::textColourId, kInk);
     addAndMakeVisible(which_);
+    sounds_.setColour(juce::Label::textColourId, kDim);
+    sounds_.setMinimumHorizontalScale(0.7f);
+    addAndMakeVisible(sounds_);
     for (const char* unit : kUnitNames) {
         auto* b = rerolls_.add(new juce::TextButton(juce::String("reroll ") + unit));
         const juce::String u(unit);
@@ -426,6 +510,15 @@ void ArrangePage::timerCallback()
              << (i.subOwns ? "the sub owns the low end" : "the rumble owns the low end") << ", bar similarity " << juce::String(i.similarity, 2);
     }
     which_.setText(text, juce::dontSendNotification);
+    // The composer's presets of the track whose sounds the knobs show.
+    juce::String sounds;
+    for (Module m : { Module::Kick, Module::Rumble, Module::Sub, Module::Ping, Module::Bass, Module::Acid, Module::Chord, Module::Drone, Module::Texture }) {
+        const int index = proc_.composedPreset(m, 0);
+        if (index < 0) continue;
+        const std::string& k0 = proc_.store().key(proc_.store().id(m, 0, 0));
+        sounds << (sounds.isEmpty() ? "Sounds: " : ", ") << juce::String(k0.substr(0, k0.find('.'))) << " " << factoryPresets(m)[static_cast<size_t>(index)].name;
+    }
+    sounds_.setText(sounds, juce::dontSendNotification);
     track_.setVisible(p.isSet);
     set_.setVisible(p.isSet);
     view_.repaint();
@@ -435,6 +528,7 @@ void ArrangePage::resized()
 {
     auto r = getLocalBounds().reduced(10);
     which_.setBounds(r.removeFromTop(22));
+    sounds_.setBounds(r.removeFromTop(20));
     r.removeFromTop(4);
     auto row = r.removeFromTop(28);
     for (auto* b : rerolls_) b->setBounds(row.removeFromLeft(104).reduced(2));

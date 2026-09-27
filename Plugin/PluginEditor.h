@@ -24,6 +24,28 @@
 #include <memory>
 #include <vector>
 
+/**
+ * @brief A synth's factory presets (umb/Presets.h): a menu of the 1024 in their sixteen groups, a step back and forth, and
+ *        the preset the composer chose for the track that plays -- the menu follows it while you have not chosen another.
+ */
+class PresetBar final : public juce::Component, private juce::Timer {
+public:
+    PresetBar(UmbraProcessor& p, umb::Module m, int instance);
+    void resized() override;
+    void paint(juce::Graphics& g) override;
+
+private:
+    void timerCallback() override;
+    void choose(int index);
+    UmbraProcessor& proc_;
+    umb::Module module_;
+    int instance_;
+    int shown_ = -2;   ///< the composer's preset the label shows
+    juce::ComboBox menu_;
+    juce::TextButton prev_{ "<" }, next_{ ">" };
+    juce::Label composed_;
+};
+
 /** @brief The parameters of module instances as knobs, menus and switches, in titled groups. */
 class ParamPage final : public juce::Component {
 public:
@@ -54,7 +76,7 @@ private:
         int control = -1;          ///< index into controls_ and labels_
         bool big = false;          ///< a large encoder
         bool narrow = false;       ///< a narrow menu
-        int kind = 0;              ///< 0 a knob, 1 a menu, 2 a switch
+        int kind = 0;              ///< 0 a knob, 1 a menu, 2 a switch, 4 a preset bar
         juce::Rectangle<int> bounds;
     };
     /** @brief A titled group of cells, drawn as a box. */
@@ -121,7 +143,7 @@ private:
     void timerCallback() override;
     UmbraProcessor& proc_;
     ArrangeView view_;
-    juce::Label which_;
+    juce::Label which_, sounds_;
     juce::OwnedArray<juce::TextButton> rerolls_;
     juce::TextButton track_{ "reroll the whole track" }, set_{ "reroll the set's plan" };
     juce::String prefix_;   ///< "track3." in a set, empty for a track

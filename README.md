@@ -19,6 +19,8 @@ sub bass locked to the kick, a twelve-lane kit with the 909's metal oscillators,
 a bass synth and a 303 line through ten circuit-modelled filters, the dub chord with its chain (tape echo, springs,
 plate), drone, texture and a granular cloud; multiband ducking, a track bus with tilt and parallel glue, a DJ mixer, a
 master with clipper and true-peak limiter, and a leveler that brings every track's loudest part to its style's level.
+Every synth has 1024 factory presets in sixteen groups; the composer chooses one per synth and per kit lane for every
+track, by its style, and the knobs show them while the track plays.
 Balance, width and loudness are fitted to 30 reference recordings (`Tools/analyze_ref.py`; only statistics are kept).
 
 What comes out: the WAV with cue markers (and the same cues as JSON), MIDI with the tempo map, stems that sum exactly to

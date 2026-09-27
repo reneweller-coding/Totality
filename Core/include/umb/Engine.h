@@ -105,7 +105,7 @@ public:
      */
     uint32_t soundsVersion() const { return soundsVersion_.load(std::memory_order_relaxed); }
     /** @brief The deck whose track's knob settings the knobs show, -1 before any. */
-    int leadDeck() const { return lead_; }
+    int leadDeck() const { return lead_.load(std::memory_order_relaxed); }
     /** @brief The cue marks of what is loaded (Cue.h: blocks, operations, keys, a set's tracks), for CueTap::scan(). */
     const std::vector<CueMark>& cueMarks() const { return cueMarks_; }
     /** @brief Deck taps: from now on every process() call also writes each deck after its mixer channel (before the
@@ -195,7 +195,7 @@ private:
     float* preR_ = nullptr;
     // The knob settings (soundsVersion): what the engine wrote on each knob (NaN: never), the deck they came from.
     std::vector<float> shown_;
-    int lead_ = -1;
+    std::atomic<int> lead_{ -1 };
     double leadGroup_ = -1.0;
     std::atomic<uint32_t> soundsVersion_{ 0 };
     /** @brief Puts deck @p d's knob settings on the knobs. */

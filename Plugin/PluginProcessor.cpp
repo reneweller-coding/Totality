@@ -7,6 +7,7 @@
 #include "umb/Export.h"
 #include "umb/Leveler.h"
 #include "umb/Midi.h"
+#include "umb/Presets.h"
 #include "umb/WavWriter.h"
 #include <cmath>
 #include <cstdlib>
@@ -204,6 +205,32 @@ int UmbraProcessor::trackAt(double beat) const
     return found;
 }
 
+int UmbraProcessor::composedPreset(Module m, int instance) const
+{
+    const int lead = engine_.leadDeck();
+    const double beat = position_.load();
+    std::lock_guard<std::mutex> g(lock_);
+    if (lead < 0 || lead >= kDecks) return -1;
+    int preset = -1;
+    for (const SoundPick& k : current_.set.decks[lead].sounds)   // in beat order: the last one begun is the one that holds
+        if (k.module == static_cast<int>(m) && k.instance == instance && k.beat <= beat + 1.0) preset = k.preset;
+    return preset;
+}
+
+void UmbraProcessor::applyPreset(Module m, int instance, int index)
+{
+    const std::vector<SoundPreset>& list = factoryPresets(m);
+    if (index < 0 || index >= static_cast<int>(list.size())) return;
+    for (const auto& [k, v] : presetKnobs(m, instance, list[static_cast<size_t>(index)])) {
+        const int id = store().id(m, instance, k);
+        StoreParameter* p = parameter(id);
+        if (p == nullptr) continue;
+        p->beginChangeGesture();
+        p->setValueNotifyingHost(store().toNormalised(id, v));
+        p->endChangeGesture();
+    }
+}
+
 void UmbraProcessor::length(double& beats, double& seconds) const
 {
     std::lock_guard<std::mutex> g(lock_);
@@ -294,6 +321,12 @@ void UmbraProcessor::timerCallback()
                 if (!cues_.start(host != nullptr ? host : "127.0.0.1", port)) cuePort_ = 0;
             }
         }
+    }
+    // A track began (or a jump landed in another): the engine wrote its sounds and mix on the knobs -- the host and the
+    // pages are told (the values are in the store already).
+    if (const uint32_t v = engine_.soundsVersion(); v != toldSounds_) {
+        toldSounds_ = v;
+        for (StoreParameter* p : params_) p->sendValueChangedMessageToListeners(p->getValue());
     }
     std::unique_ptr<Playing> next;
     uint64_t nextId = 0;

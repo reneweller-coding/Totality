@@ -68,6 +68,27 @@ its length), whether the styles wander with the energy or stay, how often a loop
 the next one, how often a break comes from the mixer's effects, and the blend's length. The mixer's effects are one
 send per deck into a tape echo and a long hall, which the set's breaks throw into and the Perform page's throw uses.
 
+== Sounds and presets | | - ==
+
+Every synth has 1024 factory presets: the kick, the rumble, the sub, a lane of the kit, the ping, the bass, the 303, the
+dub chord, the drone and the texture. Each engine has sixteen groups -- "Berlin 909", "Dub Sine", "Ride Bell", "Classic
+303", "Basic Channel" -- and each group sixty-four presets on an eight by eight grid: the rows an adjective from dark to
+bright ("Muffled" ... "Cutting"), the columns a noun of the group's own, so the name tells where on the grid a sound
+lies. A preset is the sound, not the mix: levels, pans, sends, ducking, the octaves and a lane's role and pattern stay
+where the mix and the composer put them.
+
+For every track the composer chooses a preset per synth and per lane of the kit (Composer's Sounds, compose.pick_sounds):
+a group by how well it suits the track's style, a lane only among the presets made for its role, and in the group a
+row that leans to the middle -- the darkest and the brightest are chosen less often. The style then holds a few knobs in
+its own range (the Dub kick's soft click, the Raw kick's hard clip, the Dub chord's bright band). Reroll sounds draws
+other presets and leaves the notes as they are.
+
+The knobs show what plays. When a track begins -- in a set, when the next track starts on its deck -- its presets and
+its style's mix are put on the knobs, and each page names the preset the composer chose ("this track: Punchy Drum Hall
+(Hypnotic Thud)"); the Arrange page lists them for the whole track. Turn a knob and the sound follows from there; choose
+another preset from the menu, or step through them, and it plays at once. In a blend each deck keeps its own track's
+sound: the knobs show the incoming track while the outgoing one plays on as it was.
+
 == Arrange | | 1 ==
 
 The arrangement across the whole length: in a set the tracks on decks A and B (their swaps marked: from there a track

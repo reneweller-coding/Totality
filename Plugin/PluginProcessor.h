@@ -112,6 +112,13 @@ public:
     int scoreVersion() const { return scoreVersion_.load(); }
     /** @brief A copy of what plays (message thread; for the arrange and eclipse views). */
     void copyPlaying(Playing& out) const { std::lock_guard<std::mutex> g(lock_); out = current_; }
+    /**
+     * @brief The factory preset the composer chose for instance @p instance of synth @p m in the track whose sounds the
+     *        knobs show (Engine::leadDeck): its index in umb::factoryPresets(m), -1 if none.
+     */
+    int composedPreset(umb::Module m, int instance) const;
+    /** @brief Puts factory preset @p index of @p m on instance @p instance's knobs, through the host's parameters. */
+    void applyPreset(umb::Module m, int instance, int index);
     /** @brief The length of what plays, in beats and seconds (as composed). */
     void length(double& beats, double& seconds) const;
 
@@ -241,4 +248,5 @@ private:
     bool forceMute_ = false;                         ///< muteForced()
     std::atomic<double> hostBpm_{ 0.0 };             ///< the host's tempo as the audio thread last saw it, 0 outside a host
     std::atomic<double> playedBpm_{ 0.0 };           ///< the tempo the engine's score was loaded with, 0 as composed
+    uint32_t toldSounds_ = 0;                        ///< the engine's soundsVersion() the host was last told of
 };

@@ -23,6 +23,12 @@ circuit-modelled filters; the dub chord with tape echo, springs and plate; drone
 ducking, a track bus with tilt and parallel glue, a DJ mixer, a master with a 4x clipper and a true-peak limiter at
 -1 dBTP, and a leveler that brings each track's loudest part to its style's loudness (-9.4 to -11.5 LUFS).
 
+**Presets.** 1024 factory presets for each synth -- kick, rumble, sub, a kit lane, ping, bass, 303, dub chord, drone
+and texture -- in sixteen named groups each. The composer chooses one per synth and per kit lane for every track, by how
+well its group suits the track's style (a lane among those made for its role); every page names the preset of the track
+that plays, and its values stand on the knobs, so a turn goes on from what you hear. In a set each deck keeps its own
+track's sounds through the blend.
+
 **Playing.** In a DAW Umbra follows the host's transport and tempo. The Perform page is a mixer: seven mutes (their
 tails ring out), a master filter, an echo throw, isolator kills and faders per deck, every control learnable from a
 MIDI controller; the keys C3 to F#3 toggle the mutes. The Patterns page shows the Eclipse: the kick a dark disc, every
