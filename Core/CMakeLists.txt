@@ -6,6 +6,7 @@ add_library(UmbraCore STATIC
     src/WavWriter.cpp
     src/Halfband.cpp
     src/Loudness.cpp
+    src/Leveler.cpp
     src/fx/Dynamics.cpp
     src/fx/Reverb.cpp
     src/synth/Kick.cpp
@@ -13,6 +14,14 @@ add_library(UmbraCore STATIC
     src/synth/SubBass.cpp
     src/synth/Kit.cpp
     src/synth/Ping.cpp
+    src/synth/Synth.cpp
+    src/synth/Chord.cpp
+    src/synth/Drone.cpp
+    src/fx/TapeEcho.cpp
+    src/fx/Spring.cpp
+    src/fx/Plate.cpp
+    src/fx/Dub.cpp
+    src/fx/Cloud.cpp
     src/pattern/Rack.cpp
     src/compose/Study.cpp
     src/Engine.cpp

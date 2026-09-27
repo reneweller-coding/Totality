@@ -11,7 +11,8 @@ For every recording of Tools/ref_sets.txt (fetched by Tools/fetch_refs.py) and f
               the share above 5 kHz, the power centroid (Dok. 8.7's targets: sub ~40 % of the low end, >5 kHz ~7 %,
               centroid 1.5 .. 3.5 kHz)
   width       side over mid above 200 Hz and under 120 Hz, the correlation
-  loudness    integrated LUFS, LRA and true peak from ffmpeg's ebur128 (BS.1770-4)
+  loudness    integrated LUFS, LRA and true peak from ffmpeg's ebur128 (BS.1770-4); the loudest 20 s (the energy mean
+              of the short-term loudness over the loudest window of 20 s: what Umbra's Leveler measures, PLAN 8.5)
   form        the loudness of every bar; reductions (runs of bars at least 6 dB under the body's median) and their
               lengths in bars; the strongest novelty boundaries (Foote 2000 on per-bar band energies) and where they fall
               against the 16- and 32-bar lines
@@ -78,13 +79,21 @@ def bandpass(x, lo, hi, sr):
 
 
 def loudness(path):
-    out = subprocess.run(["ffmpeg", "-v", "info", "-i", str(path), "-af", "ebur128=peak=true", "-f", "null", "-"],
-                         capture_output=True, text=True).stderr[-4000:]
+    full = subprocess.run(["ffmpeg", "-v", "info", "-i", str(path), "-af", "ebur128=peak=true", "-f", "null", "-"],
+                          capture_output=True, text=True).stderr
+    out = full[-4000:]
 
     def grab(label):
         m = re.findall(label + r":\s*(-?\d+\.\d+)", out)
         return float(m[-1]) if m else float("nan")
-    return grab("I"), grab("LRA"), grab("Peak")
+    # The per-frame log: a short-term loudness every 100 ms.
+    st = np.array([float(v) for v in re.findall(r"\bS:\s*(-?\d+\.\d+)", full)], dtype=np.float64)
+    loud20 = float("nan")
+    if len(st) > 200:
+        e = np.power(10.0, st / 10.0)
+        w = np.convolve(e, np.ones(200) / 200.0, mode="valid")
+        loud20 = round(10.0 * math.log10(max(float(w.max()), 1e-30)), 2)
+    return grab("I"), grab("LRA"), grab("Peak"), loud20
 
 
 # ------------------------------------------------------------------------------------------------ tempo and grid
@@ -328,7 +337,7 @@ def measure(path, bpm_hint=None):
     sel = (fw >= 40) & (fw < 16000)
     cen = float((fw[sel] * pm[sel]).sum() / max(pm[sel].sum(), 1e-30))
     corr = float(np.corrcoef(xs[0], xs[1])[0, 1])
-    lufs, lra, tp = loudness(path)
+    lufs, lra, tp, loud20 = loudness(path)
     return {
         "bpm": round(bpm, 2), "seconds": round(dur, 1), "bars": bars,
         "onsets": prof,
@@ -341,7 +350,7 @@ def measure(path, bpm_hint=None):
         "width_db": round(10 * math.log10(max(bp(ps, 200, 16000), 1e-30) / max(bp(pm, 200, 16000), 1e-30)), 1),
         "low_side_db": round(10 * math.log10(max(bp(ps, 20, 120), 1e-30) / max(bp(pm, 20, 120), 1e-30)), 1),
         "correlation": round(corr, 3),
-        "lufs": lufs, "lra": lra, "true_peak": tp,
+        "lufs": lufs, "lra": lra, "true_peak": tp, "loud20": loud20,
         "reductions": reductions,
         "boundaries": bounds,
         "boundary_spacing_on_8": round(on8, 2),
@@ -357,7 +366,7 @@ def measure(path, bpm_hint=None):
 
 PRINT = [("bpm", "BPM", "{:6.2f}"), ("kick_hz", "kick", "{:5.1f}"), ("sub_share", "sub/low", "{:5.2f}"),
          ("high_share", ">5k", "{:6.3f}"), ("centroid", "centr", "{:5d}"), ("width_db", "S/M", "{:5.1f}"),
-         ("lufs", "LUFS", "{:5.1f}"), ("lra", "LRA", "{:4.1f}"), ("entropy_rate", "h", "{:4.2f}"), ("pir", "PIR", "{:4.2f}"),
+         ("lufs", "LUFS", "{:5.1f}"), ("loud20", "L20", "{:5.1f}"), ("lra", "LRA", "{:4.1f}"), ("entropy_rate", "h", "{:4.2f}"), ("pir", "PIR", "{:4.2f}"),
          ("loop_entropy", "hloop", "{:5.2f}"), ("bars_repeated", "rep", "{:4.2f}"), ("loop_repeated", "lrep", "{:4.2f}"),
          ("bar_similarity", "sim", "{:4.2f}"),
          ("micro_change_db", "micro", "{:4.2f}")]
@@ -416,7 +425,7 @@ def main():
         print(row_text(f"{ref['profile'][:3]} {ref['name']}", r) + flag, flush=True)
 
     keys = ["bpm", "kick_hz", "sub_share", "low_share", "high_share", "centroid", "width_db", "low_side_db", "correlation",
-            "lufs", "lra", "true_peak", "entropy_rate", "pir", "loop_entropy", "bars_repeated", "loop_repeated", "bar_similarity",
+            "lufs", "loud20", "lra", "true_peak", "entropy_rate", "pir", "loop_entropy", "bars_repeated", "loop_repeated", "bar_similarity",
             "micro_change_db",
             "boundary_spacing_on_8"]
     profiles = {}

@@ -57,7 +57,12 @@ enum class Module : int { Compose = 0, Kick, Rumble, Sub, Perc, Mix, Master,
                           /** Phase 2: the free-running modulation of the whole instrument (Dok. 8.4; Engine.h). */
                           Motion,
                           /** Phase 2: the room the hats, the percussion and the ping are sent into (PLAN 5.9). */
-                          Space, Count };
+                          Space,
+                          /** Phase 3: the bass synth and the 303 line (one table, Synth.h), the dub chord, the drone, the
+                           *  texture, the dub chain (tape echo, springs, plate). */
+                          Bass, Acid, Chord, Drone, Texture, Dub,
+                          /** Phase 3: the granular cloud of the ping and the chord (Cloud.h). */
+                          Cloud, Count };
 
 constexpr int kPercLanes = 12;   ///< instances of the percussion module (the lanes of the kit)
 
@@ -101,11 +106,48 @@ enum : int { Active, Role, Engine, Pitch, PitchAmount, PitchDecay, FmRatio, FmIn
 }
 /** @brief Parameters of the mix: the two percussion buses (PLAN 7.3: the perc bus's low pass is a ramp target). */
 namespace mix {
-enum : int { HatsLevel, HatsCut, PercLevel, PercCut, Count };
+enum : int { HatsLevel, HatsCut, PercLevel, PercCut,
+             // Phase 3: the drum bus's saturation (Dok. 8.7: three or four stages at 10 to 20 %), the multiband duck of the
+             // pads and returns (Dok. 8.7: 20-200 Hz 8-12 dB, 200 Hz-2 kHz 2-4 dB).
+             DrumSat, DuckLow, DuckMid, Count };
 }
 /** @brief Parameters of the master (PLAN 8). */
 namespace master {
-enum : int { Level, Threshold, Ratio, Clip, Ceiling, MonoBelow, Count };
+enum : int { Level, Threshold, Ratio, Clip, Ceiling, MonoBelow,
+             // Phase 3: a tilt around 1 kHz (PLAN 8.6), the vinyl cut profile (Erg. 3: a dynamic limit on 6-10 kHz, 16 kHz
+             // low pass, mono under 150 Hz).
+             Tilt, Cut, Count };
+}
+/**
+ * @brief Parameters of a synth voice (modules Bass and Acid, PLAN 5.3): a PolyBLEP oscillator with a sub oscillator, one
+ *        of Ephemeris' circuit filters at twice the rate, envelopes, accent and glide, and its strip.
+ */
+namespace synth {
+enum : int { Level, Pan, Wave, PulseWidth, SubOsc, Filter, Cutoff, Resonance, EnvAmount, Decay, Accent, AmpAttack,
+             AmpDecay, AmpSustain, AmpRelease, Glide, Drive, KeyTrack, LowCut, HighCut, DubSend, RoomSend, Duck, DuckRelease,
+             Count };
+}
+/** @brief Parameters of the dub chord (PLAN 5.6). */
+namespace chord {
+enum : int { Level, Width, Detune, Octave, Attack, Decay, Sustain, Release, Bright, EnvAmount, Band, BandMode, BandQ,
+             Sweep, SweepRate, Crush, CrushMix, Phaser, PhaserRate, Dip, DubSend, PlateSend, Count };
+}
+/** @brief Parameters of the drone (PLAN 5.7). */
+namespace drone {
+enum : int { Level, Octave, Detune, Cutoff, Resonance, Sweep, SweepBars, Attack, Release, PlateSend, RoomSend, Count };
+}
+/** @brief Parameters of the texture (PLAN 5.7): vinyl crackle, mains hum, eroded noise. */
+namespace texture {
+enum : int { Level, Crackle, Hum, HumHz, Erosion, Width, Count };
+}
+/** @brief Parameters of the dub chain (PLAN 5.9): the tape echo with its springs, the plate. */
+namespace dub {
+enum : int { EchoTime, Feedback, Tone, LowCut, Wow, Flutter, Drive, EchoReturn, Spring, SpringDecay, PlateDecay,
+             PlateDamping, PlatePreDelay, PlateLowCut, PlateReturn, PingSend, HatsSend, PercSend, Count };
+}
+/** @brief Parameters of the granular cloud (PLAN 5.7, Cloud.h). */
+namespace cloud {
+enum : int { Level, Density, Size, Pitch, Spray, PingSend, ChordSend, PlateSend, Count };
 }
 
 /** @brief Parameters of the ping (PLAN 5.5, Ping.h): FM through a low-pass gate, a wandering band pass. */

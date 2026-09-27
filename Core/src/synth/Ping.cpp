@@ -119,8 +119,9 @@ void Ping::process(float* L, float* R, int n, int64_t sample)
             L[i] += out * v.gl;
             R[i] += out * v.gr;
             ++v.age;
+            // Silent: free at this very sample, not at the span's end (where it falls depends on the host's blocks).
+            if (v.age > 256 && v.ea < 1.0e-4 && v.vac < 1.0e-4) { v.active = false; break; }
         }
-        if (v.age > 256 && v.ea < 1.0e-4 && v.vac < 1.0e-4) v.active = false;
     }
     // The bus: a band pass whose centre a slow sine moves, its phase from the absolute sample.
     for (int i = 0; i < n; ++i) {

@@ -10,6 +10,7 @@
  * Without --out nothing is written and the render only measures (the loudness report, the time it took).
  */
 #include "umb/Engine.h"
+#include "umb/Leveler.h"
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
 #include "umb/WavWriter.h"
@@ -80,7 +81,9 @@ int main(int argc, char** argv)
     if (!set.empty() && !p.parseText(set, &error)) { std::fprintf(stderr, "--set: %s\n", error.c_str()); return 2; }
 
     const auto t0 = std::chrono::steady_clock::now();
-    const Score score = composeStudy(p, seed);
+    Score score = composeStudy(p, seed);
+    // The Leveler: the loudest part to the style's target (PLAN 8.5), before a sample is written.
+    const std::vector<LevelReading> levels = bench ? std::vector<LevelReading>{} : levelScore(score, p);
     const auto t1 = std::chrono::steady_clock::now();
     engine->prepare(rate, block);
     engine->load(score);
@@ -93,6 +96,9 @@ int main(int argc, char** argv)
                 static_cast<double>(Kick::tuneToKey(score.keyRoot, p.getInt(p.id(Module::Kick, 0, kick::Tune)),
                                                     p.get(p.id(Module::Kick, 0, kick::PitchEnd)))),
                 score.notes.size(), score.gestures.size(), score.ops.size());
+    for (const LevelReading& r : levels)
+        std::printf("level: the loudest part (bar %.0f) measured %.1f LUFS, target %.1f, trim %+.1f dB (%.1f after the first)\n",
+                    score.levels.empty() ? 0.0 : score.levels[0].peakBeat / 4.0 + 1.0, r.measured, r.target, r.trim, r.after);
     for (const BlockOp& o : score.ops) {
         std::printf("  bar %4.0f  %-8s %s\n", o.beat / 4.0 + 1.0, kOpNames[static_cast<int>(o.kind)],
                     o.layer >= 0 ? kLayerNames[o.layer] : "");
@@ -124,7 +130,7 @@ int main(int argc, char** argv)
         // The first bar of every block of every layer in mini-notation (PLAN 6.7).
         const RackPlan plan = makeRackPlan(p, mixSeed(seed, 1));
         static const char* const kSound[kNumLayers] = { "bd", "bd:1", "hh", "hh:1", "oh", "ride", "cp", "cp", "cp:1", "shaker",
-                                                        "lt", "rim", "sub", "ping" };
+                                                        "lt", "rim", "bass", "ping", "chord", "drone", "acid", "tex" };
         for (int li = 0; li < kNumLayers; ++li) {
             if (static_cast<LayerId>(li) == LayerId::ClapB) continue;
             std::printf("  %-11s \"%s\"\n", kLayerNames[li], miniNotation(plan, static_cast<LayerId>(li), 32, kSound[li]).c_str());
@@ -181,7 +187,7 @@ int main(int argc, char** argv)
     const double composeS = std::chrono::duration<double>(t1 - t0).count();
     const double renderS = std::chrono::duration<double>(t3 - t2).count();
     const double audioS = static_cast<double>(total) / rate;
-    std::printf("composed in %.3f s; rendered %.1f s of audio in %.2f s: %.0f x real time, %.2f %% of a core\n", composeS,
+    std::printf("composed and levelled in %.3f s; rendered %.1f s of audio in %.2f s: %.0f x real time, %.2f %% of a core\n", composeS,
                 audioS, renderS, audioS / renderS, 100.0 * renderS / audioS);
     if (!bench) {
         const LoudnessReport r = meter.report();

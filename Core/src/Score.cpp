@@ -10,7 +10,7 @@ namespace umb {
 
 const char* const kPartNames[kNumParts] = {
     "kick", "sub", "perc1", "perc2", "perc3", "perc4", "perc5", "perc6", "perc7", "perc8", "perc9", "perc10", "perc11",
-    "perc12", "ping",
+    "perc12", "ping", "bass", "acid", "chord", "drone", "texture",
 };
 
 const char* const kOpNames[] = { "add", "remove", "swap", "hold", "kick out", "return", "start", "end" };
@@ -42,6 +42,17 @@ void Score::sort()
     std::stable_sort(gestures.begin(), gestures.end(), [](const Gesture& a, const Gesture& b) { return a.beat < b.beat; });
     std::stable_sort(ops.begin(), ops.end(), [](const BlockOp& a, const BlockOp& b) { return a.beat < b.beat; });
     std::stable_sort(markers.begin(), markers.end(), [](const Marker& a, const Marker& b) { return a.beat < b.beat; });
+    std::stable_sort(levels.begin(), levels.end(), [](const LevelMark& a, const LevelMark& b) { return a.beat < b.beat; });
+}
+
+float Score::trimAt(double beat) const
+{
+    float t = 0.0f;
+    for (const LevelMark& m : levels) {
+        if (m.beat > beat) break;
+        t = m.trimDb;
+    }
+    return t;
 }
 
 void Score::clear(double bpm)
@@ -52,6 +63,7 @@ void Score::clear(double bpm)
     gestures.clear();
     ops.clear();
     markers.clear();
+    levels.clear();
 }
 
 float Score::gestureOffset(int param, double beat) const

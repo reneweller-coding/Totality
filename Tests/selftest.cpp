@@ -8,16 +8,20 @@
  */
 #include "umb/Clock.h"
 #include "umb/Engine.h"
+#include "umb/Leveler.h"
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
 #include "umb/Params.h"
 #include "umb/Score.h"
 #include "umb/compose/Study.h"
+#include "umb/fx/Cloud.h"
+#include "umb/fx/Dub.h"
 #include "umb/pattern/Rack.h"
 #include "umb/synth/Kick.h"
 #include "umb/synth/Kit.h"
 #include "umb/synth/Rumble.h"
 #include "umb/synth/SubBass.h"
+#include "umb/synth/Synth.h"
 #include "TestSupport.h"
 #include <algorithm>
 #include <cmath>
@@ -406,7 +410,9 @@ void testRack()
             const double pos = (n.beat - 4.0 * bar) * 4.0;
             const int step = static_cast<int>(std::floor(pos + 1e-6));
             const bool quarter = std::fabs(pos - std::round(pos)) < 0.2 && (static_cast<int>(std::lround(pos)) % 4) == 0;
-            bool allowed = n.part == Part::Kick || n.part == percPart(4) || n.part == percPart(7) || n.part == Part::Ping;
+            // The clap, the rim, the ping; the chord's stab, the drone and the texture (no bass, no 303).
+            bool allowed = n.part == Part::Kick || n.part == percPart(4) || n.part == percPart(7) || n.part == Part::Ping
+                        || n.part == Part::Chord || n.part == Part::Drone || n.part == Part::Texture;
             for (int li = 0; li < kNumLayers; ++li) {
                 const int lane = layerLane(plan, static_cast<LayerId>(li));
                 if (plan.period[li] > 0 && lane >= 0 && n.part == percPart(lane)) allowed = true;   // a cyclic layer crosses them
@@ -419,7 +425,7 @@ void testRack()
             }
         }
     }
-    check(quarterViolations == 0, "the quarters belong to the kick (clap, rim and cyclic layers may share them)",
+    check(quarterViolations == 0, "the quarters belong to the kick (clap, rim, cyclic and pad layers may share them)",
           fmt("%d violations", quarterViolations));
     check(hatClashes == 0, "one hat per step", fmt("%d clashes in %d bars", hatClashes, bars));
 
@@ -581,11 +587,14 @@ void testRackPhase2()
 void testStudyForm()
 {
     section("the study's form");
-    for (int owner = 0; owner < 2; ++owner) {
+    for (int combo = 0; combo < 8; ++combo) {
+        const int owner = combo % 2, style = combo / 2;
         auto p = std::make_unique<ParamStore>();
         p->set(p->find("compose.minutes"), 7.0f);
         p->set(p->find("compose.low_owner"), static_cast<float>(owner));
+        p->set(p->find("compose.style"), static_cast<float>(style));
         const Score s = composeStudy(*p, 5);
+        const std::string who = fmt("%s, owner %d", kStyleNames[style], owner);
         const int bars = static_cast<int>(s.lengthBeats / 4.0);
         // Exactly one operation at every block boundary of the body.
         int blocksWithOne = 0, blocks = 0;
@@ -595,23 +604,395 @@ void testStudyForm()
             for (const BlockOp& o : s.ops) if (std::fabs(o.beat - 4.0 * b) < 1e-9) ++ops;
             blocksWithOne += ops == 1 ? 1 : 0;
         }
-        check(blocksWithOne >= blocks - 1, fmt("owner %d: one operation per block boundary", owner).c_str(), fmt("%d of %d", blocksWithOne, blocks));
+        check(blocksWithOne >= blocks - 1, (who + ": one operation per block boundary").c_str(), fmt("%d of %d", blocksWithOne, blocks));
         // Every operation on a four-bar line.
         bool onFour = true;
         for (const BlockOp& o : s.ops) onFour = onFour && std::fabs(std::fmod(o.beat, 16.0)) < 1e-9;
-        check(onFour, fmt("owner %d: every operation on a multiple of four bars", owner).c_str());
+        check(onFour, (who + ": every operation on a multiple of four bars").c_str());
         // No tonal material in the first and last 32 bars (Dok. 8.5), and a bass only where the sub owns the low end.
-        int tonalEdge = 0, subNotes = 0;
+        int tonalEdge = 0, bassNotes = 0, tonalNotes = 0;
         for (const NoteEvent& n : s.notes) {
-            if (n.part != Part::Sub) continue;
-            ++subNotes;
+            const bool isTonal = n.part == Part::Bass || n.part == Part::Sub || n.part == Part::Acid || n.part == Part::Chord
+                              || n.part == Part::Drone || n.part == Part::Texture || n.part == Part::Ping;
+            if (!isTonal) continue;
+            ++tonalNotes;
+            bassNotes += n.part == Part::Bass ? 1 : 0;
             if (n.beat < 128.0 || n.beat >= s.lengthBeats - 128.0) ++tonalEdge;
         }
-        check(tonalEdge == 0, fmt("owner %d: no bass in the first and last 32 bars", owner).c_str(), fmt("%d notes", tonalEdge));
-        check(owner == 1 ? subNotes > 0 : subNotes == 0, fmt("owner %d: a bass line exactly where the sub owns the low end", owner).c_str(),
-              fmt("%d notes", subNotes));
+        // Hypnotic brings the ping early, Dub the chord, a sub owner the bass: tonal material even in seven minutes.
+        const bool wantTonal = owner == 1 || style == static_cast<int>(Style::Hypnotic) || style == static_cast<int>(Style::Dub);
+        check(tonalEdge == 0 && (tonalNotes > 0 || !wantTonal), (who + ": no tonal material in the first and last 32 bars").c_str(),
+              fmt("%d of %d notes at the edges", tonalEdge, tonalNotes));
+        check(owner == 1 ? bassNotes > 0 : bassNotes == 0, (who + ": a bass line exactly where the sub owns the low end").c_str(),
+              fmt("%d notes", bassNotes));
+        check(s.levels.size() == 1 && s.levels[0].targetLufs == styleTargetLufs(style) && s.levels[0].peakBeat > 128.0,
+              (who + ": a loudness mark in the body").c_str());
     }
 }
+
+/** A module instance's knobs as the engine hands them to a voice. */
+std::vector<float> moduleValues(const ParamStore& p, Module m, int instance = 0)
+{
+    std::vector<float> v(static_cast<size_t>(ParamStore::moduleCount(m)));
+    const int b = p.base(m, instance);
+    for (size_t i = 0; i < v.size(); ++i) v[i] = p.get(b + static_cast<int>(i));
+    return v;
+}
+
+/** The pitch of @p x at 48 kHz: the normalised autocorrelation's highest peak between @p lo and @p hi Hz, interpolated. */
+double pitchHz(const std::vector<float>& x, double lo, double hi)
+{
+    const int minLag = static_cast<int>(48000.0 / hi), maxLag = static_cast<int>(48000.0 / lo) + 1;
+    const size_t n = x.size() - static_cast<size_t>(maxLag) - 2;
+    std::vector<double> r(static_cast<size_t>(maxLag + 2), 0.0);
+    for (int lag = minLag - 1; lag <= maxLag + 1; ++lag) {
+        double s = 0.0, e0 = 0.0, e1 = 0.0;
+        for (size_t i = 0; i < n; ++i) {
+            const double a = x[i], b = x[i + static_cast<size_t>(lag)];
+            s += a * b;
+            e0 += a * a;
+            e1 += b * b;
+        }
+        r[static_cast<size_t>(lag)] = s / std::sqrt(e0 * e1 + 1e-30);
+    }
+    int best = minLag;
+    for (int lag = minLag; lag <= maxLag; ++lag) if (r[static_cast<size_t>(lag)] > r[static_cast<size_t>(best)]) best = lag;
+    const double a = r[static_cast<size_t>(best - 1)], b = r[static_cast<size_t>(best)], c = r[static_cast<size_t>(best + 1)];
+    const double d = a - 2.0 * b + c;
+    const double off = std::fabs(d) > 1e-12 ? 0.5 * (a - c) / d : 0.0;
+    return 48000.0 / (best + off);
+}
+
+/** Renders @p n samples of a mono synth into @p out (its left channel), updating it on the engine's raster. */
+void runSynth(MonoSynth& s, const std::vector<float>& v, float minCut, std::vector<float>& out, int n)
+{
+    std::vector<float> L(32), R(32);
+    for (int done = 0; done < n; done += 32) {
+        s.update(v.data(), minCut);
+        const int m = std::min(32, n - done);
+        s.process(L.data(), R.data(), m);
+        for (int i = 0; i < m; ++i) out.push_back(L[static_cast<size_t>(i)]);
+    }
+}
+
+/** The bass synth plays in tune, the 303 slides to its next note, and every filter model stays bounded when pushed. */
+void testSynth()
+{
+    section("the bass synth and the 303");
+    auto p = std::make_unique<ParamStore>();
+    {
+        std::vector<float> v = moduleValues(*p, Module::Bass);
+        v[synth::Cutoff] = 8000.0f; v[synth::EnvAmount] = 0.0f; v[synth::SubOsc] = 0.0f; v[synth::KeyTrack] = 0.0f;
+        v[synth::AmpSustain] = 1.0f; v[synth::Duck] = 0.0f; v[synth::LowCut] = 20.0f;
+        MonoSynth s;
+        s.prepare(48000.0);
+        s.update(v.data(), 20.0f);
+        s.noteOn(45, 1.0f, 0.0, false, false);
+        std::vector<float> y;
+        runSynth(s, v, 20.0f, y, 48000);
+        const std::vector<float> tail(y.begin() + 9600, y.end());
+        const double hz = pitchHz(tail, 60.0, 400.0);
+        check(std::fabs(hz / 110.0 - 1.0) < 0.003, "A2 plays at 110 Hz", fmt("%.2f Hz", hz));
+    }
+    {
+        std::vector<float> v = moduleValues(*p, Module::Acid);
+        v[synth::Cutoff] = 8000.0f; v[synth::EnvAmount] = 0.0f; v[synth::KeyTrack] = 0.0f; v[synth::Duck] = 0.0f;
+        v[synth::LowCut] = 20.0f; v[synth::AmpSustain] = 1.0f;
+        MonoSynth s;
+        s.prepare(48000.0);
+        s.update(v.data(), 20.0f);
+        s.noteOn(45, 1.0f, 0.0, false, true);   // slides into the next
+        std::vector<float> y;
+        runSynth(s, v, 20.0f, y, 14400);
+        s.noteOn(57, 1.0f, 0.0, false, false);
+        runSynth(s, v, 20.0f, y, 28800);
+        const std::vector<float> tail(y.begin() + 14400 + 9600, y.end());
+        const double hz = pitchHz(tail, 120.0, 500.0);
+        check(std::fabs(hz / 220.0 - 1.0) < 0.004, "the 303 slides to A3", fmt("%.2f Hz", hz));
+        // No new attack at the slide: the level just after it within 3 dB of the level just before.
+        double before = 0.0, after = 0.0;
+        for (size_t i = 14400 - 480; i < 14400 - 240; ++i) before += static_cast<double>(y[i]) * y[i];
+        for (size_t i = 14400 + 240; i < 14400 + 480; ++i) after += static_cast<double>(y[i]) * y[i];
+        check(std::fabs(powDb(after / before)) < 3.0, "the slide keeps the gate open", fmt("%+.1f dB", powDb(after / before)));
+    }
+    // Every model at full resonance and drive, the cutoff swept over its range, accented notes: bounded and finite.
+    double worst = 0.0;
+    int worstModel = 0;
+    bool finite = true;
+    std::string peaks;
+    for (int m = 0; m < 9; ++m) {
+        std::vector<float> v = moduleValues(*p, Module::Acid);
+        v[synth::Filter] = static_cast<float>(m); v[synth::Resonance] = 1.0f; v[synth::Drive] = 1.0f; v[synth::Accent] = 1.0f;
+        v[synth::EnvAmount] = 6.0f; v[synth::Level] = 0.0f; v[synth::Duck] = 0.0f;
+        MonoSynth s;
+        s.prepare(48000.0);
+        std::vector<float> L(32), R(32);
+        double peak = 0.0;
+        for (int done = 0; done < 96000; done += 32) {
+            v[synth::Cutoff] = 40.0f * std::pow(300.0f, static_cast<float>(done % 24000) / 24000.0f);
+            s.update(v.data(), 20.0f);
+            if (done % 6016 == 0) s.noteOn(33 + (done / 6016) % 24, 1.0f, 0.0, true, (done / 6016) % 3 == 0);
+            s.process(L.data(), R.data(), 32);
+            for (float x : L) { finite = finite && std::isfinite(x); peak = std::max(peak, static_cast<double>(std::fabs(x))); }
+        }
+        if (peak > worst) { worst = peak; worstModel = m; }
+        peaks += fmt(m == 0 ? "%.2f" : " %.2f", peak);
+    }
+    check(finite && worst < 4.0, "every filter model bounded at full resonance and drive", fmt("peaks %s (worst: model %d)", peaks.c_str(), worstModel));
+}
+
+/** The harmony rules of Dok. 8.6 and 8.9 on the plans of 600 seeds: every chord in the key, no major seventh over its
+ *  root (no maj7 chord; the minor add9's third and ninth are one apart by nature), at most four pitch classes, thirds over
+ *  130 Hz, under 150 Hz only fifths and octaves; no V; the drone and the 303 in the key. */
+void testHarmony()
+{
+    section("the harmony rules");
+    int bad = 0, chords = 0, shuttles = 0;
+    std::string first;
+    for (int k = 0; k < 600; ++k) {
+        auto p = std::make_unique<ParamStore>();
+        p->set(p->find("compose.key"), static_cast<float>(k % 12));
+        p->set(p->find("compose.scale"), static_cast<float>((k / 12) % 5));
+        const RackPlan plan = makeRackPlan(*p, static_cast<uint64_t>(k) * 7919u + 1u);
+        auto inKey = [&](int pitch) { return inScale(plan.scale, ((pitch - plan.keyRoot) % 12 + 12) % 12); };
+        auto fail = [&](const std::string& what) { ++bad; if (first.empty()) first = what; };
+        auto judge = [&](const std::vector<int>& tones, int root, const char* what) {
+            ++chords;
+            std::set<int> pcs;
+            bool ok = true;
+            for (size_t i = 0; i < tones.size(); ++i) {
+                ok = ok && inKey(tones[i]) && ((tones[i] - root) % 12 + 12) % 12 != 11;
+                pcs.insert(((tones[i] % 12) + 12) % 12);
+                for (size_t j = 0; j < tones.size(); ++j) {
+                    if (tones[j] <= tones[i]) continue;
+                    const int iv = tones[j] - tones[i];
+                    if (iv == 3 || iv == 4) ok = ok && midiToHz(tones[i]) >= 130.0;
+                    if (midiToHz(tones[j]) < 150.0) ok = ok && (iv == 7 || iv == 12);
+                }
+            }
+            ok = ok && pcs.size() <= 4;
+            if (!ok) fail(fmt("%s of seed %d", what, k));
+        };
+        std::vector<int> c;
+        for (int t = 0; t < plan.nChordTones; ++t) c.push_back(plan.chordRoot + plan.chordTones[t]);
+        judge(c, plan.chordRoot, "chord");
+        if (plan.shuttleBars > 0) {
+            ++shuttles;
+            c.clear();
+            for (int t = 0; t < 3; ++t) c.push_back(plan.chordRoot + plan.shuttleTones[t]);
+            judge(c, plan.chordRoot + plan.shuttle, "shuttle");
+            if (((plan.shuttle % 12) + 12) % 12 == 7) fail(fmt("a V at seed %d", k));
+        }
+        if (!inKey(plan.droneNote) || midiToHz(plan.droneNote) < 150.0) fail(fmt("drone of seed %d", k));
+        if (k % 20 == 0) {
+            std::vector<NoteEvent> notes;
+            for (int bar = 0; bar < 16; ++bar) {
+                BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
+                spec.active[static_cast<int>(LayerId::Acid)] = true;
+                realizeBar(plan, spec, notes);
+            }
+            for (const NoteEvent& n : notes)
+                if (n.part == Part::Acid && !inKey(n.pitch)) { fail(fmt("303 of seed %d", k)); break; }
+        }
+    }
+    check(bad == 0, "every chord, shuttle, drone and 303 line by the rules", bad == 0 ? fmt("%d chords, %d shuttles", chords, shuttles) : first);
+}
+
+/** The dub chain: the echo dies away at its default feedback and stays bounded beyond one; the multiband duck takes its
+ *  depths band by band and, untriggered, passes every band at unity (an allpass). */
+void testDub()
+{
+    section("the dub chain and the multiband duck");
+    auto p = std::make_unique<ParamStore>();
+    std::vector<float> v = moduleValues(*p, Module::Dub);
+    auto run = [](DubChain& d, int seconds, int burst) {
+        std::vector<float> in(512), zero(512, 0.0f), L(512), R(512), out;
+        Rng rng;
+        rng.seed(5);
+        for (int done = 0; done < seconds * 48000; done += 512) {
+            for (int i = 0; i < 512; ++i) in[static_cast<size_t>(i)] = done + i < burst ? rng.uniform() - 0.5f : 0.0f;
+            d.process(in.data(), in.data(), zero.data(), zero.data(), L.data(), R.data(), 512);
+            out.insert(out.end(), L.begin(), L.end());
+        }
+        return out;
+    };
+    auto energy = [](const std::vector<float>& y, double a, double b) {
+        double e = 0.0;
+        for (size_t i = static_cast<size_t>(a * 48000.0); i < static_cast<size_t>(b * 48000.0) && i < y.size(); ++i) e += static_cast<double>(y[i]) * y[i];
+        return e;
+    };
+    {
+        DubChain d;
+        d.prepare(48000.0, 512);
+        d.update(v.data(), 130.0);
+        const std::vector<float> y = run(d, 6, 480);
+        const double drop = powDb(energy(y, 5.0, 6.0) / energy(y, 0.0, 1.0));
+        check(drop < -40.0, "at the default feedback the echo dies away", fmt("%.1f dB after five seconds", drop));
+    }
+    {
+        DubChain d;
+        d.prepare(48000.0, 512);
+        v[dub::Feedback] = 1.2f;
+        d.update(v.data(), 130.0);
+        const std::vector<float> y = run(d, 20, 4800);
+        double peak = 0.0;
+        bool finite = true;
+        for (float x : y) { finite = finite && std::isfinite(x); peak = std::max(peak, static_cast<double>(std::fabs(x))); }
+        check(finite && peak < 4.0, "beyond the edge (feedback 1.2) it stays bounded", fmt("peak %.2f", peak));
+    }
+    // The duck: a tone per band, the ducker triggered at 0.5 s, its gain 20 .. 50 ms later against an untriggered twin.
+    const double freqs[3] = { 60.0, 800.0, 8000.0 }, want[3] = { -10.0, -3.0, 0.0 }, tol[3] = { 1.5, 1.0, 0.5 };
+    double worstFlat = 0.0;
+    for (int b = 0; b < 3; ++b) {
+        MultibandDucker a, c;
+        a.prepare(48000.0);
+        c.prepare(48000.0);
+        a.set(10.0f, 3.0f, 60.0f, 250.0f);
+        c.set(10.0f, 3.0f, 60.0f, 250.0f);
+        std::vector<float> x(512), al(512), ar(512), cl(512), cr(512), ya, yc;
+        for (int done = 0; done < 28672; done += 512) {
+            if (done == 24064) a.trigger(0.0);
+            for (int i = 0; i < 512; ++i) x[static_cast<size_t>(i)] = 0.3f * static_cast<float>(std::sin(2.0 * kPiD * freqs[b] * (done + i) / 48000.0));
+            al = x; ar = x; cl = x; cr = x;
+            a.process(al.data(), ar.data(), 512);
+            c.process(cl.data(), cr.data(), 512);
+            ya.insert(ya.end(), al.begin(), al.end());
+            yc.insert(yc.end(), cl.begin(), cl.end());
+        }
+        double ea = 0.0, ec = 0.0;
+        for (size_t i = 24064 + 960; i < 24064 + 2400; ++i) { ea += static_cast<double>(ya[i]) * ya[i]; ec += static_cast<double>(yc[i]) * yc[i]; }
+        const double g = powDb(ea / ec);
+        // Flatness over whole periods before the trigger (12 of 60 Hz): the allpass turns the phase, not the level.
+        double ef = 0.0, ex = 0.0;
+        for (size_t i = 14400; i < 24000; ++i) {
+            const double s = 0.3 * std::sin(2.0 * kPiD * freqs[b] * static_cast<double>(i) / 48000.0);
+            ex += s * s;
+            ef += static_cast<double>(yc[i]) * yc[i];
+        }
+        worstFlat = std::max(worstFlat, std::fabs(powDb(ef / ex)));
+        check(std::fabs(g - want[b]) <= tol[b], fmt("the duck at %.0f Hz takes %.0f dB", freqs[b], -want[b]).c_str(), fmt("%+.2f dB", g));
+    }
+    check(worstFlat < 0.05, "untriggered, every band passes at unity", fmt("%.3f dB off at worst", worstFlat));
+    // The cloud: silent at its knob; raised, grains of what it heard, bounded against its input (0.3: a few grains
+    // overlapping, panned); never ahead of its history.
+    {
+        std::vector<float> c = moduleValues(*p, Module::Cloud);
+        GrainCloud cl;
+        cl.prepare(48000.0, 3);
+        std::vector<float> in(512), zero(512, 0.0f), L(512), R(512);
+        double quiet = 0.0, loud = 0.0, early = 0.0;
+        for (int pass = 0; pass < 2; ++pass) {
+            cl.reset();
+            c[cloud::Level] = pass == 0 ? -60.0f : -12.0f;   // -12 dB: unity through the cloud's makeup
+            cl.update(c.data());
+            for (int done = 0; done < 4 * 48000; done += 512) {
+                for (int i = 0; i < 512; ++i) in[static_cast<size_t>(i)] = done + i >= 48000 ? 0.3f * static_cast<float>(std::sin(2.0 * kPiD * 440.0 * (done + i) / 48000.0)) : 0.0f;
+                cl.process(in.data(), in.data(), L.data(), R.data(), 512);
+                for (int i = 0; i < 512; ++i) {
+                    const double e = static_cast<double>(L[static_cast<size_t>(i)]) * L[static_cast<size_t>(i)];
+                    if (pass == 0) quiet += e;
+                    else if (done + i < 48000) early += e;
+                    else loud = std::max(loud, static_cast<double>(std::fabs(L[static_cast<size_t>(i)])));
+                }
+            }
+        }
+        check(quiet == 0.0 && early == 0.0 && loud > 0.05 && loud < 3.0, "the cloud: silent at -60 dB and before its input, grains after",
+              fmt("peak %.2f", loud));
+    }
+}
+
+/** The Leveler brings the loudest part of a study to its style's target (or as near as 4 dB allow). */
+void testLeveler()
+{
+    section("the leveler");
+    for (int style = 0; style < 4; style += 3) {
+        auto p = std::make_unique<ParamStore>();
+        p->set(p->find("compose.minutes"), 5.0f);
+        p->set(p->find("compose.style"), static_cast<float>(style));
+        Score s = composeStudy(*p, 21);
+        const std::vector<LevelReading> r = levelScore(s, *p);
+        if (r.size() != 1) { check(false, "one reading per track", fmt("%zu", r.size())); continue; }
+        // Independently: the part again with the correction, warmed up as the Leveler warms up.
+        auto e = std::make_unique<Engine>();
+        e->params().copyValuesFrom(*p);
+        e->prepare(48000.0, 512);
+        e->load(s);
+        const double at = s.tempo.secondsAt(s.levels[0].peakBeat);
+        e->seek(s.tempo.beatAt(at - 4.0));
+        std::vector<float> L(512), R(512);
+        for (int done = 0; done < 4 * 48000; done += 512) e->process(L.data(), R.data(), 512);
+        LoudnessMeter m;
+        m.prepare(48000.0);
+        for (int done = 0; done < 20 * 48000; done += 512) { e->process(L.data(), R.data(), 512); m.process(L.data(), R.data(), 512); }
+        const double got = m.report().integrated;
+        const bool clamped = std::fabs(r[0].trim) >= 3.99f;
+        check(clamped || std::fabs(got - r[0].target) <= 0.5, fmt("%s: the loudest part at its target", kStyleNames[style]).c_str(),
+              fmt("measured %.1f, trim %+.1f dB, then %.1f LUFS against %.1f", r[0].measured, r[0].trim, got, r[0].target));
+    }
+}
+
+/** Eight bars with every layer and both low owners' voices at once, a throw on the echo. */
+std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems = nullptr)
+{
+    auto e = std::make_unique<Engine>();
+    ParamStore& p = e->params();
+    p.parseText("compose.low_owner=Sub");
+    const RackPlan plan = makeRackPlan(p, 17);
+    Score sc;
+    sc.clear(130.0f);
+    sc.seed = 17;
+    for (int bar = 0; bar < 8; ++bar) {
+        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
+        for (bool& a : spec.active) a = true;
+        realizeBar(plan, spec, sc.notes);
+    }
+    Gesture g;
+    g.param = p.find("dub.feedback");
+    g.beat = 14.0;
+    g.length = 4.0;
+    g.from = 0.0f;
+    g.to = 0.45f;
+    g.shape = GestureShape::MinimumJerk;
+    sc.gestures.push_back(g);
+    Gesture c;
+    c.param = p.find("cloud.level");
+    c.beat = 4.0;
+    c.length = 0.0;
+    c.to = 0.9f;
+    c.shape = GestureShape::Step;
+    sc.gestures.push_back(c);
+    g.param = p.find("dub.ping_send");
+    g.beat = 15.0;
+    g.length = 0.0;
+    g.to = 0.6f;
+    g.shape = GestureShape::Step;
+    sc.gestures.push_back(g);
+    sc.lengthBeats = 32.0;
+    sc.sort();
+    e->prepare(48000.0, block);
+    e->load(sc);
+    const int n = static_cast<int>(sc.tempo.secondsAt(32.0) * 48000.0);
+    std::vector<float> out(static_cast<size_t>(2 * n));
+    std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
+    std::vector<std::vector<float>> sl(Engine::kStems, std::vector<float>(static_cast<size_t>(block))), sr = sl;
+    std::vector<float*> pl, pr;
+    for (int k = 0; k < Engine::kStems; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
+    if (stems != nullptr) { stems->assign(Engine::kStems, {}); e->setStems(pl.data(), pr.data()); }
+    for (int done = 0; done < n;) {
+        const int m = std::min(block, n - done);
+        e->process(L.data(), R.data(), m);
+        for (int i = 0; i < m; ++i) {
+            out[static_cast<size_t>(2 * (done + i))] = L[static_cast<size_t>(i)];
+            out[static_cast<size_t>(2 * (done + i) + 1)] = R[static_cast<size_t>(i)];
+        }
+        if (stems != nullptr)
+            for (int k = 0; k < Engine::kStems; ++k)
+                (*stems)[static_cast<size_t>(k)].insert((*stems)[static_cast<size_t>(k)].end(), sl[static_cast<size_t>(k)].begin(), sl[static_cast<size_t>(k)].begin() + m);
+        done += m;
+    }
+    return out;
+}
+
 
 /** Renders @p seconds of the study with block size @p block. */
 std::vector<float> renderStudy(int block, double seconds, uint64_t seed, const char* settings = "")
@@ -649,6 +1030,30 @@ void testBlockSizes()
     double peak = 0.0;
     for (float x : a) peak = std::max(peak, static_cast<double>(std::fabs(x)));
     check(peak > 0.1 && std::isfinite(peak), "it sounds", fmt("peak %.3f", peak));
+    // Every voice of Phase 3 at once, with automation on the echo.
+    const std::vector<float> d = renderFull(512), e = renderFull(37), f = renderFull(1);
+    size_t firstE = d.size(), firstF = d.size();
+    for (size_t i = 0; i < d.size(); ++i) {
+        if (firstE == d.size() && std::memcmp(&d[i], &e[i], sizeof(float)) != 0) firstE = i;
+        if (firstF == d.size() && std::memcmp(&d[i], &f[i], sizeof(float)) != 0) firstF = i;
+    }
+    std::string where;
+    if (firstE != d.size() || firstF != d.size()) {
+        // Which stem parts first.
+        std::vector<std::vector<float>> s512, s37;
+        renderFull(512, &s512);
+        renderFull(37, &s37);
+        size_t best = s512[0].size();
+        for (int k = 0; k < Engine::kStems; ++k)
+            for (size_t i = 0; i < s512[static_cast<size_t>(k)].size() && i < best; ++i)
+                if (std::memcmp(&s512[static_cast<size_t>(k)][i], &s37[static_cast<size_t>(k)][i], sizeof(float)) != 0) {
+                    best = i;
+                    where = fmt("first difference at %.4f s, first in the %s stem", i / 48000.0, Engine::stemName(k));
+                    break;
+                }
+        if (where.empty()) where = fmt("first difference at %.4f s (after the stems)", std::min(firstE, firstF) / 96000.0);
+    }
+    check(firstE == d.size() && firstF == d.size(), "every voice at once: 1 and 37 equal 512, bit for bit", where);
 }
 
 /** The master: the true peak under the ceiling, the low end mono. */
@@ -729,6 +1134,10 @@ const TestSection kSections[] = {
     { "testRack", testRack },
     { "testRackPhase2", testRackPhase2 },
     { "testStudyForm", testStudyForm },
+    { "testSynth", testSynth },
+    { "testHarmony", testHarmony },
+    { "testDub", testDub },
+    { "testLeveler", testLeveler },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },

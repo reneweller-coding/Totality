@@ -20,6 +20,72 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**27.09.2026, nachts: Phase 3, Klang und Mix.** Neu sind der Bass-Synth und die 303-Linie (eine Stimme: PolyBLEP bei
+2×, Sub-Rechteck, die Schaltungsfilter aus Ephemeris, Akzent, Slide, Glide), der Dub-Chord (acht Stimmen, je zwei
+Sägezähne, Bus mit Bandpass-Fahrt, Bitreduktion, vierstufigem Phaser, Senke bei 600 Hz), Drone und Textur (Knistern,
+Netzbrummen, Rausch-Erosion), die Dub-Kette (Bandecho mit Federn, Platte; aus Ephemeris), der Multiband-Duck für Flächen
+und Rückwege, die Granularwolke, drei Sättigungsstufen auf dem Drum-Bus, der Master mit parallelem Glue, Tilt,
+Vinyl-Schnitt, Clipper bei 4× und True-Peak-Limiter, und der Leveler (aus Ephemeris). Die Studie bringt je Stil eine
+eigene Reihenfolge der Layer, Delay-Würfe am Phrasenende, die Treppe des Akkords ("nudging louder"), Filterfahrten von
+Stab und 303 und die Wolke durch die Reduktion. Die Harmonik folgt Dok. 8.6 als harte Regel (Shuttle-Akkorde als
+Dreiklänge in den Terzen der Tonart, add9 nur, wo die Skala die None hat).
+
+Gemessen an zehnminütigen Studien (Seed 7; Dub mit Sub-Besitz) gegen die Mediane der Referenzen, mit demselben Werkzeug:
+
+| Größe | Hypnotic: Umbra / Ref. | Ostgut | Dub | Raw |
+|---|---|---|---|---|
+| Bänder dB gegen 40–140 Hz: 250 Hz–1 kHz | −8,6 / −12,8 | −14,7 / −12,0 | −14,2 / −13,4 | −14,8 / −13,0 |
+| 1–5 kHz | −15,1 / −15,8 | −16,9 / −15,4 | −23,7 / −17,9 | −18,2 / −18,5 |
+| 5–16 kHz | −18,7 / −17,4 | −17,8 / −16,3 | −20,4 / −27,7 | −17,8 / −20,7 |
+| Schwerpunkt, Hz | 264 / 252 | 247 / 331 | 164 / 182 | 238 / 170 |
+| Seite zu Mitte über 200 Hz, dB | −1,9 / −4,5 | −9,9 / −6,2 | −8,1 / −7,9 | −10,8 / −8,1 |
+| lautestes 20-s-Fenster, LUFS | −9,8 / −10,0 | −9,5 / −9,5 | −11,0 / −11,5 | −9,5 / −9,4 |
+| integriert, LUFS | −11,5 / −11,5 | −10,0 / −10,8 | −11,9 / −12,2 | −10,0 / −9,9 |
+| LRA, LU | 2,7 / 4,7 | 1,1 / 3,0 | 2,3 / 3,4 | 1,1 / 1,3 |
+| Takt-Ähnlichkeit | 0,87 / 0,87 | 0,94 / 0,955 | 0,90 / 0,93 | 0,89 / 0,92 |
+
+Vorher (Phase 2) lagen 1–5 kHz 9 bis 13 dB und 5–16 kHz bis 10 dB zu tief, der Schwerpunkt bei 96 bis 129 Hz, die
+Breite bei −13 bis −27 dB. True Peak −1,0 dBTP überall (die Referenzen liegen über 0, das wird nicht nachgeahmt), Crest
+9,5 bis 11,2 dB. `ctest` 22 von 22; Render 17-fache Echtzeit, 5,8 % eines Kerns.
+
+Befunde, alle von Tests oder Messungen gefunden:
+- **Die Balance ist ein Tilt, keine Summe von Einzelpegeln.** Ein Ausgleich der Stems gegen Bänder und Breite der
+  Referenzen (kleinste Quadrate über alle vier Stile, `kMixParams` in Params.cpp) fand für jeden Stil dasselbe: die ganze
+  obere Hälfte des Spektrums rund 10 dB zu tief gegen das Tief. Master-Tilt +10 dB (Erg. 2: der Standard folgt aus dem
+  Abstand zu den Referenzen), Raum +10 dB, Akkord und Drone +7, Hats −3,5, Perkussion −6,5, Ping +1,5. Der Tilt hebt die
+  Höhen gegen das Tief und lässt das Tief stehen; um 1 kHz gekippt nahm er dem Tief 5 dB und mit ihnen den Pegel.
+- **Der Leveler kämpfte gegen den Glue**: Die Korrektur saß vor einem Kompressor mit Ratio 2 weit über seiner Schwelle,
+  der jede Korrektur halbierte (+4 dB brachten +1,9 LU). Jetzt Glue parallel zu 35 % (8.4), die Korrektur dahinter.
+- **Die Ziele des Levelers sind gemessen**: `analyze_ref.py` misst jetzt das lauteste 20-s-Fenster (`loud20`), das, was
+  der Leveler misst. Hypnotic −10, Ostgut −9,5, Dub −11,5, Raw −9,5 LUFS statt der Schätzung "integriert + 1 dB".
+- **Der Multiband-Duck nahm die Hälfte**: Eine subtraktive Weiche (x minus Tiefpass) summiert zwar exakt, ist aber
+  nicht phasengleich; bei 60 Hz kamen 5,5 statt 10 dB an. Jetzt eine Linkwitz-Riley-Weiche mit Allpass im Tiefband:
+  −9,9 / −2,9 / 0,0 dB, in Ruhe ein Allpass.
+- **Drei Verletzungen der Blockgrößen-Regel**, gefunden von einem neuen Test mit allen Stimmen zugleich: die
+  Filterfahrt der Drone (Beat aus dem Spannenanfang fortgezählt; jetzt auf dem Raster der Engine gesetzt), Akkord- und
+  Ping-Stimmen, die erst am Spannenende frei wurden (ihre Filter liefen bis dahin weiter; jetzt frei am Sample).
+- **Diodenleiter, Polivoks und Wasp schwingen unter schneller Hüllkurve auf das 27-fache** (Ephemeris prüft nur bei
+  festem Cutoff): parametrisches Pumpen der Integratoren. Ein weiches Knie am Filterausgang (unter 1 unberührt, bei 2×)
+  und die Grenze des Cutoffs bei 0,42 der Rate wie in Ephemeris.
+- **Die hellere Balance macht die Studie unruhiger**: Hats und Ping wiegen im Onset-Profil 10 dB mehr, Hypnotic fiel auf
+  0,72. `reroll` für Hypnotic neu kalibriert: 0,15 trifft 0,87 (0,84 bis 0,87 über drei Seeds); der Unterschied zu
+  Ostgut sind jetzt die Zyklen des Pings.
+- **Ruhende Stimmen kosteten die Hälfte der Rechenzeit**: Bass, 303, Drone und Textur rechneten auch schweigend. Jetzt
+  ruhen sie ab dem Sample, an dem ihre Hüllkurve endet (11- auf 20-fache Echtzeit).
+
+Abweichungen vom Plan, bewusst:
+- **Die Granularwolke ist neu geschrieben**, nicht aus Noctuary kopiert: Dessen `GrainCloud` bringt die Aetherizer-
+  Hälfte mit (Rückkopplungsspirale durch einen FFT-Shifter, Resonatoren auf der Skala, Hawkes-Schwarm) und braucht das
+  Stimmungssystem. Eine Reduktion braucht die schlichte Wolke (`fx/Cloud.h`, ein Zehntel der Zeilen).
+- **Der Rumble bleibt mono.** Die Breite kommt aus Raum, Echo, Flächen und Ping, wie die Stems zeigten.
+- **Unter 120 Hz strikt mono** (Seite −41 bis −64 dB), die Referenzen haben dort −23 bis −27 dB Seite: nicht
+  nachgeahmt (8.2).
+
+Offen, für Phase 4: die Klangrezepte der Stile (Hypnotic ist zu breit und hat 4 dB zu viel bei 250 Hz–1 kHz; Dub ist
+über 5 kHz 7 dB zu hell und bei 1–5 kHz 6 dB zu dunkel; Ostgut und Raw sind 3 bis 4 dB zu schmal), der Lautheitsverlauf
+(LRA 1 bis 3 statt 1,3 bis 4,7: die Form ist noch flach), Stems, deren Summe die Mischung exakt ergibt (die geduckten
+Rückwege teilen sich einen Ducker), und der Hörvergleich je Profil durch den Nutzer.
+
 **27.09.2026, abends: Referenzmessung und der größte Teil von Phase 2.** Die 30 Referenztitel (`Tools/ref_sets.txt`)
 liegen als Tonspur in `%TEMP%\umbra_refs` (Entscheidung 16.1: Audio behalten, außerhalb des Repos) und sind mit
 `Tools/analyze_ref.py` vermessen; im Repo stehen nur die Statistiken (`Tools/ref_stats.json`). Dasselbe Werkzeug misst

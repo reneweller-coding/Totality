@@ -10,7 +10,8 @@
 namespace umb {
 
 const char* const kLayerNames[kNumLayers] = { "kick", "ghost kick", "closed hat", "rolling hat", "open hat", "ride", "clap",
-                                              "clap b", "clap ghost", "shaker", "tom/conga", "rim", "bass", "ping" };
+                                              "clap b", "clap ghost", "shaker", "tom/conga", "rim", "bass", "ping", "chord",
+                                              "drone", "acid", "texture" };
 
 namespace {
 
@@ -92,10 +93,31 @@ const LayerDef kLayers[kNumLayers] = {
     { LayerKind::Loop,
       { 0 }, { V(95) },
       V(14), 0.0f, 6.0f, 0.5f, 0.25, true },
+    // Chord: Dok. 8.2's stab -- the downbeat .6, the third eighth .3, beat 3's offbeat .4; 79 % velocity with a wide spread
+    // (Brootle's "Random Velocity 79 %"), straight, an eighth long.
+    { LayerKind::Loop,
+      { .6f, 0, 0, 0, 0, 0, .3f, 0, 0, 0, .4f, 0, 0, 0, 0, 0 },
+      { V(100), 0, 0, 0, 0, 0, V(100), 0, 0, 0, V(100), 0, 0, 0, 0, 0 },
+      V(20), 0.0f, 0.0f, 0.0f, 0.5, false },
+    // Drone: a note on the downbeat of every eighth bar, held for them (realizeBar).
+    { LayerKind::Anchor,
+      { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+      { V(90), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+      0.0f, 0.0f, 0.0f, 0.0f, 32.0, false },
+    // Acid: the 303's sixteenths, three in four sounding; pitches, accents and slides rolled per block (realizeBar).
+    { LayerKind::Loop,
+      { .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f, .75f },
+      { V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96), V(96) },
+      V(6), 0.0f, 3.0f, 0.5f, 0.18, false },
+    // Texture: a note a bar, which gates it (Drone.h).
+    { LayerKind::Anchor,
+      { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+      { V(100), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+      0.0f, 0.0f, 0.0f, 0.0f, 4.0, false },
 };
 
 /** @brief General MIDI notes of the layers (the ping's is its pitch, set from the plan). */
-constexpr int kLayerNote[kNumLayers] = { 36, 36, 42, 44, 46, 51, 39, 39, 39, 70, 45, 37, 45, 60 };
+constexpr int kLayerNote[kNumLayers] = { 36, 36, 42, 44, 46, 51, 39, 39, 39, 70, 45, 37, 45, 60, 57, 57, 45, 60 };
 
 /** @brief A uniform number for (seed, a, b, c), the same whatever else was rolled. */
 float roll(uint64_t seed, uint64_t a, uint64_t b, uint64_t c)
@@ -104,7 +126,8 @@ float roll(uint64_t seed, uint64_t a, uint64_t b, uint64_t c)
     return static_cast<float>((h >> 40) * (1.0 / 16777216.0));
 }
 
-enum Salt : uint64_t { kBase = 11, kMutA = 12, kMutB = 13, kMotion = 14, kVel = 15, kJitter = 16, kCycle = 17, kFill = 18 };
+enum Salt : uint64_t { kBase = 11, kMutA = 12, kMutB = 13, kMotion = 14, kVel = 15, kJitter = 16, kCycle = 17, kFill = 18,
+                       kAcid = 19 };
 
 bool isCyclic(const RackPlan& plan, int li) { return plan.period[li] > 0; }
 
@@ -169,11 +192,13 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed)
     plan.seed = seed;
     Rng rng;
     rng.seed(mixSeed(seed, 0x5241434Bull));   // "RACK"
-    // The style's restlessness (RackPlan), after the reference measurement's bar similarity (PLAN 13.4): Hypnotic 0.87
-    // (Dok. 8.2's motion, rolled every bar), Raw 0.92 and Dub 0.93, Ostgut 0.955 (most of the motion rolled per block).
+    // The style's restlessness (RackPlan), after the reference measurement's bar similarity (PLAN 13.4): Hypnotic 0.87,
+    // Raw 0.92 and Dub 0.93, Ostgut 0.955 (most of the motion rolled per block). Hypnotic rolled every bar while the mix
+    // was dull (Phase 2); with the balance fitted to the references (Phase 3: highs +10 dB) the hats and the ping weigh
+    // more in the onset profiles, and 0.15 meets 0.87 (0.84 .. 0.87 over three seeds): its difference is the ping's cycles.
     const int styleId = p.getInt(p.id(Module::Compose, 0, compose::Style));
     switch (static_cast<Style>(styleId)) {
-    case Style::Hypnotic: plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 1.0f; break;
+    case Style::Hypnotic: plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.15f; break;
     case Style::Dub:      plan.mutation = 0.125f; plan.motionScale = 0.8f; plan.reroll = 0.25f; break;
     case Style::RawPeak:  plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.3f; break;
     default:              plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.15f; break;
@@ -262,6 +287,39 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed)
             }
         }
         if (rng.uniform() < 0.3f) plan.displace[static_cast<int>(LayerId::ClapGhost)] = 1 + rng.below(3);
+    }
+    // Phase 3: the harmony (Dok. 8.6). The chord in close position from the root in 220 .. 415 Hz.
+    {
+        plan.chordRoot = 57 + ((plan.keyRoot - 9 + 12) % 12);
+        const float c = rng.uniform();
+        const bool noNinth = !inScale(plan.scale, 2);   // Phrygian and the pentatonic
+        if (c < 0.5f) { plan.nChordTones = 3; plan.chordTones[0] = 0; plan.chordTones[1] = 3; plan.chordTones[2] = 7; }
+        else if (c < 0.8f || (c < 0.9f && noNinth)) {
+            plan.nChordTones = 4; plan.chordTones[0] = 0; plan.chordTones[1] = 3; plan.chordTones[2] = 7; plan.chordTones[3] = 10;
+        } else if (c < 0.9f) {   // add9 (where the scale has no ninth, the seventh above)
+            plan.nChordTones = 4; plan.chordTones[0] = 0; plan.chordTones[1] = 3; plan.chordTones[2] = 7; plan.chordTones[3] = 14;
+        } else {                 // the fourth in the bass
+            plan.nChordTones = 4; plan.chordTones[0] = -7; plan.chordTones[1] = 0; plan.chordTones[2] = 3; plan.chordTones[3] = 7;
+        }
+        if (rng.uniform() < 0.2f) {
+            const float s = rng.uniform();
+            int shuttle = s < 0.3f ? 1 : (s < 0.55f ? 10 : (s < 0.8f ? 5 : 3));   // bII, bVII, iv, bIII
+            if (!inScale(plan.scale, shuttle)) shuttle = 10;
+            plan.shuttle = shuttle > 6 ? shuttle - 12 : shuttle;
+            plan.shuttleBars = rng.uniform() < 0.5f ? 2 : 4;
+            // A triad in the scale's thirds on the shuttle's degree: every second degree up (a quartal shape in the
+            // pentatonic), so the second chord stays in the key and carries no major seventh.
+            const ScaleDef& d = scaleDef(plan.scale);
+            int deg = 0;
+            while (deg < d.size && d.steps[deg] != shuttle) ++deg;
+            for (int t = 0; t < 3; ++t) {
+                const int k = deg + 2 * t;
+                plan.shuttleTones[t] = plan.shuttle + d.steps[k % d.size] + 12 * (k / d.size) - d.steps[deg];
+            }
+        }
+        plan.droneNote = plan.chordRoot + (rng.uniform() < 0.7f ? 0 : 7);
+        plan.acidRoot = plan.bassRoot + 12;
+        if (plan.acidRoot < 45) plan.acidRoot += 12;   // from A2 on: the 303 speaks through its harmonics, over the sub
     }
     // Trig conditions (Dok. 8.2): an extra open hat in the second of four bars, a single shaker in the third.
     plan.conds[plan.nConds++] = TrigCond{ LayerId::OpenHat, rng.uniform() < 0.5f ? 14 : 10, 2, 4 };
@@ -375,8 +433,12 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
     for (int i = 0; i < kNumLayers; ++i) {
         const LayerId id = static_cast<LayerId>(i);
         if (id == LayerId::Kick || id == LayerId::ClapA || id == LayerId::Rim || isCyclic(plan, i)) continue;
+        // The tonal layers that are no bass may sit on the quarters: the chord's stab on the downbeat, the drone, the texture.
+        if (id == LayerId::Chord || id == LayerId::Drone || id == LayerId::Texture) continue;
         for (int s = 0; s < kSteps; s += 4) on[i][s] = false;
     }
+    // The drone speaks every eighth bar.
+    if ((spec.bar % 8) != 0) for (int s = 0; s < kSteps; ++s) on[L(LayerId::Drone)][s] = false;
     // One hat per step.
     for (int s = 0; s < kSteps; ++s) {
         if (on[L(LayerId::OpenHat)][s]) { on[L(LayerId::ClosedHat)][s] = false; on[L(LayerId::RollingHat)][s] = false; }
@@ -437,7 +499,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
                 n.part = Part::Kick;
                 n.pitch = 36;
             } else if (id == LayerId::Bass) {
-                n.part = Part::Sub;
+                n.part = Part::Bass;   // the synth; where the sub owns the low end the engine plays the sine too
                 // Root ostinato; the alphabet's other tones only on the last two sixteenths (Dok. 8.6).
                 int interval = 0;
                 if (plan.bassSize > 1 && s >= 14) {
@@ -448,6 +510,37 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
             } else if (id == LayerId::Ping) {
                 n.part = Part::Ping;
                 n.pitch = plan.pingNote[cyclePos(plan, i, spec.bar, s)];
+            } else if (id == LayerId::Chord) {
+                // Every tone of the chord (or of the shuttle's, in its bars), each a note of its own.
+                const bool other = plan.shuttleBars > 0 && (spec.bar % plan.shuttleBars) == plan.shuttleBars - 1;
+                const int nt = other ? 3 : plan.nChordTones;
+                for (int t = 0; t < nt; ++t) {
+                    NoteEvent c = n;
+                    c.part = Part::Chord;
+                    c.pitch = plan.chordRoot + (other ? plan.shuttleTones[t] : plan.chordTones[t]);
+                    out.push_back(c);
+                }
+                continue;
+            } else if (id == LayerId::Drone) {
+                n.part = Part::Drone;
+                n.pitch = plan.droneNote;
+                n.length = 32.0;
+            } else if (id == LayerId::Texture) {
+                n.part = Part::Texture;
+                n.pitch = 60;
+                n.length = 4.0;
+            } else if (id == LayerId::Acid) {
+                // Pitch, accent and slide of this step, rolled once per block: the root 0.45, its octave 0.2, the fifth,
+                // the flat seventh and the minor third 0.1 each, within the scale (Dok. 8.6's alphabet, a 303 idiom).
+                n.part = Part::Acid;
+                const uint64_t key = static_cast<uint64_t>(spec.block) * 16 + s;
+                const float u = roll(plan.seed, i, kAcid, key);
+                int iv = u < 0.45f ? 0 : (u < 0.65f ? 12 : (u < 0.75f ? 7 : (u < 0.85f ? 10 : (u < 0.95f ? 3 : 5))));
+                if (!inScale(plan.scale, iv)) iv = 0;
+                n.pitch = plan.acidRoot + iv;
+                n.accent = roll(plan.seed, i, kAcid, 1000 + key) < 0.3f;
+                n.slide = roll(plan.seed, i, kAcid, 2000 + key) < 0.2f;
+                if (n.slide) n.length = 0.3;   // the gate holds into the next sixteenth
             } else {
                 n.part = percPart(layerLane(plan, id));
                 n.pitch = kLayerNote[i];

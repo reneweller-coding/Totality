@@ -32,9 +32,13 @@ namespace umb {
 enum class Part : int { Kick = 0, Sub,
                         Perc1, Perc2, Perc3, Perc4, Perc5, Perc6, Perc7, Perc8, Perc9, Perc10, Perc11, Perc12,
                         /** Phase 2: the ping voices. */
-                        Ping, Count };
+                        Ping,
+                        /** Phase 3: the bass synth, the 303 line, the dub chord, the drone, the texture (its notes gate it). */
+                        Bass, Acid, Chord, Drone, Texture, Count };
 constexpr int kNumParts = static_cast<int>(Part::Count);   ///< number of parts
-extern const char* const kPartNames[kNumParts];            ///< "kick", "sub", "perc1" .. "perc12", "ping"
+extern const char* const kPartNames[kNumParts];            ///< "kick", "sub", "perc1" .. "perc12", "ping", "bass", ...
+/** @brief Whether a part's notes are one-shots (the kick, the kit, the ping) or held until their end. */
+constexpr bool isOneShot(Part p) { return p == Part::Kick || p == Part::Ping || (static_cast<int>(p) >= 2 && static_cast<int>(p) < 14); }
 /** @brief The part of kit lane @p lane (0-based). */
 constexpr Part percPart(int lane) { return static_cast<Part>(static_cast<int>(Part::Perc1) + lane); }
 /** @brief The kit lane of @p part, or -1 if it is not a lane. */
@@ -52,6 +56,8 @@ struct NoteEvent {
     int pitch = 36;           ///< MIDI note number (the kit: its General MIDI instrument; the sub: its pitch)
     float velocity = 1.0f;    ///< 0..1
     int shift = 0;            ///< a kit hit's pitch shift in semitones
+    bool accent = false;      ///< the 303's accent (Synth.h)
+    bool slide = false;       ///< slides into the next note (Synth.h)
 };
 
 /** @brief How a curve moves between its two values. */
@@ -88,6 +94,17 @@ struct BlockOp {
 };
 extern const char* const kOpNames[];   ///< "add", "remove", "swap", "hold", "kick out", "return", "start", "end"
 
+/**
+ * @brief Where a track's loudness is set (Leveler.h, after Ephemeris): its start, where its loudest part begins, what that
+ *        part should measure, and the correction found for it -- the master gain from the track's start on.
+ */
+struct LevelMark {
+    double beat = 0.0;          ///< the track's start
+    double peakBeat = 0.0;      ///< where its loudest part begins
+    float targetLufs = -11.0f;  ///< what that part should measure (the style's, PLAN 8.5)
+    float trimDb = 0.0f;        ///< the correction (levelScore); 0 until measured
+};
+
 /** @brief A named position. */
 struct Marker {
     double beat = 0.0;   ///< position in beats
@@ -105,6 +122,9 @@ struct Score {
     std::vector<Gesture> gestures;   ///< automation, sorted by beat after sort()
     std::vector<BlockOp> ops;        ///< the form's operations, sorted by beat after sort()
     std::vector<Marker> markers;     ///< markers, sorted by beat after sort()
+    std::vector<LevelMark> levels;   ///< every track's loudness mark, in beat order (Leveler.h)
+    /** @brief The loudness correction at @p beat in dB: the latest mark's (0 before the first). */
+    float trimAt(double beat) const;
     /** @brief Sorts every list by beat (stable, so equal beats keep the order they were written in). */
     void sort();
     /** @brief Empties the score and resets the tempo to @p bpm. */

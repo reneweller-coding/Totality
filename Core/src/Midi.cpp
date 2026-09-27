@@ -87,6 +87,11 @@ int midiChannelOf(Part part)
 {
     if (part == Part::Sub) return 0;
     if (part == Part::Ping) return 1;
+    if (part == Part::Bass) return 2;
+    if (part == Part::Acid) return 3;
+    if (part == Part::Chord) return 4;
+    if (part == Part::Drone) return 5;
+    if (part == Part::Texture) return 6;
     return 9;   // the kick and the kit's lanes: the drum channel
 }
 

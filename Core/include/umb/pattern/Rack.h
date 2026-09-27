@@ -50,7 +50,10 @@ constexpr int kSteps = 16;   ///< sixteenths per bar
 enum class LayerId : int { Kick = 0, GhostKick, ClosedHat, RollingHat, OpenHat, Ride, ClapA, ClapB, ClapGhost, Shaker,
                            TomConga, Rim, Bass,
                            /** Phase 2: the ping's figure (always cyclic). */
-                           Ping, Count };
+                           Ping,
+                           /** Phase 3: the dub chord's stabs, the drone (a note every eight bars), the 303 line, the
+                            *  texture (a note every bar). */
+                           Chord, Drone, Acid, Texture, Count };
 constexpr int kNumLayers = static_cast<int>(LayerId::Count);   ///< number of layers
 extern const char* const kLayerNames[kNumLayers];             ///< "kick", "ghost kick", ...
 
@@ -116,6 +119,22 @@ struct RackPlan {
     float motionScale = 1.0f;           ///< factor on the motion layers' probabilities
     float reroll = 1.0f;                ///< share of the motion layers' steps rolled anew every bar (the rest once per block)
     float oneBarLoops = 0.10f;          ///< chance of a one-bar loop (the rest two and four bars, 0.55 : 0.35)
+    /** @} */
+    /**
+     * @name Phase 3: the harmony (Dok. 8.6, PLAN 7.5)
+     * One chord a track (p 0.8): i 0.5, i7 0.3, i add9 0.1, i with the fourth in the bass 0.1, in close position from the
+     * root in 220 .. 415 Hz (thirds over 200 Hz); with p 0.2 a second chord a shuttle away -- bII 0.3, bVII 0.25,
+     * iv 0.25, bIII 0.2 -- every second or fourth bar, a triad stacked in the scale's thirds (so it stays in the key).
+     * Never V-i, never the leading tone, never a major seventh; add9 only where the scale has the ninth.
+     * @{ */
+    int chordRoot = 57;                 ///< the chord's root note
+    int chordTones[5] = { 0, 3, 7 };    ///< semitones above the root (the fourth in the bass below it: -7)
+    int nChordTones = 3;
+    int shuttle = 0;                    ///< the second chord's root, semitones from the first (0: none)
+    int shuttleTones[3] = {};           ///< the second chord, semitones above chordRoot
+    int shuttleBars = 0;                ///< it plays every shuttleBars-th bar (2 or 4), 0: never
+    int droneNote = 57;                 ///< the drone's note (tonic or fifth; the voice keeps it above 150 Hz)
+    int acidRoot = 45;                  ///< the 303 line's root, an octave over the bass's
     /** @} */
 };
 /**
