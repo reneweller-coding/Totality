@@ -1,0 +1,743 @@
+/**
+ * @file PluginProcessor.cpp
+ * @brief The plugin's processor.
+ */
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+#include "umb/Export.h"
+#include "umb/Leveler.h"
+#include "umb/Midi.h"
+#include "umb/WavWriter.h"
+#include <cmath>
+#include <cstdlib>
+
+using namespace umb;
+
+// ---------------------------------------------------------------------------------------------------
+// StoreParameter (after Phosphene's Plugin/PluginProcessor.cpp at 9a2f615, as in Ephemeris)
+
+StoreParameter::StoreParameter(ParamStore& store, int id, const juce::String& name)
+    : juce::RangedAudioParameter(juce::ParameterID(juce::String(store.key(id)), 1), name,
+                                 juce::AudioProcessorParameterWithIDAttributes().withLabel(store.desc(id).unit)),
+      store_(store), id_(id), name_(name)
+{
+    const ParamDesc& d = store.desc(id);
+    ParamStore* s = &store;
+    range_ = juce::NormalisableRange<float>(
+        d.minValue, d.maxValue,
+        [s, id](float, float, float n) { return s->fromNormalised(id, n); },
+        [s, id](float, float, float v) { return s->toNormalised(id, v); },
+        [s, id](float lo, float hi, float v) {
+            const ParamDesc& dd = s->desc(id);
+            const float c = juce::jlimit(lo, hi, v);
+            return (dd.curve == Curve::Linear || dd.curve == Curve::Log) ? c : std::round(c);
+        });
+}
+
+float StoreParameter::getValue() const { return store_.toNormalised(id_, store_.get(id_)); }
+void StoreParameter::setValue(float newValue) { store_.setNormalised(id_, newValue); }
+float StoreParameter::getDefaultValue() const { return store_.toNormalised(id_, store_.defaultValue(id_)); }
+// A length of 0 or less means no limit, as in JUCE's own parameters (the slider attachments ask with 0).
+juce::String StoreParameter::getName(int maximumStringLength) const { return maximumStringLength > 0 ? name_.substring(0, maximumStringLength) : name_; }
+juce::String StoreParameter::getLabel() const { return store_.desc(id_).unit; }
+
+int StoreParameter::getNumSteps() const
+{
+    const ParamDesc& d = store_.desc(id_);
+    if (d.curve == Curve::Toggle) return 2;
+    if (d.curve == Curve::Choice || d.curve == Curve::Int) return static_cast<int>(std::lround(d.maxValue - d.minValue)) + 1;
+    return juce::AudioProcessor::getDefaultNumParameterSteps();
+}
+
+bool StoreParameter::isDiscrete() const
+{
+    const Curve c = store_.desc(id_).curve;
+    return c == Curve::Int || c == Curve::Choice || c == Curve::Toggle;
+}
+
+bool StoreParameter::isBoolean() const { return store_.desc(id_).curve == Curve::Toggle; }
+
+juce::String StoreParameter::getText(float normalisedValue, int maximumStringLength) const
+{
+    const ParamDesc& d = store_.desc(id_);
+    const float v = store_.fromNormalised(id_, normalisedValue);
+    juce::String t;
+    if (d.curve == Curve::Choice && d.choices != nullptr) t = d.choices[juce::jlimit(0, static_cast<int>(d.maxValue), static_cast<int>(std::lround(v)))];
+    else if (d.curve == Curve::Toggle) t = v >= 0.5f ? "On" : "Off";
+    else if (d.curve == Curve::Int) t = juce::String(static_cast<int>(std::lround(v)));
+    // (juce::String(v, 0) would mean "as precise as it gets", not "no decimals": 159.126 ms)
+    else t = std::fabs(v) >= 100.0f ? juce::String(juce::roundToInt(v)) : juce::String(v, std::fabs(v) >= 10.0f ? 1 : 2);
+    return maximumStringLength > 0 ? t.substring(0, maximumStringLength) : t;
+}
+
+float StoreParameter::getValueForText(const juce::String& text) const
+{
+    const ParamDesc& d = store_.desc(id_);
+    if (d.curve == Curve::Choice && d.choices != nullptr)
+        for (int c = 0; c <= static_cast<int>(d.maxValue); ++c)
+            if (text.equalsIgnoreCase(d.choices[c])) return store_.toNormalised(id_, static_cast<float>(c));
+    if (d.curve == Curve::Toggle) return text.equalsIgnoreCase("on") ? 1.0f : 0.0f;
+    return store_.toNormalised(id_, text.getFloatValue());
+}
+
+// ---------------------------------------------------------------------------------------------------
+// The processor
+
+namespace {
+
+/** @brief An RBJ biquad (normalised by a0), for the K-weighting of the loudness meter. */
+void designBiquad(double b0, double b1, double b2, double a0, double a1, double a2, double& ob0, double& ob1, double& ob2,
+                  double& oa1, double& oa2)
+{
+    ob0 = b0 / a0; ob1 = b1 / a0; ob2 = b2 / a0; oa1 = a1 / a0; oa2 = a2 / a0;
+}
+
+} // namespace
+
+UmbraProcessor::UmbraProcessor()
+    : juce::AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      juce::Thread("Umbra composer")
+{
+    ParamStore& s = store();
+    for (int id = 0; id < s.count(); ++id) {
+        auto* p = new StoreParameter(s, id, juce::String(s.key(id)).replaceCharacter('.', ' ') + " (" + s.desc(id).name + ")");
+        params_.push_back(p);
+        addParameter(p);
+    }
+    engine_.setLive(true);   // the performer's controls act, the mixer is in a track's path (Engine.h)
+    seed_ = static_cast<uint64_t>(juce::Time::currentTimeMillis() % 100000);
+    if (const char* env = std::getenv("UMB_SEED")) seed_ = std::strtoull(env, nullptr, 10);
+    autoPlay_ = std::getenv("UMB_PLAY") != nullptr;
+    if (const char* set = std::getenv("UMB_SET")) s.set(s.id(Module::Set, 0, set::Minutes), static_cast<float>(std::atof(set)));   // a set of so many minutes
+    // UMB_MUTE=1 (and the screenshot mode): silent from the first sample, never unmuted from inside. The house rule for
+    // every automated run -- tests, screenshots, the manual -- is that nothing makes a sound.
+    forceMute_ = std::getenv("UMB_MUTE") != nullptr || std::getenv("UMB_SHOT") != nullptr;
+    mute_ = forceMute_;
+    // The performer's controllers as a keyboard has them: the mod wheel the master filter, the expression pedal the throw.
+    for (auto& c : ccMap_) c = -1;
+    ccMap_[1] = s.id(Module::Perform, 0, perform::Filter);
+    ccMap_[11] = s.id(Module::Perform, 0, perform::Throw);
+    startTimerHz(10);
+    compose();
+}
+
+UmbraProcessor::~UmbraProcessor()
+{
+    stopTimer();
+    newer_ = true;
+    stopThread(10000);
+    if (exporter_ && exporter_->joinable()) exporter_->join();
+}
+
+Playing UmbraProcessor::composeNow(ParamStore& snapshot)
+{
+    snapshot.copyValuesFrom(store());
+    Curation cur;
+    uint64_t seed;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        cur = curation_;
+        seed = seed_;
+    }
+    Playing out;
+    const double setMinutes = snapshot.get(snapshot.id(Module::Set, 0, set::Minutes));
+    if (setMinutes > 0.0) {
+        out.isSet = true;
+        out.set = composeSet(snapshot, seed, setMinutes, &cur, &out.setInfo);
+        for (const SetTrack& t : out.setInfo.tracks) out.tracks.push_back({ t.start, t.swapIn, t.end, t.deck, t.info });
+    } else {
+        TrackInfo info;
+        out.set.decks[0] = composeTrack(snapshot, seed, TrackRequest{}, &cur, std::string(), &info);
+        out.set.lengthBeats = out.set.decks[0].lengthBeats;
+        out.tracks.push_back({ 0.0, 0.0, out.set.lengthBeats, 0, info });
+    }
+    return out;
+}
+
+void UmbraProcessor::compose()
+{
+    // One at a time: a press while composing is remembered and composed when the first is done.
+    if (composing_.exchange(true)) { again_ = true; return; }
+    newer_ = true;   // the last score's measuring, if it still runs, is broken off
+    if (isThreadRunning()) waitForThreadToExit(-1);
+    newer_ = false;
+    startThread();
+}
+
+void UmbraProcessor::newSeed()
+{
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        seed_ = static_cast<uint64_t>(juce::Random::getSystemRandom().nextInt64() & 0xFFFFFF);
+        curation_ = Curation{};
+    }
+    compose();
+}
+
+void UmbraProcessor::reroll(const juce::String& unit)
+{
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        curation_.reroll(unit.toStdString());
+    }
+    compose();
+}
+
+juce::String UmbraProcessor::curationText() const
+{
+    std::lock_guard<std::mutex> g(lock_);
+    juce::String t;
+    for (const auto& r : curation_.rerolls) t << r.first << " x" << r.second << "  ";
+    return t.isEmpty() ? juce::String("nothing rerolled") : t.trimEnd();
+}
+
+int UmbraProcessor::trackAt(double beat) const
+{
+    std::lock_guard<std::mutex> g(lock_);
+    int found = -1;
+    for (size_t i = 0; i < current_.tracks.size(); ++i) {
+        const TrackPlace& t = current_.tracks[i];
+        // In a set, a track owns the time from its swap to the next's; its intro before belongs to the one it follows.
+        const double from = current_.isSet && i > 0 ? t.swapIn : t.start;
+        if (beat >= from - 1e-9) found = static_cast<int>(i);
+    }
+    return found;
+}
+
+void UmbraProcessor::length(double& beats, double& seconds) const
+{
+    std::lock_guard<std::mutex> g(lock_);
+    beats = current_.set.lengthBeats;
+    seconds = current_.set.decks[0].tempo.secondsAt(beats);
+}
+
+void UmbraProcessor::run()
+{
+    ParamStore snapshot;
+    Playing p = composeNow(snapshot);
+    uint64_t id = 0;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        pending_ = std::make_unique<Playing>(p);
+        id = pendingId_ = ++composed_;
+    }
+    composing_ = false;
+    // Then its loudness (Leveler.h), while it already plays: 20 seconds of each track's loudest part rendered. The
+    // corrections follow and glide in; a newer score asked for, or the plugin closing, breaks the measuring off.
+    const auto stop = [this] { return newer_.load() || threadShouldExit(); };
+    const bool done = p.isSet ? !levelSet(p.set, snapshot, 20.0, stop).empty() : !levelScore(p.set.decks[0], snapshot, 20.0, stop).empty();
+    if (!done) return;
+    std::lock_guard<std::mutex> g(lock_);
+    for (int d = 0; d < kDecks; ++d) {
+        trims_[d].clear();
+        for (const LevelMark& m : p.set.decks[d].levels) trims_[d].push_back(m.trimDb);
+    }
+    trimsFor_ = id;
+}
+
+void UmbraProcessor::takeTrims()
+{
+    std::vector<float> trims[kDecks];
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        if (trimsFor_ == 0 || trimsFor_ > playingId_) return;   // (none, or for a score not yet loaded)
+        const bool mine = trimsFor_ == playingId_;
+        trimsFor_ = 0;
+        if (!mine) return;
+        for (int d = 0; d < kDecks; ++d) {
+            trims[d].swap(trims_[d]);
+            for (size_t i = 0; i < current_.set.decks[d].levels.size() && i < trims[d].size(); ++i)
+                current_.set.decks[d].levels[i].trimDb = trims[d][i];
+        }
+        levelled_ = true;
+    }
+    // A few numbers: the audio thread waits for them instead of losing a block (suspendProcessing would silence one).
+    const juce::ScopedLock sl(getCallbackLock());
+    for (int d = 0; d < kDecks; ++d) if (!trims[d].empty()) engine_.setLevelTrims(d, trims[d]);
+}
+
+SetScore UmbraProcessor::forPlayback(const Playing& p) const
+{
+    SetScore out = p.set;
+    const double bpm = hostBpm_.load();
+    if (wrapperType != wrapperType_Standalone && bpm > 0.0)
+        for (Score& s : out.decks) s.tempo.setConstant(bpm);
+    return out;
+}
+
+void UmbraProcessor::loadEngine(const Playing& p)
+{
+    const SetScore s = forPlayback(p);
+    engine_.prepare(sampleRate_, blockSize_);
+    if (p.isSet) engine_.loadSet(s);
+    else engine_.load(s.decks[0]);
+    std::lock_guard<std::mutex> g(lock_);
+    if (levelled_)   // the corrections already found go with the score (a reload at a new host tempo)
+        for (int d = 0; d < kDecks; ++d) {
+            std::vector<float> t;
+            for (const LevelMark& m : p.set.decks[d].levels) t.push_back(m.trimDb);
+            if (!t.empty()) engine_.setLevelTrims(d, t);
+        }
+}
+
+void UmbraProcessor::timerCallback()
+{
+    // The cue sender follows its two parameters (message thread: the socket is opened and closed here).
+    {
+        const ParamStore& s = store();
+        const int port = s.getBool(s.id(Module::Cue, 0, cue::Enabled)) ? s.getInt(s.id(Module::Cue, 0, cue::Port)) : 0;
+        if (port != cuePort_) {
+            cues_.stop();
+            cuePort_ = port;
+            if (port > 0) {
+                const char* host = std::getenv("UMB_CUE_HOST");
+                if (!cues_.start(host != nullptr ? host : "127.0.0.1", port)) cuePort_ = 0;
+            }
+        }
+    }
+    std::unique_ptr<Playing> next;
+    uint64_t nextId = 0;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        next = std::move(pending_);
+        nextId = pendingId_;
+    }
+    // A score asked for again while it was composed is out of date: the next one comes.
+    if (next && again_ && !composing_) {
+        next.reset();
+        again_ = false;
+        compose();
+        return;
+    }
+    if (!next) {
+        // In a host the score plays at the host's tempo. A new tempo means new sample positions for every event, and
+        // the engine allocates when it loads: so the score is loaded again here, and the engine goes on from its beat.
+        const double bpm = hostBpm_.load();
+        if (wrapperType != wrapperType_Standalone && bpm > 0.0 && std::fabs(bpm - playedBpm_.load()) > 1.0e-3) {
+            Playing p;
+            copyPlaying(p);
+            suspendProcessing(true);
+            const double beat = engine_.beat();
+            loadEngine(p);
+            engine_.seek(beat);
+            playedBpm_ = bpm;
+            suspendProcessing(false);
+        }
+        if (again_ && !composing_) { again_ = false; compose(); }
+        takeTrims();
+        return;
+    }
+    // The engine allocates when it loads: never on the audio thread.
+    suspendProcessing(true);
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        levelled_ = false;
+    }
+    loadEngine(*next);
+    playedBpm_ = wrapperType != wrapperType_Standalone ? hostBpm_.load() : 0.0;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        current_ = std::move(*next);
+        playingId_ = nextId;
+    }
+    ++scoreVersion_;
+    position_ = 0.0;
+    cueTap_.reset();
+    if (autoPlay_) { autoPlay_ = false; playing_ = true; }
+    suspendProcessing(false);
+    takeTrims();
+}
+
+void UmbraProcessor::takeMeters(float* deckPeak, float* deckRms, float& outPeak, float& momentaryLufs)
+{
+    const int n = meterCount_.exchange(0, std::memory_order_acquire);
+    for (int d = 0; d < kDecks; ++d) {
+        const size_t k = static_cast<size_t>(d);
+        deckPeak[d] = meterPeak_[k].exchange(0.0f, std::memory_order_relaxed);
+        const double s = meterSum_[k].exchange(0.0, std::memory_order_relaxed);
+        deckRms[d] = n > 0 ? static_cast<float>(std::sqrt(s / n)) : 0.0f;
+    }
+    outPeak = outPeak_.exchange(0.0f, std::memory_order_relaxed);
+    momentaryLufs = lufs_.load(std::memory_order_relaxed);
+}
+
+void UmbraProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    sampleRate_ = sampleRate;
+    blockSize_ = std::max(1, samplesPerBlock);
+    // The deck taps for the meters (reading only: the mix is the same to the bit).
+    tapBuf_.assign(static_cast<size_t>(kDecks * 2 * blockSize_), 0.0f);
+    for (int d = 0; d < kDecks; ++d) {
+        tapL_[static_cast<size_t>(d)] = tapBuf_.data() + static_cast<size_t>(2 * d * blockSize_);
+        tapR_[static_cast<size_t>(d)] = tapBuf_.data() + static_cast<size_t>((2 * d + 1) * blockSize_);
+    }
+    engine_.setDeckTaps(tapL_.data(), tapR_.data());
+    // The K-weighting of BS.1770 at this rate (the pre-filter's shelf and the RLB high pass, as pyloudnorm designs them).
+    {
+        const double fs = sampleRate;
+        double K = std::tan(juce::MathConstants<double>::pi * 1681.974450955533 / fs);
+        const double Vh = std::pow(10.0, 3.999843853973347 / 20.0), Vb = std::pow(Vh, 0.4996667741545416), Q = 0.7071752369554196;
+        const double a0 = 1.0 + K / Q + K * K;
+        for (Biquad& b : kShelf_) {
+            designBiquad(Vh + Vb * K / Q + K * K, 2.0 * (K * K - Vh), Vh - Vb * K / Q + K * K, a0, 2.0 * (K * K - 1.0), 1.0 - K / Q + K * K,
+                         b.b0, b.b1, b.b2, b.a1, b.a2);
+            b.z1 = b.z2 = 0.0;
+        }
+        K = std::tan(juce::MathConstants<double>::pi * 38.13547087602444 / fs);
+        const double Q2 = 0.5003270373238773, a02 = 1.0 + K / Q2 + K * K;
+        for (Biquad& b : kHigh_) {
+            designBiquad(1.0, -2.0, 1.0, a02, 2.0 * (K * K - 1.0), 1.0 - K / Q2 + K * K, b.b0, b.b1, b.b2, b.a1, b.a2);
+            b.z1 = b.z2 = 0.0;
+        }
+        kCoef_ = 1.0 - std::exp(-1.0 / (0.4 * fs / 3.0));   // a 400 ms window as an exponential of a third of it
+        kMs_ = 0.0;
+    }
+    if (const char* secs = std::getenv("UMB_PLAY"); secs != nullptr && std::getenv("UMB_RECORD") != nullptr) {
+        recordTarget_ = static_cast<size_t>(std::atof(secs) * sampleRate) * 2;
+        record_.assign(recordTarget_, 0.0f);
+        recordPos_ = 0;
+    }
+    Playing p;
+    copyPlaying(p);
+    loadEngine(p);
+    playedBpm_ = wrapperType != wrapperType_Standalone ? hostBpm_.load() : 0.0;
+}
+
+bool UmbraProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+{
+    return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
+}
+
+void UmbraProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+{
+    juce::ScopedNoDenormals noDenormals;
+    perform(midi);
+    midi.clear();
+    const int n = buffer.getNumSamples();
+    bool play = playing_.load();
+    // In a host, the host's playhead is the clock.
+    if (wrapperType != wrapperType_Standalone) {
+        play = false;
+        if (auto* ph = getPlayHead()) {
+            if (const auto pos = ph->getPosition()) {
+                play = pos->getIsPlaying();
+                if (const auto bpm = pos->getBpm(); bpm && *bpm > 0.0) hostBpm_ = *bpm;
+                // Until the message thread has loaded the score at a new host tempo, the positions drift apart by
+                // design: only a real jump of the host's playhead is followed then.
+                const bool tempoPending = std::fabs(hostBpm_.load() - playedBpm_.load()) > 1.0e-3;
+                if (play)
+                    if (const auto ppq = pos->getPpqPosition())
+                        if (std::fabs(*ppq - engine_.beat()) > (tempoPending ? 4.0 : 0.05)) engine_.seek(*ppq);
+            }
+        }
+    }
+    const double seek = seekRequest_.exchange(-1.0);
+    if (seek >= 0.0) engine_.seek(seek);
+    if (!play || buffer.getNumChannels() < 2 || n > blockSize_) {
+        buffer.clear();
+        return;
+    }
+    const double before = engine_.beat();
+    engine_.process(buffer.getWritePointer(0), buffer.getWritePointer(1), n);
+    position_ = engine_.beat();
+    if (cues_.running()) {
+        // The cues of this block, stamped with the moment it is heard (Cue.h); a jump starts the marks again.
+        if (std::fabs(before - lastBeat_) > 1.0e-6) cueTap_.reset();
+        const double blockSeconds = static_cast<double>(n) / sampleRate_;
+        const double bpm = 60.0 * (engine_.beat() - before) / std::max(1e-9, blockSeconds);
+        cueTap_.scan(engine_.cueMarks(), before, engine_.beat(), static_cast<float>(bpm), CueSender::nowNanos(),
+                     static_cast<int64_t>(blockSeconds * 1.0e9), static_cast<int64_t>(blockSeconds * 1.0e9), cues_.ring());
+    }
+    lastBeat_ = engine_.beat();
+    {
+        // The meters: raised here, taken by the editor (takeMeters). One writer, so a load and a store will do.
+        for (int d = 0; d < kDecks; ++d) {
+            const size_t k = static_cast<size_t>(d);
+            float pk = 0.0f;
+            double ss = 0.0;
+            for (int i = 0; i < n; ++i) {
+                const float l = tapL_[k][i], r = tapR_[k][i];
+                pk = std::max(pk, std::max(std::fabs(l), std::fabs(r)));
+                ss += 0.5 * (static_cast<double>(l) * l + static_cast<double>(r) * r);
+            }
+            if (pk > meterPeak_[k].load(std::memory_order_relaxed)) meterPeak_[k].store(pk, std::memory_order_relaxed);
+            meterSum_[k].store(meterSum_[k].load(std::memory_order_relaxed) + ss, std::memory_order_relaxed);
+        }
+        meterCount_.fetch_add(n, std::memory_order_release);
+        const float* l = buffer.getReadPointer(0);
+        const float* r = buffer.getReadPointer(1);
+        float pk = outPeak_.load(std::memory_order_relaxed);
+        for (int i = 0; i < n; ++i) {
+            pk = std::max(pk, std::max(std::fabs(l[i]), std::fabs(r[i])));
+            const double kl = kHigh_[0].run(kShelf_[0].run(l[i])), kr = kHigh_[1].run(kShelf_[1].run(r[i]));
+            kMs_ += kCoef_ * (kl * kl + kr * kr - kMs_);
+        }
+        outPeak_.store(pk, std::memory_order_relaxed);
+        lufs_.store(kMs_ > 1e-10 ? static_cast<float>(-0.691 + 10.0 * std::log10(kMs_)) : -70.0f, std::memory_order_relaxed);
+    }
+    if (recordTarget_ > 0) {
+        const float* l = buffer.getReadPointer(0);
+        const float* r = buffer.getReadPointer(1);
+        size_t pos = recordPos_.load();
+        for (int i = 0; i < n && pos + 1 < recordTarget_; ++i) { record_[pos++] = l[i]; record_[pos++] = r[i]; }
+        recordPos_ = pos + 1 >= recordTarget_ ? recordTarget_ : pos;
+    }
+    if (mute_.load(std::memory_order_relaxed)) buffer.clear();   // after the meters and the recording
+    // The standalone stops at the end, with the rooms rung out.
+    if (wrapperType == wrapperType_Standalone && engine_.seconds() > engine_.lengthSeconds() + 8.0) playing_ = false;
+}
+
+bool UmbraProcessor::saveSet(const juce::File& file)
+{
+    SetFile sf;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        sf.seed = seed_;
+        sf.curation = curation_;
+    }
+    sf.minutes = store().get(store().id(Module::Compose, 0, compose::Minutes));
+    sf.set = store().get(store().id(Module::Set, 0, set::Minutes));
+    return umb::saveSet(file.getFullPathName().toRawUTF8(), sf, store());
+}
+
+bool UmbraProcessor::loadSet(const juce::File& file)
+{
+    SetFile sf;
+    std::string err;
+    if (!umb::loadSet(file.getFullPathName().toRawUTF8(), sf, store(), &err)) return false;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        seed_ = sf.seed;
+        curation_ = sf.curation;
+    }
+    if (sf.minutes > 0.0) store().set(store().id(Module::Compose, 0, compose::Minutes), static_cast<float>(sf.minutes));
+    store().set(store().id(Module::Set, 0, set::Minutes), static_cast<float>(sf.set));
+    for (int id = 0; id < store().count(); ++id)
+        if (StoreParameter* p = parameter(id)) p->sendValueChangedMessageToListeners(p->getValue());
+    compose();
+    return true;
+}
+
+void UmbraProcessor::exportTo(const juce::File& wav, int extras)
+{
+    if (exporting_.exchange(true)) return;
+    if (exporter_ && exporter_->joinable()) exporter_->join();
+    Playing p;
+    bool levelled = true;
+    uint64_t seed = 0;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        p = current_;
+        levelled = levelled_;
+        seed = seed_;
+    }
+    auto params = std::make_shared<ParamStore>();
+    params->copyValuesFrom(store());
+    exporter_ = std::make_unique<std::thread>([this, p, params, wav, extras, levelled, seed]() mutable {
+        if (!levelled) {   // exported before its measuring was done: measured here
+            if (p.isSet) levelSet(p.set, *params);
+            else levelScore(p.set.decks[0], *params);
+        }
+        constexpr double kRate = 48000.0;
+        Engine e;
+        e.params().copyValuesFrom(*params);
+        e.prepare(kRate, 512);
+        if (p.isSet) e.loadSet(p.set);
+        else e.load(p.set.decks[0]);
+        // The cues (PLAN 9): in the WAV and as JSON beside it; the tags.
+        std::vector<CueAt> cues;
+        std::string title;
+        const TempoMap& tm = p.set.decks[0].tempo;
+        if (p.isSet) {
+            cues = setCues(p.setInfo, tm);
+            title = std::string("Umbra set ") + kDramaturgyNames[static_cast<int>(p.setInfo.dramaturgy)] + " seed " + std::to_string(seed);
+        } else if (!p.tracks.empty()) {
+            const TrackInfo& info = p.tracks[0].info;
+            trackCues(info, 0.0, tm, std::string(), cues);
+            title = "Umbra " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " " + info.camelot
+                  + " seed " + std::to_string(seed);
+        }
+        WavWriter w;
+        bool ok = w.open(wav.getFullPathName().toRawUTF8(), static_cast<int>(kRate), 2, WavFormat::Pcm24);
+        for (const CueAt& c : cues) w.addCue(static_cast<uint64_t>(std::llround(c.seconds * kRate)), c.label);
+        w.setInfo("INAM", title);
+        w.setInfo("ISFT", std::string("Umbra ") + UMB_VERSION);
+        w.setInfo("IGNR", "Techno");
+        ok = ok && writeCuesJson(wav.getFullPathName().toStdString() + ".cues.json", cues, kRate);
+        // The stems: a WAV per element, their sum the mix before the master (Engine.h).
+        const bool stems = (extras & kStems) != 0;
+        std::vector<std::vector<float>> stemBuf(stems ? 2 * Engine::kStems : 0, std::vector<float>(512));
+        std::vector<float*> stemL(Engine::kStems), stemR(Engine::kStems);
+        std::vector<WavWriter> stemWav(stems ? Engine::kStems : 0);
+        if (stems && ok) {
+            const juce::File dir = wav.getParentDirectory().getChildFile(wav.getFileNameWithoutExtension() + "_stems");
+            dir.createDirectory();
+            for (int s = 0; s < Engine::kStems; ++s) {
+                stemL[static_cast<size_t>(s)] = stemBuf[static_cast<size_t>(2 * s)].data();
+                stemR[static_cast<size_t>(s)] = stemBuf[static_cast<size_t>(2 * s + 1)].data();
+                const juce::String name = juce::String(s + 1).paddedLeft('0', 2) + "_" + Engine::stemName(s) + ".wav";
+                ok = ok && stemWav[static_cast<size_t>(s)].open(dir.getChildFile(name).getFullPathName().toRawUTF8(), static_cast<int>(kRate), 2, WavFormat::Float32);
+            }
+            e.setStems(stemL.data(), stemR.data());
+        }
+        const int64_t total = static_cast<int64_t>((e.lengthSeconds() + 2.0) * kRate);
+        std::vector<float> L(512), R(512);
+        for (int64_t done = 0; ok && done < total; done += 512) {
+            const int n = static_cast<int>(std::min<int64_t>(512, total - done));
+            e.process(L.data(), R.data(), n);
+            w.write(L.data(), R.data(), n);
+            for (size_t s = 0; s < stemWav.size(); ++s) stemWav[s].write(stemL[s], stemR[s], n);
+        }
+        w.close();
+        for (WavWriter& sw : stemWav) sw.close();
+        const juce::File mid = wav.withFileExtension(".mid");
+        ok = ok && writeMidiFile(p.isSet ? flattenSet(p.set) : p.set.decks[0], mid.getFullPathName().toRawUTF8(), "Umbra", params.get());
+        // The DJ loops of a track.
+        if (ok && (extras & kLoops) != 0 && !p.isSet && !p.tracks.empty()) {
+            const juce::File dir = wav.getParentDirectory().getChildFile(wav.getFileNameWithoutExtension() + "_loops");
+            ok = renderLoops(*params, p.set.decks[0], p.tracks[0].info, dir.getFullPathName().toStdString(), kRate);
+        }
+        {
+            std::lock_guard<std::mutex> g(lock_);
+            lastExport_ = ok ? "exported " + wav.getFileName() + ", its MIDI and cues" + (stems ? juce::String(", stems") : juce::String())
+                                   + ((extras & kLoops) != 0 && !p.isSet ? juce::String(", loops") : juce::String())
+                             : "could not write " + wav.getFileName();
+        }
+        exporting_ = false;
+    });
+}
+
+void UmbraProcessor::writeRecording()
+{
+    const char* path = std::getenv("UMB_RECORD");
+    if (path == nullptr || record_.empty()) return;
+    WavWriter w;
+    if (!w.open(path, static_cast<int>(sampleRate_), 2, WavFormat::Float32)) return;
+    std::vector<float> L(record_.size() / 2), R(record_.size() / 2);
+    for (size_t i = 0; i < L.size(); ++i) { L[i] = record_[2 * i]; R[i] = record_[2 * i + 1]; }
+    w.write(L.data(), R.data(), static_cast<int>(L.size()));
+    w.close();
+    recordTarget_ = 0;
+}
+
+juce::String UmbraProcessor::status() const
+{
+    if (composing_) return "composing ...";
+    if (exporting_) return "exporting ...";
+    std::lock_guard<std::mutex> g(lock_);
+    juce::String t;
+    const double secs = current_.set.decks[0].tempo.secondsAt(current_.set.lengthBeats);
+    t << "seed " << juce::String(static_cast<juce::int64>(seed_)) << "   ";
+    if (current_.isSet) t << "set of " << static_cast<int>(current_.tracks.size()) << " tracks, " << kDramaturgyNames[static_cast<int>(current_.setInfo.dramaturgy)];
+    else if (!current_.tracks.empty()) {
+        const TrackInfo& i = current_.tracks[0].info;
+        t << juce::String(i.style) << " " << kFormNames[static_cast<int>(i.form)] << ", " << juce::String(i.bpm, 1) << " BPM, " << kKeyNames[i.key] << " "
+          << kScaleNames[i.scale] << " (" << juce::String(i.camelot) << ")";
+    }
+    t << ", " << juce::String(secs / 60.0, 1) << " min";
+    if (!levelled_ && !current_.tracks.empty()) t << ", levelling";
+    if (lastExport_.isNotEmpty()) t << "   " << lastExport_;
+    return t;
+}
+
+int UmbraProcessor::controllerFor(int id) const
+{
+    for (int c = 0; c < 128; ++c) if (ccMap_[static_cast<size_t>(c)].load() == id) return c;
+    return -1;
+}
+
+void UmbraProcessor::forget(int id)
+{
+    for (auto& c : ccMap_) if (c.load() == id) c = -1;
+}
+
+void UmbraProcessor::setFromMidi(int id, float value)
+{
+    StoreParameter* p = parameter(id);
+    if (p == nullptr) return;
+    const float norm = store().toNormalised(id, value);
+    if (std::fabs(p->getValue() - norm) < 1.0e-6f) return;
+    p->beginChangeGesture();
+    p->setValueNotifyingHost(norm);
+    p->endChangeGesture();
+}
+
+void UmbraProcessor::perform(const juce::MidiBuffer& midi)
+{
+    const ParamStore& s = store();
+    for (const auto meta : midi) {
+        const juce::MidiMessage m = meta.getMessage();
+        if (m.isNoteOn()) {
+            // The keys from middle C: C kick, C# sub, D hats, D# perc, E ping, F bass, F# pads -- each press toggles.
+            const int k = m.getNoteNumber() - 60;
+            if (k >= 0 && k < perform::kMutes) {
+                const int id = s.id(Module::Perform, 0, perform::MuteKick + k);
+                setFromMidi(id, s.getBool(id) ? 0.0f : 1.0f);
+            }
+        } else if (m.isController()) {
+            const int cc = m.getControllerNumber();
+            if (cc < 0 || cc > 127) continue;
+            const int learning = learn_.exchange(-1);
+            if (learning >= 0) {
+                for (auto& c : ccMap_) if (c.load() == learning) c = -1;   // one controller per control
+                ccMap_[static_cast<size_t>(cc)] = learning;
+            }
+            const int id = ccMap_[static_cast<size_t>(cc)].load();
+            if (id < 0) continue;
+            const ParamDesc& d = s.desc(id);
+            const float u = static_cast<float>(m.getControllerValue()) / 127.0f;
+            float v = d.minValue + u * (d.maxValue - d.minValue);
+            // A bipolar control has its middle on the controller's middle (64), exactly; a switch turns at the middle.
+            if (d.minValue < 0.0f && d.maxValue > 0.0f && m.getControllerValue() == 64) v = 0.0f;
+            if (d.curve == Curve::Toggle) v = m.getControllerValue() >= 64 ? 1.0f : 0.0f;
+            setFromMidi(id, v);
+        }
+    }
+}
+
+void UmbraProcessor::getStateInformation(juce::MemoryBlock& destData)
+{
+    juce::XmlElement xml("Umbra");
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        xml.setAttribute("seed", juce::String(static_cast<juce::int64>(seed_)));
+        juce::String rerolls;
+        for (const auto& r : curation_.rerolls) rerolls << r.first << "=" << r.second << ";";
+        xml.setAttribute("rerolls", rerolls);
+    }
+    xml.setAttribute("params", juce::String(store().toText(true)));
+    juce::String cc;
+    for (int c = 0; c < 128; ++c)
+        if (const int id = ccMap_[static_cast<size_t>(c)].load(); id >= 0) cc << c << "=" << juce::String(store().key(id)) << ";";
+    xml.setAttribute("controllers", cc);
+    copyXmlToBinary(xml, destData);
+}
+
+void UmbraProcessor::setStateInformation(const void* data, int sizeInBytes)
+{
+    const auto xml = getXmlFromBinary(data, sizeInBytes);
+    if (xml == nullptr || !xml->hasTagName("Umbra")) return;
+    store().resetDefaults();
+    store().parseText(xml->getStringAttribute("params").toStdString());
+    if (xml->hasAttribute("controllers")) {
+        for (auto& c : ccMap_) c = -1;
+        for (const auto& item : juce::StringArray::fromTokens(xml->getStringAttribute("controllers"), ";", "")) {
+            const int c = item.upToFirstOccurrenceOf("=", false, false).getIntValue();
+            const int id = store().find(item.fromFirstOccurrenceOf("=", false, false).toStdString());
+            if (c >= 0 && c < 128 && id >= 0) ccMap_[static_cast<size_t>(c)] = id;
+        }
+    }
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        seed_ = static_cast<uint64_t>(xml->getStringAttribute("seed").getLargeIntValue());
+        curation_ = Curation{};
+        for (const auto& item : juce::StringArray::fromTokens(xml->getStringAttribute("rerolls"), ";", ""))
+            if (item.contains("=")) curation_.rerolls[item.upToFirstOccurrenceOf("=", false, false).toStdString()] = item.fromFirstOccurrenceOf("=", false, false).getIntValue();
+    }
+    compose();
+}
+
+juce::AudioProcessorEditor* UmbraProcessor::createEditor() { return new UmbraEditor(*this); }
+
+/** @brief The plugin's factory, called by the JUCE wrappers. */
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new UmbraProcessor(); }
