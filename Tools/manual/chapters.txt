@@ -1,0 +1,191 @@
+# The prose of the Umbra manual, one block per chapter (after Ephemeris' Tools/manual/chapters.txt).
+#
+# Everything else in the manual -- the parameter tables and the pictures -- comes from the program itself:
+# `umb_render --dump-params` writes every parameter's description, and the standalone's screenshot mode
+# (UMB_SHOT, UMB_TAB, Tools/manual/make_shots.py) one picture per tab. Only the text that explains *why* lives here.
+#
+# Format: "== Title | module prefixes | screenshot ==" starts a chapter. The module prefixes (space separated, may be
+# empty) are the parameter tables printed under the chapter; the screenshot is the tab's index
+# (docs/screenshots/tab_NN.png) or "-". Every module must belong to a chapter, or the generator refuses to print.
+# Blank lines separate paragraphs; a line indented by four spaces is printed as it stands; "[image path: caption]"
+# shows a picture from docs/; lines starting with '#' are comments.
+
+== About | | - ==
+
+Umbra composes, mixes and plays hypnotic Berlin techno: tracks of six to eight minutes and DJ sets of up to four
+hours, in which the tracks follow one another on two decks as a DJ would mix them. Nothing is played back from a
+recording. The kick, the rumble under it, the twelve lanes of the drum kit, the ping, the bass and the 303, the dub
+chord, the drone and the texture are synthesised; the tape echo, the spring, the plate and the rooms are simulated;
+and every note, every operation of the form and every move of a knob is decided by the composer.
+
+The music it aims at is the one of Berghain and Ostgut Ton, of Dub Techno and of the hypnotic school: a groove that
+holds for minutes and changes by one element at a time, a low end made of a kick and the rumble of its own reverb, a
+chord thrown into a tape echo. Four style profiles span it -- Hypnotic in the centre, Ostgut, Dub and Raw -- and every
+knob of their recipes was fitted against measurements of thirty reference tracks: their spectral balance, their width,
+their loudness and its range, and how alike their bars are.
+
+The same seed always gives the same track. A track is a seed, a style, a length and a handful of rerolls, which is
+what a set file stores and what you can hand to someone else. The standalone and the plugin play what the offline
+renderer plays, sample for sample.
+
+An umbra is the core of a shadow, the dark disc of an eclipse. In Umbra's Patterns view the kick is that disc: every
+other part turns around it in rings, and its corona swells with every beat.
+
+== Quick start | | - ==
+
+The standalone plays by itself: press Play. Compose writes a new track with the knobs as they stand, New seed draws a
+fresh one. The status line tells what plays: its style and form, its tempo, its key with the Camelot label a DJ mixes
+by, and its length. While a track begins to play, Umbra measures its loudest part in the background and brings it to
+its style's loudness; the status says "levelling" until the correction has glided in.
+
+For a set, move Set min above zero: Umbra then writes a set of that many minutes -- a dramaturgy of tempo and energy,
+tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line, loops of the last track
+under the next on the third deck, breaks from the mixer's effects.
+
+In a DAW, Umbra is an instrument plugin that follows the host's transport: it plays when the host plays, jumps when
+the host jumps, and plays at the host's tempo (a set's own tempo drift is the standalone's and the export's). Its
+output is a finished stereo mix at about -10 LUFS with its true peak under -1 dBTP.
+
+A reroll draws one part of the track again and leaves the rest as it was: form, harmony, rack, layers, blocks,
+events, hands, sounds. In a set the rerolls act on the track under the playhead, and "reroll the whole track" or "the
+set's plan" draw more at once (the Arrange page).
+
+== The track and the set | compose set djfx | 0 ==
+
+A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars from the kick on, a body that adds
+one layer every 32-bar block, an outro that takes them away again -- so it mixes. The Peak builds to a long kick-out and
+returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
+hypnotic records do. Every block boundary has exactly one operation (add, remove, swap), every change falls on a
+4-bar line and a return on a 16-bar line; nothing tonal plays in the first and last 32 bars, so two tracks can be
+mixed without a clash.
+
+Style picks the profile; Morph To and Morph blend it with a second one; the Dub and Hypnotic shares pull any profile
+along the two axes the style is described by. With Auto the tempo, the key and the owner of the low end are drawn from
+the profile; without it the knobs decide. Minutes is the track's length, rounded to whole blocks.
+
+The set knobs: its length, the dramaturgy (Warm-up, Peak, Closing, Sunday, Flat -- the arc of tempo and energy over
+its length), whether the styles wander with the energy or stay, how often a loop of the outgoing track plays on under
+the next one, how often a break comes from the mixer's effects, and the blend's length. The mixer's effects are one
+send per deck into a tape echo and a long hall, which the set's breaks throw into and the Perform page's throw uses.
+
+== Arrange | | 1 ==
+
+The arrangement across the whole length: in a set the tracks on decks A and B (their swaps marked: from there a track
+owns the low end), in a track its blocks with their names, and under them a lane per group of layers -- kick, hats,
+perc, ping, bass, pads -- lit where it plays. The Arrange page shows the operations of the form by name. A click jumps
+there.
+
+The row of rerolls acts on the track under the playhead; each part of it is drawn from a stream of its own, so a
+reroll of the blocks keeps the harmony and the sounds, and a reroll of the hands (the automation) keeps every note.
+
+== Patterns and the Eclipse | | 2 ==
+
+The kick is the dark disc in the middle, and every other part that plays in the bar is a ring around it: a bar once
+round, its onsets as beads, larger the louder, the playhead's hand sweeping over them. A layer on the sixteen-step
+matrix shows the same beads bar after bar; a polymeter or a slipping layer moves on from bar to bar -- it precesses, and
+you can see it. Where three rings or more have an onset on the same sixteenth, the corona lights up at that angle: a
+conjunction. Beside it the same bar as a step grid, with a tick where an onset lies off the grid (swing and feel).
+
+== Low End | kick rumble sub | 3 ==
+
+The low end is one system. The kick hands its phase on: the rumble's sub continues the kick's tail at the phase the
+kick left it, and the sub bass locks its phase to the last kick, so the three never cancel each other. The kick has
+three engines (a swept sine, a resonator, a modelled 909) and a top layer; its drive runs at four times the rate.
+
+The rumble is the kick sent into a hall, cut below the split, clipped and ducked by the next kick -- the dark roll of
+Berlin techno. Either the rumble or the sub bass owns the band under 80 Hz (compose.low_owner): never both at once.
+
+== Drums | perc mix | 4 ==
+
+Twelve lanes, each a small drum synthesiser: a role (the closed and rolling hats, the open hat, the ride, the claps,
+the snare, the rim, the shaker, toms and congas, noise), an engine (noise, metal -- the 909's six square waves -- modal,
+tone, FM), a filter, a shape. They run side by side in the lanes of the processor's vector registers. The hats and the percussion each have
+a bus with its level and a low pass, then the drum bus's saturation; the ducks let the pads and the rooms step aside
+for the kick, band by band.
+
+== Tones | ping bass acid chord drone texture | 5 ==
+
+The ping is the hypnotic school's figure: FM through a low-pass gate, a band pass that wanders. The bass and the 303
+share one synthesiser with ten circuit filters (the Moog ladder, the 303's diode ladder, the Prophet's SSM2040, the
+Juno's IR3109, the SEM, the MS-20's Korg35 and more); the 303 line has its accents and slides. The dub chord is a minor seventh or a stab of six voices through a band pass, a
+crusher and a phaser, sent into the tape echo and the plate. The drone holds a note under eight bars; the texture is
+vinyl crackle, hum and erosion.
+
+== Dub | dub space cloud | 6 ==
+
+The dub chain: a tape echo with wow, flutter and drive, a spring, a plate. The ping, the chord and the kit's buses
+send into it, and the composer throws single hits into the echo on the 8-bar lines. The room is the hall the hats,
+the percussion and the ping live in; the grain cloud hears the ping and the chord and scatters them.
+
+== Mixer and Master | mix master motion deck | 7 ==
+
+The meters: each deck after its mixer channel, the output, and the loudness of the last 400 ms. Each deck's track bus
+has a group high pass (the form's filter sweeps), a tilt of the highs against the lows, and the glue -- a bus
+compressor mixed in at 35 per cent -- after which the loudness correction sits. The master keeps the side under Mono
+Below mono, sets the level, has an optional vinyl cut, a clipper at four times the rate and a true-peak limiter.
+
+The motion is the free-running modulation of the whole instrument: the hats' cutoff and level, their decay, the
+percussion's cutoff, the rumble's drive, slow LFOs of prime periods that never line up.
+
+A deck's channel is a DJ mixer's: the fader, a three-band isolator (200 Hz and 2.5 kHz, Linkwitz-Riley, each band from
+a kill to +6 dB), a filter that is a low pass to the left and a high pass to the right, and the send into the mixer's
+effects. In a set the composer moves them as a DJ would; in the plugin they are yours too.
+
+== Perform | perform | 8 ==
+
+As at a mixer. Seven mutes: a muted group's notes stop and its tails ring out -- the kick out, the classic move. The
+master filter takes the whole mix, the echo throw sends it into the mixer's tape echo. Each deck has its kills and its
+fader. Every control can be learned from a MIDI controller: click learn, move the controller (a right click forgets
+it). By default the mod wheel moves the filter and the expression pedal the throw, and the keys from middle C up (C
+to F#) toggle the mutes of kick, sub, hats, perc, ping, bass and pads. The bindings are saved with the project.
+
+The perform controls are live only: an export or umb_render plays the track as it was composed.
+
+== Export and cues | cue | 9 ==
+
+[image screenshots/set.png: A set of 40 minutes on the Arrange page: nine tracks on two decks, their blends, the swaps.]
+
+The export renders what plays at 48 kHz: a 24-bit WAV with cue markers (the bass's entry, the kick-outs and returns,
+the outro; in a set every track, swap and loop) and the same cues as JSON beside it, for DJ software that does not
+read the WAV's markers; the MIDI file with the tempo map and a channel per part; on request the stems -- a WAV per
+element, whose sum is exactly the mix before the master -- and the DJ loops of a track: 4 and 8 bars of its loudest
+block, seamless, as the mix and as kick, hats and percussion alone. An .umbset file holds the seed, the lengths, the
+rerolls and every changed knob.
+
+The OSC cues tell a visualiser such as Kaleidoscope what the score knows, at the moment it is heard: the beat and the
+tempo, the bar, the block's name, the form's operation, the key. They go to this machine at the port given, or to
+UMB_CUE_HOST.
+
+    /umb/beat i f      beat number, tempo
+    /umb/bar i         bar number
+    /umb/block s       the block's name ("Intro", "Block 3", "Reduction", a set's track)
+    /umb/op s          the operation ("add ride", "kick out")
+    /umb/key s         the key as a Camelot label ("8A")
+
+== Style | custom | 10 ==
+
+The numbers of the profile the knobs describe, and the references' measurements per style that the profiles are
+fitted to. A style of your own: Take the profile's numbers, change what you like, switch Use on -- the tempo range, the
+weights of the three forms, the length, the rack's mutation and reroll, polymeters, fills, swing, the filtered edges,
+the longest kick-out, the events, the corridor of bar similarity the composer's candidates are chosen against, and the
+loudness the Leveler brings each track to.
+
+== Meta Quest | | - ==
+
+The whole generator runs on the headset (build-quest\UmbraQuest.apk, see Quest/README.md). The hands are the hands at
+the mixer: left pinch play and stop, right pinch kick out and in, both hands together the next track; the left hand's
+height the master filter, the right's the echo throw. Above and ahead of the player the Eclipse turns at the size of a
+room. A file umb.cfg in the app's folder sets the seed, the style, a set's length and any knob.
+
+== The command line | | - ==
+
+umb_render composes and renders without a window, the same samples the plugin plays:
+
+    umb_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
+    umb_render --seed 2026 --set-minutes 120 --out set.wav --score-json set.json
+    umb_render --set "compose.style=Dub; compose.minutes=8" --seed 3 --out dub.wav
+    umb_render --list                  every parameter with its value
+    umb_render --bench --quality quest how fast, at the headset's quality
+
+The evaluation (Tools/eval_report.py) measures rendered tracks as the references were measured and writes a report of
+what lies outside their corridor.

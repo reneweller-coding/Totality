@@ -9,7 +9,7 @@
 #
 # Built after Ephemeris's root CMakeLists.txt at d047d79 (27.09.2026); the rules below are its rules.
 cmake_minimum_required(VERSION 3.22)
-project(Umbra VERSION 0.5.0 LANGUAGES C CXX)
+project(Umbra VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -766,6 +766,18 @@ void UmbraEditor::timerCallback()
     // moves the playhead there first.
     if (shotPath_.isNotEmpty() && !proc_.isComposing() && shotTicks_ == 0)
         if (const char* at = std::getenv("UMB_SHOT_AT")) proc_.seekTo(std::atof(at));
+    // UMB_SHOT_FULL: the window grows until nothing of the page in front scrolls, so the picture shows all of it.
+    if (shotPath_.isNotEmpty() && !proc_.isComposing() && (shotTicks_ == 6 || shotTicks_ == 12) && std::getenv("UMB_SHOT_FULL") != nullptr) {
+        std::function<int(juce::Component&)> overflow = [&](juce::Component& c) {
+            int most = 0;
+            if (auto* v = dynamic_cast<juce::Viewport*>(&c))
+                if (auto* inner = v->getViewedComponent()) most = inner->getHeight() - v->getMaximumVisibleHeight();
+            for (auto* child : c.getChildren()) most = std::max(most, overflow(*child));
+            return most;
+        };
+        if (auto* page = tabs_.getCurrentContentComponent())
+            if (const int more = overflow(*page); more > 0) setSize(getWidth(), getHeight() + more + 4);
+    }
     if (shotPath_.isNotEmpty() && !proc_.isComposing() && proc_.scoreVersion() > 0 && ++shotTicks_ > 20) {
         const juce::Image img = createComponentSnapshot(getLocalBounds());
         juce::File f(shotPath_);

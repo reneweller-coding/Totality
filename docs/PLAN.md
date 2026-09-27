@@ -20,6 +20,69 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, nachts: Phasen 5 bis 7, Plugin, Quest, Release 1.0.0 (lokal).** Auf "Bitte baue die restlichen Phasen
+und was noch fehlt nacheinander in dieser Nacht" hin, ohne Agenten; alles lokal committet, nichts veröffentlicht.
+
+Was vorher fehlte:
+- **OSC-Cues für Kaleidoscope** (10.3): `Cue.h` aus Ephemeris, Umbras Marken: `/umb/beat`, `/umb/bar`, `/umb/block`,
+  `/umb/op`, `/umb/key` (Camelot); der Audio-Thread stempelt, ein eigener Thread sendet (`testCues`: Bytes nach OSC 1.0,
+  Marken, Tap, ein Datagramm durch das Loopback).
+- **Stems, deren Summe die Mischung ergibt**: jeder Stem durch eigene Kopien der linearen Stufen (Gruppen-Hochpass, Tilt,
+  die Frequenzweichen der Ducks, Isolator und Filter des Mixerkanals) und mal den Gains der nichtlinearen (Drum-Bus-
+  Sättigung, Glue, Trim); die Mixer-Effekte als eigener Stem `djfx`. Die Summe ist die Mischung vor dem Master auf
+  −120 dB genau, in einem Track, in einem Blend mit Bass-Swap und in einem Break; mit Stems ist die Mischung bitgleich
+  zu ohne (`testStems`).
+- **Perform und MIDI-Learn**: `perform.*` (Master-Filter, Echo-Wurf, sieben Mutes: Kick samt Rumble, Sub, Hats, Perc,
+  Ping, Bass samt 303, Pads), wirksam nur live (`Engine::setLive`: Plugin und Quest; Renders und Exporte spielen die
+  Partitur, wie sie komponiert ist). Ein Mute lässt die Noten weg, die Fahnen klingen aus (`testPerform`).
+- **Style-Tab**: `custom.*`, ein eigener Stil über dem Profil (Tempo, Formgewichte, Länge, Rack, Swing, Ränder, längster
+  Kick-out, Ereignisse, Korridor, Ziel-LUFS), dazu die Zahlen des Profils und die Referenz-Mediane.
+- **Namensprüfung (Risiko 7):** "Umbra" ist als Audio-Software **vergeben**: Orchestral Tools vertreibt ein kommerzielles
+  "Umbra" (VST/AU/AAX, Sample-Instrument), H.G. Fortune ein freies "Umbra"-VSTi (2008), dazu ein "Umbra VSTi" für Trap.
+  Vor einer Veröffentlichung entscheidet der Nutzer; eine erste Suche nach "Totality" fand keine Audio-Software (keine
+  Markenrecherche). Bis dahin bleibt der Name.
+- **Rekordbox/Traktor**: die Prüfung der Cue-Marken in DJ-Software bleibt beim Nutzer (15.8); JSON-Cues liegen daneben.
+
+**Phase 5, GUI** (`Plugin/`, Gerüst aus Ephemeris): Tabs nach 10.1 -- Set, Arrange (Zeitleiste, Operationen, Matrix je
+Lagengruppe, Rerolls des Tracks unter dem Abspielkopf), Patterns (die **Eclipse**: die Kick als dunkle Scheibe, jede
+Stimme ein Ring von Perlen, ein Takt je Umlauf, Polymeter präzedieren, Konjunktionen ab drei Ringen als Strahl; daneben
+das Step-Raster mit Off-Grid-Strich), Low End, Drums (zwölf Lanes), Tones, Dub, Mixer (Meter je Deck, Ausgang, Lautheit
+über 400 ms K-gewichtet), Perform (Mute-Pads, Master-Filter, Wurf, Kills und Fader je Deck, Learn an jedem Regler,
+Rechtsklick vergisst; Tasten C3 bis F#3 schalten die Mutes, Modrad Filter, Expression Wurf), Export (WAV mit Cues, MIDI,
+Stems, DJ-Loops, `.umbset`, OSC), Style. Die Parameterseiten entstehen aus den Tabellen (`EditorTheme.cpp`, `layoutOf`).
+Im Host gilt das Host-Tempo, Sprünge des Playheads werden verfolgt. `UMB_SHOT`/`UMB_TAB`/`UMB_SHOT_FULL`/`UMB_SET` für
+Bilder ohne Menschen; Update-Prüfung wie Ephemeris (`reneweller-coding/Umbra`).
+Prüfsteine: `vst3test` 30 von 30 (Tempo, Sprung, MIDI, Zustand, 44,1/96 kHz, zweite Instanz, Editor), **pluginval
+Strenge 10 bestanden**.
+
+**Phase 6, Quest** (`Quest/`, Rahmen aus Ephemeris' Quest-App): der ganze Generator auf dem Gerät, live; die Hände am
+Mischpult -- links Pinch Play/Stop, rechts Pinch Kick-out/-in, beide zusammen der nächste Track, Handhöhe links
+Master-Filter, rechts Echo-Wurf; ein Pinch wirkt beim Öffnen, damit beide zusammen nicht zugleich zwei einzelne sind.
+Die **Eclipse im Raum**: 3 m voraus, 1,3 m über den Augen, zum Spieler geneigt, am Sessionbeginn verankert; Korona
+schwillt mit jeder Kick, Perlen des nächsten Takts blenden über das erste Achtel ein (keine Sprünge, Kaleidoscope-Regeln).
+`umb.cfg` mit Seed, Stil, Set-Länge, Qualität, OSC, beliebigen Knöpfen. APK gebaut (4,8 MB, arm64, ohne Warnung),
+**auf dem Gerät ungetestet** (kein Headset angeschlossen).
+Qualitätsstufe `Engine::Quality::Quest`: Granularwolke aus, der Rumble clippt ohne Überabtastung. Kosten je Stufe mit der
+CMake-Option `UMB_PROFILE` gemessen (20-Minuten-Set, Seed 2026, Desktop): Rumble 12 %, Kit 13 %, Dub-Kette 11 %,
+Raum 9 %, Master-Clipper 7,5 %; gesamt 7,8 % eines Kerns, in der Quest-Stufe 7,5 %. Auf der Quest 2 wären das mit dem
+üblichen Faktor 3 bis 4 etwa 23 bis 30 % -- am Rand des Plans; messen kann es nur das Gerät. Weitere Hebel (nicht gebaut):
+das abgehende Deck eines Blends in der niedrigen Stufe (11), ein kleinerer Raum.
+
+**Phase 7, Qualität und Release:** Version 1.0.0. Handbuch aus dem Programm (`Tools/manual`: `umb_render --dump-params`
+für die Tabellen, die Screenshots aus dem Standalone, der Text in `chapters.txt`; PDF über Edge), Social Preview
+(`docs/social-preview.png`), Installer (`Deploy/Umbra.iss`, Inno Setup) und `Deploy/build_release.ps1` (icx,
+statische Laufzeit, Tests, pluginval, Handbuch, Prüfung der Abhängigkeiten, Prüfsummen, portables Zip, Setup): der lokale Durchlauf mit icx bestand alle 30 Tests und pluginval, keine Laufzeit-DLL, Setup 10,3 MB und
+portables Zip 11,8 MB in `Deploy/out`.
+Nicht getan, bewusst: Hörrunden (des Nutzers), Nachkalibrierung (die offenen Befunde der Phase 4 -- Endless flach, Dub am
+unteren Rand des Schwerpunkts -- bleiben), Veröffentlichung auf GitHub (morgen, durch den Nutzer).
+
+| Prüfstein | Ergebnis |
+|---|---|
+| Standalone und VST3 bedienbar | 11 Tabs, Screenshots aller Seiten (`docs/screenshots`), `vst3test` 30/30 |
+| pluginval Strenge 10 | bestanden |
+| Quest-APK | gebaut; Gerätetest und CPU-Messung offen |
+| `ctest` | 29 von 29 (dazu pluginval: 30) |
+
 **27.09.2026, spät: Phase 4, Komponist und Set.** Der Komponist (`compose/Composer`) schreibt Tracks in den drei Formen von
 7.2 aus vier Stilprofilen (`compose/Style`, designierte Initialisierer wie Ephemeris, Morph und die Achsen Dub/Hypnotic);
 der Set-Komponist (`compose/Set`) mischt sie auf zwei Decks. Die Engine besteht jetzt aus drei Decks (`Deck`: alle
