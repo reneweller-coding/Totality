@@ -51,7 +51,13 @@ struct ParamDesc {
 };
 
 /** @brief The modules that own parameters. Appended to, never reordered. */
-enum class Module : int { Compose = 0, Kick, Rumble, Sub, Perc, Mix, Master, Count };
+enum class Module : int { Compose = 0, Kick, Rumble, Sub, Perc, Mix, Master,
+                          /** Phase 2: the ping voices (Ping.h). */
+                          Ping,
+                          /** Phase 2: the free-running modulation of the whole instrument (Dok. 8.4; Engine.h). */
+                          Motion,
+                          /** Phase 2: the room the hats, the percussion and the ping are sent into (PLAN 5.9). */
+                          Space, Count };
 
 constexpr int kPercLanes = 12;   ///< instances of the percussion module (the lanes of the kit)
 
@@ -100,6 +106,27 @@ enum : int { HatsLevel, HatsCut, PercLevel, PercCut, Count };
 /** @brief Parameters of the master (PLAN 8). */
 namespace master {
 enum : int { Level, Threshold, Ratio, Clip, Ceiling, MonoBelow, Count };
+}
+
+/** @brief Parameters of the ping (PLAN 5.5, Ping.h): FM through a low-pass gate, a wandering band pass. */
+namespace ping {
+enum : int { Level, Pan, Width, Ratio, Index, IndexDecay, PitchAmount, PitchDecay, Decay, Lpg, LpgRelease, Resonance,
+             Band, BandQ, BandMix, Sweep, SweepRate, Count };
+}
+
+/**
+ * @brief Parameters of the global motion (Dok. 8.4, PLAN 5.8): LFOs with incommensurable periods -- 7, 11 and 13 beats,
+ *        and a slow filter drift at 0.065 Hz -- on the filters of the hats and of the other lanes (their own, not the
+ *        buses' low passes, which the form ramps), the hats' level and decay, and the rumble's drive. Their phases come from the absolute beat and second, so a bar alone moves as the bar in
+ *        sequence.
+ */
+namespace motion {
+enum : int { Amount, HatsCut, HatsLevel, HatDecay, PercCut, RumbleDrive, Count };
+}
+
+/** @brief Parameters of the room (PLAN 5.9): Ephemeris' FDN hall on a send, its return high-passed (Dok. 8.7: 200-400 Hz). */
+namespace space {
+enum : int { Level, Size, Decay, Damping, PreDelay, LowCut, HighCut, HatsSend, PercSend, PingSend, Count };
 }
 
 /** @brief What a percussion lane plays in the groove; decides its patterns and its MIDI note. */

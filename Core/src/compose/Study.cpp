@@ -70,7 +70,11 @@ Score composeStudy(const ParamStore& p, uint64_t seed)
     // The layers a body block may add, in order: the open hat and the full rolling hat first, then the rest shuffled.
     std::vector<LayerId> pool = { LayerId::Shaker, LayerId::TomConga, LayerId::Rim, LayerId::Ride };
     for (int i = static_cast<int>(pool.size()) - 1; i > 0; --i) std::swap(pool[static_cast<size_t>(i)], pool[static_cast<size_t>(rng.below(i + 1))]);
-    std::vector<LayerId> queue = { LayerId::OpenHat, LayerId::RollingHat };
+    // The hypnotic profile brings the ping second: its cyclic figure is the style's signature (PLAN 5.5).
+    const bool hypnotic = p.getInt(p.id(Module::Compose, 0, compose::Style)) == static_cast<int>(Style::Hypnotic);
+    std::vector<LayerId> queue = { LayerId::OpenHat };
+    if (hypnotic) queue.push_back(LayerId::Ping);
+    queue.push_back(LayerId::RollingHat);
     queue.insert(queue.end(), pool.begin(), pool.end());
 
     bool active[kNumLayers] = {};

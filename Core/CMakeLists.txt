@@ -12,6 +12,7 @@ add_library(UmbraCore STATIC
     src/synth/Rumble.cpp
     src/synth/SubBass.cpp
     src/synth/Kit.cpp
+    src/synth/Ping.cpp
     src/pattern/Rack.cpp
     src/compose/Study.cpp
     src/Engine.cpp

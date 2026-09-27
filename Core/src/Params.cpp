@@ -103,7 +103,7 @@ const ParamDesc kRumbleParams[rumble::Count] = {
     { "drive",        "Drive",        "dB",   0.0f,  18.0f,   6.0f, Curve::Linear },
     { "ratio",        "Low Pass",     "x f0", 1.5f,   6.0f,   3.0f, Curve::Log },
     { "resonance",    "Resonance",    "",     0.0f,   1.0f,  0.15f, Curve::Linear },
-    { "sub",          "Sub",          "dB", -60.0f,   6.0f,  -4.0f, Curve::Linear },   // -60: off
+    { "sub",          "Sub",          "dB", -60.0f,   6.0f,   0.0f, Curve::Linear },   // -60: off; 0 dB since the reference measurement (sub share)
     { "sub_attack",   "Sub Attack",   "ms",   5.0f, 200.0f,  25.0f, Curve::Log },
     { "sub_release",  "Sub Release",  "ms",  50.0f, 2000.0f, 300.0f, Curve::Log },
     { "duck",         "Duck",         "dB",   0.0f,  24.0f,   7.0f, Curve::Linear },
@@ -183,6 +183,64 @@ const ParamDesc kMasterParams[master::Count] = {
 };
 
 /**
+ * The ping (PLAN 5.5, Erg. 1): a carrier of 200 to 600 Hz (the notes decide), a modulator at sqrt 2 times it, an index of
+ * 0.5 to 3 by velocity, a pitch drop of 30 to 90 ms, 40 to 180 ms of decay, the gate's longer tail, a band pass that
+ * wanders by some half an octave at 0.07 Hz (Dok. 8.4's free filter LFOs, 0.05 .. 0.08 Hz).
+ */
+const ParamDesc kPingParams[ping::Count] = {
+    { "level",        "Level",        "dB",  -60.0f,    6.0f, -14.0f, Curve::Linear },
+    { "pan",          "Pan",          "",     -1.0f,    1.0f,   0.0f, Curve::Linear },
+    { "width",        "Width",        "",      0.0f,    1.0f,   0.5f, Curve::Linear },
+    { "ratio",        "Ratio",        "",      0.25f,   8.0f, 1.414f, Curve::Log },
+    { "index",        "Index",        "",      0.0f,    6.0f,   2.0f, Curve::Linear },
+    { "index_decay",  "Index Decay",  "ms",    2.0f,  500.0f,  60.0f, Curve::Log },
+    { "pitch_amount", "Pitch Amount", "",      0.0f,    4.0f,   0.8f, Curve::Linear },
+    { "pitch_decay",  "Pitch Decay",  "ms",    2.0f,  300.0f,  45.0f, Curve::Log },
+    { "decay",        "Decay",        "ms",   10.0f, 2000.0f, 140.0f, Curve::Log },
+    { "lpg",          "Low-Pass Gate", "",     0.0f,    1.0f,   0.6f, Curve::Linear },
+    { "lpg_release",  "Gate Release", "ms",   10.0f, 2000.0f, 150.0f, Curve::Log },
+    { "resonance",    "Resonance",    "",      0.0f,    1.0f,  0.35f, Curve::Linear },
+    { "band",         "Band",         "Hz",  150.0f, 6000.0f, 900.0f, Curve::Log },
+    { "band_q",       "Band Q",       "",      0.2f,    8.0f,   0.8f, Curve::Log },
+    { "band_mix",     "Band Mix",     "",      0.0f,    1.0f,   0.5f, Curve::Linear },
+    { "sweep",        "Sweep",        "oct",   0.0f,    2.0f,   0.6f, Curve::Linear },
+    { "sweep_rate",   "Sweep Rate",   "Hz",    0.01f,   2.0f,  0.07f, Curve::Log },
+};
+
+/**
+ * The global motion (Dok. 8.4): cutoff LFOs of +-10 to 20 % (here in octaves), a hat volume sine of 10 to 20 % (dB), the
+ * hat decay, the rumble's drive. Defaults inside those ranges; the reference measurement asks for about half a dB of
+ * change from bar to bar in every band (PLAN 13.4).
+ */
+const ParamDesc kMotionParams[motion::Count] = {
+    { "amount",       "Amount",       "",     0.0f, 1.0f, 1.0f, Curve::Linear },
+    { "hats_cut",     "Hats Cut",     "oct",  0.0f, 1.5f, 0.4f, Curve::Linear },
+    { "hats_level",   "Hats Level",   "dB",   0.0f, 6.0f, 1.5f, Curve::Linear },
+    { "hat_decay",    "Hat Decay",    "",     0.0f, 0.5f, 0.2f, Curve::Linear },
+    { "perc_cut",     "Perc Cut",     "oct",  0.0f, 1.5f, 0.4f, Curve::Linear },
+    { "rumble_drive", "Rumble Drive", "dB",   0.0f, 6.0f, 2.0f, Curve::Linear },
+};
+
+/**
+ * The room (PLAN 5.9): a short plate-like hall, 1.2 s, 15 ms pre-delay, its return cut under 250 Hz and over 6 kHz
+ * (Dok. 8.7: returns high-passed at 200 to 400 Hz; Dok. 8.4: "kurz/Plate auf Hats/Claps bei 10 bis 22 %"). Sends: the
+ * hats 25 %, the percussion 30 %, the ping 40 %, the return +12 dB: the FDN returns quietly, and so the room lies some
+ * 17 dB under the dry hats (measured on the study, 27.09.2026).
+ */
+const ParamDesc kSpaceParams[space::Count] = {
+    { "level",     "Return",     "dB", -60.0f,  18.0f,  12.0f, Curve::Linear },   // the FDN returns quietly (Ephemeris: +4 dB at sends of 0.3)
+    { "size",      "Size",       "",     0.3f,   3.0f,   0.9f, Curve::Log },
+    { "decay",     "Decay",      "s",    0.2f,  12.0f,   1.2f, Curve::Log },
+    { "damping",   "Damping",    "",     0.0f,   1.0f,   0.5f, Curve::Linear },
+    { "predelay",  "Pre-Delay",  "ms",   0.0f, 100.0f,  15.0f, Curve::Linear },
+    { "low_cut",   "Low Cut",    "Hz",  60.0f, 800.0f, 250.0f, Curve::Log },
+    { "high_cut",  "High Cut",   "Hz", 1000.0f, 18000.0f, 6000.0f, Curve::Log },
+    { "hats_send", "Hats Send",  "",     0.0f,   1.0f,  0.25f, Curve::Linear },
+    { "perc_send", "Perc Send",  "",     0.0f,   1.0f,  0.30f, Curve::Linear },
+    { "ping_send", "Ping Send",  "",     0.0f,   1.0f,  0.40f, Curve::Linear },
+};
+
+/**
  * The default kit (PLAN 5.4): what each of the twelve lanes is and how it sounds before a preset touches it. The
  * hats play the 909's metal table (Kit.h), 50 to 80 ms closed and 200 to 600 open, high-passed at 7 kHz or
  * band-passed at 10 kHz (Dok. 8.4); the ride the 808's six squares; the clap four bursts 10 to 20 ms apart through a
@@ -236,6 +294,9 @@ const ModuleSpec kModules[static_cast<int>(Module::Count)] = {
     { "perc",    kPercParams,    perc::Count,    kPercLanes },
     { "mix",     kMixParams,     mix::Count,     1 },
     { "master",  kMasterParams,  master::Count,  1 },
+    { "ping",    kPingParams,    ping::Count,    1 },
+    { "motion",  kMotionParams,  motion::Count,  1 },
+    { "space",   kSpaceParams,   space::Count,   1 },
 };
 
 bool isDiscrete(Curve c) { return c == Curve::Int || c == Curve::Choice || c == Curve::Toggle; }

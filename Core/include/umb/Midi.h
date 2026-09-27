@@ -5,7 +5,7 @@
  * Format 1, 960 ticks per quarter note. Track 0 is the conductor track: name, 4/4, key signature, the tempo map, the
  * markers and the form's operations (as markers "op: add open hat"). Every part with notes gets its own track: the
  * kick and the kit's lanes on channel 10 with their General MIDI notes, so a DAW's drum rack recognises them, one
- * track per lane so each can be muted; the sub on channel 1.
+ * track per lane so each can be muted; the sub on channel 1, the ping on channel 2.
  *
  * Tempo ramps are written as one tempo event per beat whose value makes that beat last exactly as long as it does in
  * the ramp (Phosphene's and Ephemeris' rule). Automation, when the parameters are given, goes on a track "controls",

@@ -31,9 +31,10 @@ namespace umb {
 /** @brief The parts of the score, one MIDI track and one stem each. Appended to, never reordered. */
 enum class Part : int { Kick = 0, Sub,
                         Perc1, Perc2, Perc3, Perc4, Perc5, Perc6, Perc7, Perc8, Perc9, Perc10, Perc11, Perc12,
-                        Count };
+                        /** Phase 2: the ping voices. */
+                        Ping, Count };
 constexpr int kNumParts = static_cast<int>(Part::Count);   ///< number of parts
-extern const char* const kPartNames[kNumParts];            ///< "kick", "sub", "perc1" .. "perc12"
+extern const char* const kPartNames[kNumParts];            ///< "kick", "sub", "perc1" .. "perc12", "ping"
 /** @brief The part of kit lane @p lane (0-based). */
 constexpr Part percPart(int lane) { return static_cast<Part>(static_cast<int>(Part::Perc1) + lane); }
 /** @brief The kit lane of @p part, or -1 if it is not a lane. */

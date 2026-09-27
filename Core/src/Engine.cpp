@@ -16,7 +16,7 @@ constexpr float kClipCeiling = 0.97f;   ///< where the soft clipper's curve flat
 
 const char* Engine::stemName(int s)
 {
-    static const char* const kNames[kStems] = { "kick", "rumble", "sub", "hats", "perc" };
+    static const char* const kNames[kStems] = { "kick", "rumble", "sub", "hats", "perc", "ping", "room" };
     return s >= 0 && s < kStems ? kNames[s] : "";
 }
 
@@ -28,6 +28,8 @@ void Engine::prepare(double sampleRate, int maxBlock)
     rumble_.prepare(sampleRate, kRaster);
     sub_.prepare(sampleRate);
     kit_.prepare(sampleRate);
+    ping_.prepare(sampleRate);
+    room_.prepare(sampleRate);
     glue_.prepare(sampleRate);
     limiter_.prepare(sampleRate);
     for (Oversampler4& o : clipOs_) o.reset();
@@ -36,6 +38,12 @@ void Engine::prepare(double sampleRate, int maxBlock)
     bodyBuf_.assign(n, 0.0f);
     rumbleBuf_.assign(n, 0.0f);
     subBuf_.assign(n, 0.0f);
+    pingL_.assign(n, 0.0f);
+    pingR_.assign(n, 0.0f);
+    sendL_.assign(n, 0.0f);
+    sendR_.assign(n, 0.0f);
+    retL_.assign(n, 0.0f);
+    retR_.assign(n, 0.0f);
     cellDirty_ = true;
 }
 
@@ -87,6 +95,8 @@ void Engine::seek(double beat)
     rumble_.reset();
     sub_.reset();
     kit_.reset();
+    ping_.reset();
+    room_.reset();
     glue_.reset();
     limiter_.reset();
     for (Oversampler4& o : clipOs_) o.reset();
@@ -135,6 +145,20 @@ void Engine::updateCell()
     subOwns_ = std::lround(c[compose::LowOwner]) == static_cast<long>(LowOwner::Sub);
     const double bpm = score_.tempo.bpmAt(beat);
 
+    // The global motion (Dok. 8.4): three LFOs of 7, 11 and 13 beats and a drift of 0.065 Hz, from the absolute beat
+    // and second, so the phases do not depend on where a render starts.
+    // They step every 128 samples (an absolute raster, 2.7 ms), so the kit recomputes its lanes a quarter as often.
+    float mv[16];
+    readPlayed(Module::Motion, 0, mv);
+    const int64_t q = (sample_ / 128) * 128;
+    const double qs = static_cast<double>(q) / sampleRate_, qb = score_.tempo.beatAt(qs);
+    const float amt = mv[motion::Amount];
+    const float lfo7 = amt * static_cast<float>(std::sin(2.0 * 3.141592653589793 * qb / 7.0));
+    const float lfo11 = amt * static_cast<float>(std::sin(2.0 * 3.141592653589793 * qb / 11.0 + 1.3));
+    const float lfo13 = amt * static_cast<float>(std::sin(2.0 * 3.141592653589793 * qb / 13.0 + 2.1));
+    const float drift = amt * static_cast<float>(std::sin(2.0 * 3.141592653589793 * 0.065 * qs + 0.7));
+    const float drift2 = amt * static_cast<float>(std::sin(2.0 * 3.141592653589793 * 0.05 * qs + 2.9));
+
     float v[64];
     readPlayed(Module::Kick, 0, v);
     Kick::constrain(v, 0.0, keyRoot_);
@@ -142,6 +166,7 @@ void Engine::updateCell()
 
     readPlayed(Module::Rumble, 0, v);
     if (subOwns_) v[rumble::Sub] = -60.0f;   // the sub bass owns the band under the split
+    v[rumble::Drive] = std::max(0.0f, v[rumble::Drive] + mv[motion::RumbleDrive] * drift2);
     rumble_.update(v, kick_.tunedEndHz());
 
     readPlayed(Module::Sub, 0, v);
@@ -150,18 +175,41 @@ void Engine::updateCell()
     kit_.setTempo(bpm);
     for (int l = 0; l < kPercLanes; ++l) {
         readPlayed(Module::Perc, l, v);
+        const PercRole r = static_cast<PercRole>(std::lround(v[perc::Role]));
+        if (r == PercRole::ClosedHat || r == PercRole::RollingHat || r == PercRole::OpenHat) {
+            const float k = 1.0f + mv[motion::HatDecay] * lfo11;
+            v[perc::NoiseDecay] *= k;
+            v[perc::Decay] *= k;
+            // The hats' own filters wander, not the bus's low pass (which is open, and a ramp target of the form).
+            v[perc::Cutoff] *= std::pow(2.0f, mv[motion::HatsCut] * drift);
+        } else {
+            v[perc::Cutoff] *= std::pow(2.0f, mv[motion::PercCut] * lfo13);
+        }
         kit_.update(l, v, keyRoot_, scale_);
         const PercRole role = static_cast<PercRole>(std::lround(v[perc::Role]));
         laneIsHat_[l] = role == PercRole::ClosedHat || role == PercRole::RollingHat || role == PercRole::OpenHat
                      || role == PercRole::Ride || role == PercRole::Shaker;
     }
 
+    readPlayed(Module::Ping, 0, v);
+    ping_.update(v);
+
     const float fs = static_cast<float>(sampleRate_);
     readPlayed(Module::Mix, 0, v);
-    hatsGain_ = dbToGain(v[mix::HatsLevel]);
+    hatsGain_ = dbToGain(v[mix::HatsLevel] + mv[motion::HatsLevel] * lfo7);
     percGain_ = dbToGain(v[mix::PercLevel]);
-    for (Svf& f : hatsLp_) f.setQ(std::min(v[mix::HatsCut], 0.45f * fs), 0.7071f, fs);
-    for (Svf& f : percLp_) f.setQ(std::min(v[mix::PercCut], 0.45f * fs), 0.7071f, fs);
+    const float hatsCut = v[mix::HatsCut];
+    const float percCut = v[mix::PercCut];
+    for (Svf& f : hatsLp_) f.setQ(std::min(hatsCut, 0.45f * fs), 0.7071f, fs);
+    for (Svf& f : percLp_) f.setQ(std::min(percCut, 0.45f * fs), 0.7071f, fs);
+
+    readPlayed(Module::Space, 0, v);
+    room_.set(v[space::Size], v[space::Decay], v[space::Damping], v[space::PreDelay] * 0.001f * fs, v[space::LowCut],
+              v[space::HighCut]);
+    roomReturn_ = v[space::Level] <= -59.9f ? 0.0f : dbToGain(v[space::Level]);
+    hatsSend_ = v[space::HatsSend];
+    percSend_ = v[space::PercSend];
+    pingSend_ = v[space::PingSend];
 
     readPlayed(Module::Master, 0, v);
     masterGain_ = dbToGain(v[master::Level]);
@@ -204,6 +252,10 @@ void Engine::dispatch(const Ev& e)
         subNote_ = e.id;
         return;
     }
+    if (part == Part::Ping) {
+        ping_.noteOn(e.pitch, e.velocity, e.late, static_cast<uint32_t>(e.id));
+        return;
+    }
     const int lane = laneOf(part);
     if (lane >= 0) kit_.trigger(lane, e.velocity, e.shift, e.late);
 }
@@ -214,8 +266,10 @@ void Engine::renderSpan(float* L, float* R, int n)
     rumble_.process(bodyBuf_.data(), rumbleBuf_.data(), n);
     sub_.process(subBuf_.data(), n);
     kit_.processLanes(n);
+    ping_.process(pingL_.data(), pingR_.data(), n, sample_);
     const float* ll = kit_.laneL();
     const float* lr = kit_.laneR();
+    float busH[2][kRaster], busP[2][kRaster];
     for (int i = 0; i < n; ++i) {
         float hl = 0.0f, hr = 0.0f, pl = 0.0f, pr = 0.0f;
         for (int l = 0; l < kPercLanes; ++l) {
@@ -223,11 +277,19 @@ void Engine::renderSpan(float* L, float* R, int n)
             if (laneIsHat_[l]) { hl += ll[k]; hr += lr[k]; }
             else { pl += ll[k]; pr += lr[k]; }
         }
-        hl = hatsLp_[0].lp(hl) * hatsGain_;
-        hr = hatsLp_[1].lp(hr) * hatsGain_;
-        pl = percLp_[0].lp(pl) * percGain_;
-        pr = percLp_[1].lp(pr) * percGain_;
+        busH[0][i] = hatsLp_[0].lp(hl) * hatsGain_;
+        busH[1][i] = hatsLp_[1].lp(hr) * hatsGain_;
+        busP[0][i] = percLp_[0].lp(pl) * percGain_;
+        busP[1][i] = percLp_[1].lp(pr) * percGain_;
         const size_t k = static_cast<size_t>(i);
+        sendL_[k] = busH[0][i] * hatsSend_ + busP[0][i] * percSend_ + pingL_[k] * pingSend_;
+        sendR_[k] = busH[1][i] * hatsSend_ + busP[1][i] * percSend_ + pingR_[k] * pingSend_;
+    }
+    room_.process(sendL_.data(), sendR_.data(), retL_.data(), retR_.data(), n);
+    for (int i = 0; i < n; ++i) {
+        const float hl = busH[0][i], hr = busH[1][i], pl = busP[0][i], pr = busP[1][i];
+        const size_t k = static_cast<size_t>(i);
+        const float rl = retL_[k] * roomReturn_, rr = retR_[k] * roomReturn_;
         const float mono = kickBuf_[k] + rumbleBuf_[k] + subBuf_[k];
         if (stemL_ != nullptr) {
             const int o = stemOffset_ + i;
@@ -236,8 +298,10 @@ void Engine::renderSpan(float* L, float* R, int n)
             stemL_[2][o] = stemR_[2][o] = subBuf_[k];
             stemL_[3][o] = hl; stemR_[3][o] = hr;
             stemL_[4][o] = pl; stemR_[4][o] = pr;
+            stemL_[5][o] = pingL_[k]; stemR_[5][o] = pingR_[k];
+            stemL_[6][o] = rl; stemR_[6][o] = rr;
         }
-        float l = mono + hl + pl, r = mono + hr + pr;
+        float l = mono + hl + pl + pingL_[k] + rl, r = mono + hr + pr + pingR_[k] + rr;
         // The side under Mono Below goes (PLAN 8.2).
         const float mid = 0.5f * (l + r);
         float side = 0.5f * (l - r), lp, bp, hp;

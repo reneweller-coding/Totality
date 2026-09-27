@@ -29,10 +29,12 @@
  * **Calibration** (27.09.2026, selftest testRumbleLevel). The hall's return of a default kick peaks at -13 dBFS, far
  * below anything a clip would touch, and the first version's rumble sat 29 dB under the kick. Two constants now stage
  * it: +12 dB in front of the clip, so that at the defaults the return's peaks reach it at -1 dBFS and Drive 6 dB takes
- * about 5 dB off them (Dok. 8.4: "SoftClip 4-6 dB"); +7.5 dB after the band's filters, so that Level is the rumble's
- * level against the kick's, RMS over a beat (-9 dB at the default Level: Dok. 8.7's "-6 .. -10 dB", itself [I]).
- * With the sub at that level the band under 80 Hz gains 0.5 to 1.3 dB per beat over the kick alone, and the sub's
- * phase stays within 1.3 degrees of the kick's tail (testRumble, f0 46 .. 61 Hz, halls of 1 and 3.5 s).
+ * about 5 dB off them (Dok. 8.4: "SoftClip 4-6 dB"); after the band's filters a gain that makes Level the rumble's
+ * level against the kick's, RMS over a beat (-9 dB at the default Level: Dok. 8.7's "-6 .. -10 dB", itself [I]): +7.5 dB
+ * with the sub at -4 dB, +5.1 dB since the sub stands at 0 dB (the reference measurement's sub share, PLAN 13.4:
+ * 0.45 of the low end in the hypnotic records). With the sub there the band under 80 Hz gains 0.8 to 2.4 dB per beat
+ * over the kick alone, and the sub's phase stays within 1.3 degrees of the kick's tail (testRumble, f0 46 .. 61 Hz,
+ * halls of 1 and 3.5 s).
  */
 #pragma once
 #include "umb/Dsp.h"

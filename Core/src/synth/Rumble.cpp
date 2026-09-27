@@ -14,7 +14,7 @@ constexpr double kTwoPiD = 6.283185307179586;
 /** @brief Gain on the hall's return before the clip (calibrated, see Rumble.h). */
 constexpr float kHallGain = 3.98f;   // +12 dB: the return's peaks at the defaults near -1 dBFS
 /** @brief Gain on the band after its filters (calibrated, see Rumble.h). */
-constexpr float kBandGain = 2.37f;   // +7.5 dB: at Level 0 dB the rumble (band and sub) as loud as the kick, RMS over a beat
+constexpr float kBandGain = 1.80f;   // +5.1 dB: at Level 0 dB the rumble (band and sub) as loud as the kick, RMS over a beat
 }
 
 void Rumble::prepare(double sampleRate, int maxBlock)

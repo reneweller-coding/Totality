@@ -9,8 +9,8 @@
  *   block 0        intro: kick; the offbeat hat from bar 8; the rolling hat at half density from bar 16;
  *                  the hats' bus opens from 1.5 kHz over bars 8 .. 32 (Dok. 8.5: "Perc-Bus LP 800 Hz -> offen")
  *   block 1        add: the ghost kicks -- or, where the sub owns the low end, the bass
- *   block 2 ..     one operation each: add the open hat, the rolling hat's other half, the shaker, the tom/conga,
- *                  the rim, the ride (these four shuffled), then hold
+ *   block 2 ..     one operation each: add the open hat, the ping (Hypnotic only), the rolling hat's other half,
+ *                  the shaker, the tom/conga, the rim, the ride (these four shuffled), then hold
  *   the reduction  in the block at about 55 % of the body: kick out for 8 bars (bars 16 .. 23), a noise swell over
  *                  them, bar 23 a one-bar dropout, the return on bar 24 (Dok. 8.5)
  *   last 2 blocks  the outro, subtractive: the layers leave in the reverse order; the last 16 bars kick and hat

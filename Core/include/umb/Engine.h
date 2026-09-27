@@ -28,8 +28,10 @@
 #include "umb/Params.h"
 #include "umb/Score.h"
 #include "umb/fx/Dynamics.h"
+#include "umb/fx/Reverb.h"
 #include "umb/synth/Kick.h"
 #include "umb/synth/Kit.h"
+#include "umb/synth/Ping.h"
 #include "umb/synth/Rumble.h"
 #include "umb/synth/SubBass.h"
 #include <cstdint>
@@ -40,8 +42,9 @@ namespace umb {
 /** @brief Plays a score. Not thread-safe except for parameter writes (ParamStore is atomic). */
 class Engine {
 public:
-    /** @brief The stems, in the order setStems() takes them: kick, rumble, sub, hats, percussion (before the master). */
-    static constexpr int kStems = 5;
+    /** @brief The stems, in the order setStems() takes them: kick, rumble, sub, hats, percussion, ping, the room's return
+     *         (before the master). */
+    static constexpr int kStems = 7;
     /** @brief Name of stem @p s. */
     static const char* stemName(int s);
     /** @brief The raster the parameters and the automation are read on, in samples. */
@@ -123,6 +126,7 @@ private:
     Rumble rumble_;
     SubBass sub_;
     PercKit kit_;
+    Ping ping_;
     int keyRoot_ = 9, scale_ = 0;
     bool subOwns_ = false;
     // The last kick, for the sub's lock.
@@ -136,12 +140,15 @@ private:
     float hatsGain_ = 1.0f, percGain_ = 1.0f;
     bool laneIsHat_[kPercLanes] = {};
     Svf sideHp1_, sideHp2_;
+    Reverb room_;                                   ///< the room (PLAN 5.9)
+    float roomReturn_ = 1.0f, hatsSend_ = 0.0f, percSend_ = 0.0f, pingSend_ = 0.0f;
+    std::vector<float> sendL_, sendR_, retL_, retR_;
     float masterGain_ = 1.0f, clipDrive_ = 1.0f;
     BusCompressor glue_;
     Oversampler4 clipOs_[2];
     TruePeakLimiter limiter_;
 
-    std::vector<float> kickBuf_, bodyBuf_, rumbleBuf_, subBuf_;
+    std::vector<float> kickBuf_, bodyBuf_, rumbleBuf_, subBuf_, pingL_, pingR_;
     float* const* stemL_ = nullptr;
     float* const* stemR_ = nullptr;
     int stemOffset_ = 0;   ///< where in the stem buffers the current span begins

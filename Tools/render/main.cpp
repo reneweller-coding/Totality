@@ -16,6 +16,7 @@
 #include "umb/compose/Study.h"
 #include "umb/pattern/Rack.h"
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -43,7 +44,7 @@ int main(int argc, char** argv)
     double rate = 48000.0;
     int block = 512;
     std::string out, midi, stems, set;
-    bool bench = false, list = false;
+    bool bench = false, list = false, stats = false, patterns = false;
     float minutes = -1.0f, bpm = -1.0f;
     int low = -1;
     for (int i = 1; i < argc; ++i) {
@@ -61,6 +62,8 @@ int main(int argc, char** argv)
         else if (!std::strcmp(a, "--block")) block = std::max(1, std::atoi(next()));
         else if (!std::strcmp(a, "--bench")) bench = true;
         else if (!std::strcmp(a, "--list")) list = true;
+        else if (!std::strcmp(a, "--stats")) stats = true;
+        else if (!std::strcmp(a, "--patterns")) patterns = true;
         else { usage(); return 2; }
     }
 
@@ -93,6 +96,39 @@ int main(int argc, char** argv)
     for (const BlockOp& o : score.ops) {
         std::printf("  bar %4.0f  %-8s %s\n", o.beat / 4.0 + 1.0, kOpNames[static_cast<int>(o.kind)],
                     o.layer >= 0 ? kLayerNames[o.layer] : "");
+    }
+    if (stats) {
+        // Symbolic repetition (PLAN 7.9): per part, the share of the body's bars (the middle three fifths) whose onsets
+        // on the sixteenth grid equal the bar before's, and the share of bars it plays in.
+        const int bars = static_cast<int>(score.lengthBeats / 4.0);
+        std::vector<std::vector<uint32_t>> grid(kNumParts, std::vector<uint32_t>(static_cast<size_t>(bars), 0u));
+        for (const NoteEvent& n : score.notes) {
+            const int step = static_cast<int>(std::floor(n.beat * 4.0 + 0.5));
+            const int bar = step / 16;
+            if (bar >= 0 && bar < bars) grid[static_cast<size_t>(n.part)][static_cast<size_t>(bar)] |= 1u << (step % 16);
+        }
+        std::printf("repetition per part over bars %d .. %d (same as the bar before / playing):\n", bars / 5, bars - bars / 5);
+        for (int pi = 0; pi < kNumParts; ++pi) {
+            int same = 0, playing = 0, total = 0;
+            for (int b = bars / 5 + 1; b < bars - bars / 5; ++b) {
+                const uint32_t g = grid[static_cast<size_t>(pi)][static_cast<size_t>(b)];
+                if (g == 0) continue;
+                ++playing;
+                same += g == grid[static_cast<size_t>(pi)][static_cast<size_t>(b - 1)] ? 1 : 0;
+            }
+            total = bars - 2 * (bars / 5) - 1;
+            if (playing > 0) std::printf("  %-7s %4.0f %% same  %4.0f %% playing\n", kPartNames[pi], 100.0 * same / playing, 100.0 * playing / total);
+        }
+    }
+    if (patterns) {
+        // The first bar of every block of every layer in mini-notation (PLAN 6.7).
+        const RackPlan plan = makeRackPlan(p, mixSeed(seed, 1));
+        static const char* const kSound[kNumLayers] = { "bd", "bd:1", "hh", "hh:1", "oh", "ride", "cp", "cp", "cp:1", "shaker",
+                                                        "lt", "rim", "sub", "ping" };
+        for (int li = 0; li < kNumLayers; ++li) {
+            if (static_cast<LayerId>(li) == LayerId::ClapB) continue;
+            std::printf("  %-11s \"%s\"\n", kLayerNames[li], miniNotation(plan, static_cast<LayerId>(li), 32, kSound[li]).c_str());
+        }
     }
     if (!midi.empty()) {
         if (!writeMidiFile(score, midi.c_str(), "Umbra", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }

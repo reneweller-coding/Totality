@@ -86,6 +86,7 @@ void appendTrack(std::vector<uint8_t>& file, std::vector<Ev>& evs)
 int midiChannelOf(Part part)
 {
     if (part == Part::Sub) return 0;
+    if (part == Part::Ping) return 1;
     return 9;   // the kick and the kit's lanes: the drum channel
 }
 

@@ -10,7 +10,7 @@ namespace umb {
 
 const char* const kPartNames[kNumParts] = {
     "kick", "sub", "perc1", "perc2", "perc3", "perc4", "perc5", "perc6", "perc7", "perc8", "perc9", "perc10", "perc11",
-    "perc12",
+    "perc12", "ping",
 };
 
 const char* const kOpNames[] = { "add", "remove", "swap", "hold", "kick out", "return", "start", "end" };

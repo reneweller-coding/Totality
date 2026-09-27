@@ -1,0 +1,33 @@
+# Reference recordings for the calibration (PLAN 13.4). Only statistics of them are kept (Tools/ref_stats.json);
+# the audio is fetched into %TEMP%\umbra_refs and deleted after the measurement.
+# profile | artist - title | Beatport BPM and key from the research document (Dok. 1), or - | YouTube URL
+ostgut   | Klock & Dettmann - Dawning                         | 125 Ebm | https://www.youtube.com/watch?v=-z4QdShPw_A
+ostgut   | Marcel Dettmann - Quicksand                        | 125 Ab  | https://www.youtube.com/watch?v=dhNbnPCBGng
+ostgut   | Len Faki - Rainbow Delta                           | 129 Am  | https://www.youtube.com/watch?v=z-PWw9TdqLM
+ostgut   | Function - Disaffected                             | 127 Ab  | https://www.youtube.com/watch?v=6HcbdTc8QhA
+ostgut   | Ben Klock - Subzero                                | 125 Dbm | https://www.youtube.com/watch?v=QmY6Dh-DLRc
+ostgut   | Sandwell District - Immolare (Function Version)    | 127 Bm  | https://www.youtube.com/watch?v=UaRqnutL0UM
+ostgut   | Marcel Dettmann - Deluge                           | 130 Dm  | https://www.youtube.com/watch?v=Y9ZBJCDAbCQ
+ostgut   | Norman Nodge - Maniac                              | 127 D   | https://www.youtube.com/watch?v=4wFFvWN0DyM
+ostgut   | Efdemin - Decay                                    | 130 Gbm | https://www.youtube.com/watch?v=ieZgUD1j4vA
+ostgut   | Rodhad - Haumea (Dirt Mix)                         | 130 Am  | https://www.youtube.com/watch?v=xp_rE1aqi2o
+ostgut   | Head High - Rave (Dirt Mix)                        | 128 B   | https://www.youtube.com/watch?v=9dhVXLUpY4s
+dub      | Quadrant - Infinition                              | 128 Ab  | https://www.youtube.com/watch?v=UT3MJl0Xo-g
+dub      | Basic Channel - Quadrant Dub I                     | -       | https://www.youtube.com/watch?v=Gi4vzEoJXHU
+dub      | Porter Ricks - Port Gentil                         | -       | https://www.youtube.com/watch?v=uX4fdvZsNSw
+dub      | Porter Ricks - Nautical Dub                        | -       | https://www.youtube.com/watch?v=mXBXG6Eu5Eo
+dub      | Monolake - Cyan                                    | -       | https://www.youtube.com/watch?v=X1SazPaZqm8
+dub      | DeepChord - Vantage Isle (DC Mix I)                | -       | https://www.youtube.com/watch?v=hj7DWyURMKg
+raw      | Planetary Assault Systems - Bell Blocker           | 129 Em  | https://www.youtube.com/watch?v=Zz7nadSu0sI
+raw      | Jeff Mills - The Dancer                            | 131 Dbm | https://www.youtube.com/watch?v=_gI9ibL-JWA
+raw      | Planetary Assault Systems - Kat                    | 132 Bm  | https://www.youtube.com/watch?v=AJ5o9jsZ0CU
+raw      | DVS1 - Running                                     | 135 E   | https://www.youtube.com/watch?v=ZlR37HVmKxE
+raw      | Kobosil - Per                                      | 135 Am  | https://www.youtube.com/watch?v=KNoT7vP0D48
+raw      | Oscar Mulero - Generator                           | 135 Am  | https://www.youtube.com/watch?v=rlzBcqQ_qsQ
+hypnotic | Donato Dozzy - Vaporware 07                        | -       | https://www.youtube.com/watch?v=GitTQcNCW8c
+hypnotic | Voices From The Lake - Manuvex                     | -       | https://www.youtube.com/watch?v=b40buEbE82s
+hypnotic | Rrose - Waterfall                                  | -       | https://www.youtube.com/watch?v=ihoHRayyUkI
+hypnotic | Mike Parker - Geophone 14                          | -       | https://www.youtube.com/watch?v=axjFU9L_VHk
+hypnotic | Mike Parker - Lustration Eight (Contours)          | -       | https://www.youtube.com/watch?v=Hhohhhm1USc
+hypnotic | Oscar Mulero - Horses                              | -       | https://www.youtube.com/watch?v=2fP4V-KmvvI
+hypnotic | Ruhig - Alba (Luigi Tozzi Reshape)                 | -       | https://www.youtube.com/watch?v=E-oH5goFUz4

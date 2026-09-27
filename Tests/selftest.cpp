@@ -406,7 +406,11 @@ void testRack()
             const double pos = (n.beat - 4.0 * bar) * 4.0;
             const int step = static_cast<int>(std::floor(pos + 1e-6));
             const bool quarter = std::fabs(pos - std::round(pos)) < 0.2 && (static_cast<int>(std::lround(pos)) % 4) == 0;
-            const bool allowed = n.part == Part::Kick || n.part == percPart(4) || n.part == percPart(7);
+            bool allowed = n.part == Part::Kick || n.part == percPart(4) || n.part == percPart(7) || n.part == Part::Ping;
+            for (int li = 0; li < kNumLayers; ++li) {
+                const int lane = layerLane(plan, static_cast<LayerId>(li));
+                if (plan.period[li] > 0 && lane >= 0 && n.part == percPart(lane)) allowed = true;   // a cyclic layer crosses them
+            }
             if (quarter && !allowed && n.velocity > 0.2f) ++quarterViolations;
             const int lane = laneOf(n.part);
             if (lane >= 0 && lane <= 2) {
@@ -415,7 +419,8 @@ void testRack()
             }
         }
     }
-    check(quarterViolations == 0, "the quarters belong to the kick (clap and rim may share them)", fmt("%d violations", quarterViolations));
+    check(quarterViolations == 0, "the quarters belong to the kick (clap, rim and cyclic layers may share them)",
+          fmt("%d violations", quarterViolations));
     check(hatClashes == 0, "one hat per step", fmt("%d clashes in %d bars", hatClashes, bars));
 
     // Anchors: the same every bar of a block. Motion: rolled anew. Loop: bar 3 of a loop equals bar 1.
@@ -423,13 +428,24 @@ void testRack()
     rollSteps(plan, LayerId::ClosedHat, 3, 0, 1.0f, on1);
     rollSteps(plan, LayerId::ClosedHat, 17, 0, 1.0f, on2);
     check(std::equal(on1, on1 + kSteps, on2), "the offbeat hat is the same in every bar");
-    int motionDiff = 0;
-    for (int bar = 0; bar < 16; ++bar) {
+    std::set<unsigned> shapes;
+    for (int bar = 0; bar < 64; ++bar) {
         rollSteps(plan, LayerId::RollingHat, bar, 0, 1.0f, on1);
-        rollSteps(plan, LayerId::RollingHat, bar + 1, 0, 1.0f, on2);
-        motionDiff += std::equal(on1, on1 + kSteps, on2) ? 0 : 1;
+        unsigned m = 0;
+        for (int s = 0; s < kSteps; ++s) m |= on1[s] ? (1u << s) : 0u;
+        shapes.insert(m);
     }
-    check(motionDiff > 8, "the rolling hat is rolled anew every bar", fmt("%d of 16 neighbours differ", motionDiff));
+    check(shapes.size() > 12, "the rolling hat is rolled anew every bar (Hypnotic)", fmt("%zu shapes in 64 bars", shapes.size()));
+    // A reroll share of 0 rolls the motion once per block: the same shape in every bar of the block.
+    RackPlan steady = plan;
+    steady.reroll = 0.0f;
+    bool steadySame = true;
+    rollSteps(steady, LayerId::RollingHat, 32, 1, 1.0f, on1);
+    for (int bar = 33; bar < 64; ++bar) {
+        rollSteps(steady, LayerId::RollingHat, bar, 1, 1.0f, on2);
+        steadySame = steadySame && std::equal(on1, on1 + kSteps, on2);
+    }
+    check(steadySame, "reroll 0: the rolling hat is the same in every bar of a block");
     const int loop = plan.loopBars[static_cast<int>(LayerId::OpenHat)];
     rollSteps(plan, LayerId::OpenHat, 32 + 0, 1, 1.0f, on1);
     rollSteps(plan, LayerId::OpenHat, 32 + 2, 1, 1.0f, on2);
@@ -460,6 +476,105 @@ void testRack()
     bool same = a.size() == b.size();
     for (size_t i = 0; same && i < a.size(); ++i) same = a[i].beat == b[i].beat && a[i].velocity == b[i].velocity && a[i].part == b[i].part;
     check(same, "a bar realised alone equals the bar in sequence", fmt("%zu notes", a.size()));
+}
+
+/**
+ * The rack's Phase 2 (Rack.h): cycles against the bar, Euclidean patterns off the quarters, the ghost chain, trig
+ * conditions, fills, the mini-notation.
+ */
+void testRackPhase2()
+{
+    section("the rack's cycles, chains and conditions");
+    auto p = std::make_unique<ParamStore>();
+    p->set(p->find("compose.humanize"), 0.0f);
+    // Cycles: a period of p sixteenths is back on the bar's first step after lcm(p, 16) / 16 bars, and not before.
+    bool realign = true;
+    std::string detail;
+    for (int period : { 3, 5, 6, 7, 12, 15, 17 }) {
+        RackPlan plan = makeRackPlan(*p, 3);
+        const int li = static_cast<int>(LayerId::Ping);
+        plan.period[li] = period;
+        plan.resetBars[li] = 64;
+        plan.cycle[li] = 1;   // one onset, on the period's first position
+        int first = -1;
+        for (int bar = 1; bar < 40 && first < 0; ++bar) {
+            bool on[kSteps];
+            rollSteps(plan, LayerId::Ping, bar, 0, 1.0f, on);
+            if (on[0]) first = bar;
+        }
+        int g = period, h = 16;
+        while (h) { const int t = g % h; g = h; h = t; }
+        const int want = period * 16 / g / 16;
+        if (first != want) { realign = false; detail += fmt("%d: bar %d (want %d) ", period, first, want); }
+    }
+    check(realign, "a cycle meets the bar again after lcm(p, 16) / 16 bars (15 and 17: after 15 and 17)", detail);
+    // Euclid: the chosen rotations keep the quarters free, the masks are maximally even.
+    int euclidOnQuarter = 0, plans = 0;
+    for (uint64_t seed = 1; seed < 200; ++seed) {
+        const RackPlan plan = makeRackPlan(*p, seed);
+        for (int li = 0; li < kNumLayers; ++li) {
+            if (plan.euclid[li] == 0) continue;
+            ++plans;
+            if (plan.euclid[li] & 0x1111u) ++euclidOnQuarter;
+        }
+    }
+    const uint64_t e516 = euclidMask(5, 16);
+    int gaps[5], k = 0, last = -1, firstOn = -1;
+    for (int i = 0; i < 16; ++i) if (e516 & (uint64_t(1) << i)) { if (last >= 0) gaps[k++] = i - last; else firstOn = i; last = i; }
+    gaps[k++] = 16 - last + firstOn;
+    bool even = true;
+    for (int i = 0; i < k; ++i) even = even && (gaps[i] == 3 || gaps[i] == 4);
+    check(euclidOnQuarter == 0 && plans > 20, "Euclidean patterns off the quarters", fmt("%d of %d on a quarter", euclidOnQuarter, plans));
+    check(even && k == 5, "E(5,16) is 3+3+3+3+4 in some rotation");
+    // The ghost chain: after a ghost kick, the next sixteenth's chance is halved.
+    const RackPlan plan = makeRackPlan(*p, 21);
+    int pairs = 0, afterOn = 0;
+    for (int bar = 0; bar < 40000; ++bar) {
+        bool on[kSteps];
+        rollSteps(plan, LayerId::ClapGhost, bar, 0, 1.0f, on);
+        for (int s = 2; s < kSteps; ++s) if (layerDef(LayerId::ClapGhost).p[s] > 0.0f && on[s - 2]) { ++pairs; afterOn += on[s] ? 1 : 0; }
+    }
+    int base = 0, total = 0;
+    for (int bar = 0; bar < 40000; ++bar) {
+        bool on[kSteps];
+        rollSteps(plan, LayerId::ClapGhost, bar, 0, 1.0f, on);
+        for (int s = 0; s < kSteps; ++s) if (layerDef(LayerId::ClapGhost).p[s] > 0.0f) { ++total; base += on[s] ? 1 : 0; }
+    }
+    const double after = pairs > 0 ? static_cast<double>(afterOn) / pairs : 0.0, overall = static_cast<double>(base) / total;
+    check(after < 0.9 * overall, "a clap ghost two steps after another is rarer than any clap ghost",
+          fmt("%.3f against %.3f", after, overall));
+    // Trig conditions: the extra open hat only in the second of four bars.
+    bool condOk = true;
+    for (int bar = 0; bar < 32; ++bar) {
+        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
+        spec.active[static_cast<int>(LayerId::OpenHat)] = true;
+        std::vector<NoteEvent> notes;
+        realizeBar(plan, spec, notes);
+        const TrigCond& t = plan.conds[0];
+        bool has = false;
+        for (const NoteEvent& n : notes) if (std::fabs((n.beat - 4.0 * bar) * 4.0 - t.step) < 0.2 && n.part == percPart(2)) has = true;
+        const bool want = (bar % 4) == 1;
+        if (want && !has) condOk = false;
+    }
+    check(condOk, "the open hat's trig condition plays in bar 2 of 4");
+    // Fills: only in the last bar of an eight-bar phrase.
+    bool fillOk = true;
+    int fills = 0;
+    for (int bar = 0; bar < 256; ++bar) {
+        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
+        spec.active[static_cast<int>(LayerId::TomConga)] = true;
+        std::vector<NoteEvent> notes;
+        realizeBar(plan, spec, notes);
+        int last4 = 0;
+        for (const NoteEvent& n : notes) if ((n.beat - 4.0 * bar) * 4.0 >= 12.9 && n.shift > 0) ++last4;
+        if (last4 > 0) { ++fills; if (bar % 8 != 7) fillOk = false; }
+    }
+    check(fillOk && fills > 0, "fills only in the last bar of an eight-bar phrase", fmt("%d fills in 32 phrases", fills));
+    // Mini-notation.
+    const std::string kick = miniNotation(plan, LayerId::Kick, 0, "bd");
+    const std::string ping = miniNotation(plan, LayerId::Ping, 0, "p");
+    check(kick == "bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~", "the kick in mini-notation", kick);
+    check(ping.front() == '{' && ping.find("}%16") != std::string::npos, "a cyclic layer as a polymetric sequence", ping);
 }
 
 /** The study's form (Study.h, PLAN 7.2). */
@@ -612,6 +727,7 @@ const TestSection kSections[] = {
     { "testMetalTable", testMetalTable },
     { "testKitLevels", testKitLevels },
     { "testRack", testRack },
+    { "testRackPhase2", testRackPhase2 },
     { "testStudyForm", testStudyForm },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },

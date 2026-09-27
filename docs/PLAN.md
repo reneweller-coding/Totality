@@ -20,6 +20,63 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**27.09.2026, abends: Referenzmessung und der größte Teil von Phase 2.** Die 30 Referenztitel (`Tools/ref_sets.txt`)
+liegen als Tonspur in `%TEMP%\umbra_refs` (Entscheidung 16.1: Audio behalten, außerhalb des Repos) und sind mit
+`Tools/analyze_ref.py` vermessen; im Repo stehen nur die Statistiken (`Tools/ref_stats.json`). Dasselbe Werkzeug misst
+Umbras Renders.
+
+| Größe (Median) | Hypnotic (7) | Ostgut (11) | Raw (6) | Dub (6) | alle (30) | Studie, Hypnotic (Seed 7/8) |
+|---|---|---|---|---|---|---|
+| Tempo, BPM | 128,0 | 126,9 | 133,9 | 124,3 | 128,1 | 130 |
+| Kick-Grundton im Ausklang, Hz | 55,0 | 50,3 | 51,1 | 58,4 | 54,1 | 55,1 |
+| Sub-Anteil (20–60 von 20–250 Hz) | 0,45 | 0,51 | 0,51 | 0,40 | 0,49 | 0,39–0,41 |
+| Anteil über 5 kHz | 0,5 % | 1,6 % | 0,7 % | 0,1 % | 1,2 % | 0,5 % |
+| Schwerpunkt (Leistung), Hz | 252 | 331 | 170 | 182 | 248 | 140 |
+| Seite zu Mitte über 200 Hz, dB | −4,5 | −6,2 | −8,1 | −7,9 | −7,2 | −27 |
+| Lautheit integriert, LUFS / LRA, LU | −11,5 / 4,7 | −10,8 / 3,0 | −9,9 / 1,3 | −12,2 / 3,4 | −11,2 / 3,0 | −14,5 / 0,7 |
+| Takt-Ähnlichkeit (ohne Schwelle, beste Distanz 1/2/4 Takte) | 0,87 | 0,955 | 0,92 | 0,93 | 0,95 | 0,87 |
+| Mikroveränderung, dB je Takt und Band | 0,53 | 0,43 | 0,37 | 0,69 | 0,51 | 0,48 |
+| Reduktionen je Titel / Länge in Takten | 1,6 / 3 | 2,0 / 1,5 | 0,5 / 3 | 0,3 / 5 | 1,3 / 2 | 1 / 8 |
+| Formgrenzen im Abstand von 8 Takten (Zufall ≈ 0,38) | 0,57 | 0,57 | 0,50 | 0,57 | 0,57 | – |
+
+Befunde der Messung:
+- **Das Werkzeug trifft das Beatport-Tempo bei 16 von 18 Titeln auf 0,5 BPM**; die zwei Abweichler (*Immolare* −3,
+  *The Dancer* +1,9 BPM) sind vermutlich andere Fassungen auf YouTube. Die erste Fassung legte die Kick auf das 16tel
+  vor dem Schlag (Ausrichtung am Energiemaximum statt am Einsatz) und rasterte den Kick-Grundton auf 5,4 Hz; beides am
+  eigenen Render gefunden und behoben.
+- **Die Spektralziele von Dok. 8.7 sind so nicht reproduzierbar**: Leistungsgewichtet liegen über 5 kHz 1,2 % und der
+  Schwerpunkt bei 248 Hz, nicht bei 7 % und 1,5 bis 3,5 kHz (vermutlich betragsgewichtet oder anders gefiltert gemessen).
+  Kalibriert wird gegen die eigene Messung.
+- **Der Kick-Grundton liegt bei 54 Hz**, nicht bei den 60 Hz des Korpus in Dok. 8.7; Umbras Standard (tonal auf 41 bis
+  62 Hz, A → 55 Hz) passt.
+- **Reduktionen sind kurz**: im Median 2 Takte, 1,3 je Titel; lange Kick-outs sind die Ausnahme (Efdemin 32, Function
+  20, Kobosil 14 Takte). Die Studie mit ihrem 8-Takt-Kick-out liegt am langen Ende. Für die Form (Phase 4) heißt das:
+  kurze Schnitte (1 bis 4 Takte) im Tool, lange nur im Peak-Typ.
+- **Hypnose, und ein Irrweg dabei.** Die binären Maße (Entropierate, PIR, Positionsentropie, gleiche Takte) ließen die
+  Studie viel unruhiger aussehen als die Referenzen; daraufhin wurden Rolling-Hat und Ghost-Kicks zu Loops. Eine
+  Gegenprobe zeigte, dass diese Maße vor allem die Binarisierungsschwelle messen: Ein Render aus nichts als Kick,
+  Offbeat-Hat und Rumble erreicht schon die Werte der Referenzen, und leise 16tel kippen um die Schwelle. Das
+  schwellenfreie Maß (Korrelation der kontinuierlichen Onset-Profile zwischen Takten) zeigt das Gegenteil: Die
+  Hypnotic-Titel sind die unruhigste Schule (0,87), Ostgut die gleichförmigste (0,955); Dok. 8.2s Motion, jeden Takt neu
+  gewürfelt, trifft Hypnotic genau (0,87), als Loop lag die Studie bei 0,98. Die Loops sind zurückgenommen; die
+  Unruhe ist jetzt eine Stilgröße (`RackPlan::reroll`: Hypnotic 1,0, Raw 0,3, Dub 0,25, Ostgut 0,15; gemessen 0,87 /
+  0,93 / 0,94 / 0,97). Die binären Maße bleiben im Werkzeug, als schwellenabhängig markiert.
+- **Offen gegen die Referenzen**: Breite (−27 dB statt −4,5) und Lautheitsverlauf (LRA 0,7 statt 4,7) fehlen, weil
+  Akkorde, Flächen und Dub-Kette (Phase 3) und die Dynamik der Form (Phase 4) fehlen; die Lautheit selbst (−14,5 statt
+  −11,5 LUFS) setzt der Leveler (Phase 3), nicht ein höherer Master-Pegel (+3 dB brachten nur +1,6 LUFS, weil Clipper
+  und Limiter die Kick-Spitzen nehmen).
+
+Gebaut in Phase 2 (aus Abschnitt 14): Polymeter (3, 5, 6, 7, 12, Reset alle 16 Takte) und Slipping (15, 17, Reset am
+Block) als zyklische Layer, Euklid E(3,8)/E(5,16)/E(7,16) neben den Vierteln, Displacement, Ghost-Ketten (Erg. 7),
+Trig-Conditions (OH 2:4, Shaker 3:4), Fills (Tom/Conga nach dem letzten Viertel einer 8-Takt-Phrase), die Ping-Stimme
+(FM mit √2, Low-Pass-Gate mit Vactrol-Abfall nach Parker und D'Angelo, wandernder Bandpass) samt zyklischer Figur,
+Mininotation (`umb_render --patterns`), die symbolische Wiederholung je Stimme (`--stats`), die globalen LFOs (7, 11,
+13 Beats, 0,065 und 0,05 Hz) auf Filter, Pegel und Decay der Lanes und den Rumble-Drive, ein Raum-Send (FDN, Rückweg
+250 Hz bis 6 kHz) für Hats, Perkussion und Ping. Kalibriert: Rumble-Sub 0 dB (Sub-Anteil 0,45 wie Hypnotic), Rumble-
+Ausgang neu (Level weiter "Rumble gegen Kick"), Raum 17 dB unter den trockenen Hats. `ctest` 18 von 18. Aus Phase 2
+offen: die Onset-Profile gegen die Referenzen im Einzelnen (die Hypnotic-Titel haben einen fast gleichmäßigen
+16tel-Teppich im Höhenband, die Studie ein Offbeat-Profil).
+
 **27.09.2026: Phase 0 fertig, Phase 1 hörbar** (Freigabe des Nutzers: "Ja, bitte ziehe das erst mal so durch", damit
 auch die Vorschläge 16.2). `umb_render --seed 7 --minutes 7` spielt die Studie (`compose/Study.h`): sieben Blöcke zu
 32 Takten, Kick und Rumble ab Takt 1, Offbeat-Hat ab Takt 9, Rolling-Hat zur Hälfte ab Takt 17, der Hat-Bus öffnet von
@@ -69,7 +126,7 @@ Abweichungen vom Plan, bewusst:
   und die Ping-Stimme.
 - **Eine feste Studie statt des Komponisten**, wie bei Ephemeris.
 
-Noch offen in Phase 1: die Referenzmessung (13.4; die Downloadliste liegt dem Nutzer zur Bestätigung vor) und das
+Noch offen in Phase 1 (Stand dieses Eintrags): die Referenzmessung (erledigt, siehe den Eintrag darüber) und das
 Urteil des Nutzers nach dem Hören. Die Spektralbalance der Studie ist erwartbar dunkel (über 5 kHz 0,4 % statt der
 7 % des Korpus, Schwerpunkt 140 Hz): Ohne Akkorde, Bass-Synth und Pings fehlt die ganze Mitte; kalibriert wird gegen die
 gemessenen Referenzen, nicht gegen Korpuszahlen ganzer Mischungen.
@@ -240,6 +297,12 @@ Größen, die gemessen und gesteuert werden:
 
 Die Zahlen der Ergänzung ("Vorhersagbarkeit > 90 %", "1 bis 5 % Informationszuwachs") stehen nicht in der Arbeit von
 Abdallah und Plumbley und werden nicht übernommen; die Korridore kommen aus der Messung (13.4).
+
+**Nachtrag 27.09.2026 (Referenzmessung):** Auf Audio gemessen hängen Entropierate und PIR stark an der Schwelle, mit
+der Onsets binarisiert werden; schon ein reiner Anker-Loop erreicht die Werte der Referenzen. Das tragfähige Maß der
+Wiederholung ist die schwellenfreie Takt-Ähnlichkeit (Korrelation der Onset-Profile zwischen einem Takt und dem 1, 2
+oder 4 Takte davor): Hypnotic 0,87, Raw 0,92, Dub 0,93, Ostgut 0,955. Zusammen mit der Mikroveränderung (0,37 bis
+0,69 dB je Takt) bildet sie den Korridor. Auf der Partitur (7.9) gilt dieselbe Größe symbolisch.
 
 ### 2.10 Stand der Technik (SOTA)
 
@@ -912,7 +975,8 @@ Nach Phase 1 gibt es den ersten hörbaren Prüfstein, nach Phase 4 ist das Produ
 3. **Stilbreite:** Hypnotic im Zentrum, dazu Ostgut, Dub und Raw/Peak als Profile, zwischen denen interpoliert wird;
    Hypnotic ist der Standard und wird zuerst kalibriert.
 4. **Quest:** ja, der komplette Generator auf dem Gerät.
-5. **Referenzen:** die im Dokument genannten Tracks, über YouTube bezogen.
+5. **Referenzen:** die im Dokument genannten Tracks, über YouTube bezogen; die Liste von 30 Titeln (Ergänzungen für
+   Hypnotic und Dub) am 27.09.2026 freigegeben, das Audio bleibt außerhalb des Repos liegen ("Ja, Audio behalten").
 6. **Bausteine** aller drei Geschwister nutzen, ausdrücklich auch Noctuarys (Abschnitt 4).
 7. **Keine Agenten** bei der Arbeit an diesem Projekt.
 
