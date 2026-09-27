@@ -24,6 +24,11 @@ add_library(UmbraCore STATIC
     src/fx/Cloud.cpp
     src/pattern/Rack.cpp
     src/compose/Study.cpp
+    src/compose/Style.cpp
+    src/compose/GestureEngine.cpp
+    src/compose/Corridor.cpp
+    src/compose/Composer.cpp
+    src/SetFile.cpp
     src/Engine.cpp
 )
 target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

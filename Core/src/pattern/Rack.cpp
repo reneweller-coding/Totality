@@ -3,6 +3,7 @@
  * @brief The layer tables of Dok. 8.2 and 8.3, the rolls, the cycles, the ghost chains and the rules.
  */
 #include "umb/pattern/Rack.h"
+#include "umb/compose/Style.h"
 #include "umb/Dsp.h"
 #include <algorithm>
 #include <cmath>
@@ -131,6 +132,12 @@ enum Salt : uint64_t { kBase = 11, kMutA = 12, kMutB = 13, kMotion = 14, kVel = 
 
 bool isCyclic(const RackPlan& plan, int li) { return plan.period[li] > 0; }
 
+/** @brief The seed of layer @p li's rolls in a block of candidate @p variant (0: the layer's own seed). */
+uint64_t seedOf(const RackPlan& plan, int li, uint32_t variant)
+{
+    return variant == 0 ? plan.layerSeed[li] : mixSeed(plan.layerSeed[li], 0x5641524900000000ull + variant);   // "VARI"
+}
+
 /** @brief Base velocity of a layer: its loudest step's. */
 float baseVelocity(const LayerDef& d)
 {
@@ -186,23 +193,43 @@ uint64_t rotateMask(uint64_t mask, int n, int r)
     return out;
 }
 
+RackSettings rackSettings(const ParamStore& p)
+{
+    RackSettings s;
+    const StyleProfile& prof = styleProfile(static_cast<Style>(p.getInt(p.id(Module::Compose, 0, compose::Style))));
+    s.keyRoot = p.getInt(p.id(Module::Compose, 0, compose::Key));
+    s.scale = p.getInt(p.id(Module::Compose, 0, compose::Scale));
+    s.swing = prof.swingHigh <= 51.0f ? 50.0f : p.get(p.id(Module::Compose, 0, compose::Swing));   // Dub plays straight
+    s.humanizeMs = p.get(p.id(Module::Compose, 0, compose::Humanize));
+    s.mutation = prof.mutation;
+    s.motionScale = prof.motionScale;
+    s.reroll = prof.reroll;
+    s.polymeterChance = prof.polymeterChance;
+    s.fillChance = prof.fillChance;
+    return s;
+}
+
 RackPlan makeRackPlan(const ParamStore& p, uint64_t seed)
+{
+    return makeRackPlan(rackSettings(p), seed);
+}
+
+RackPlan makeRackPlan(const RackSettings& st, uint64_t seed)
 {
     RackPlan plan;
     plan.seed = seed;
+    for (uint64_t& s : plan.layerSeed) s = seed;
     Rng rng;
     rng.seed(mixSeed(seed, 0x5241434Bull));   // "RACK"
-    // The style's restlessness (RackPlan), after the reference measurement's bar similarity (PLAN 13.4): Hypnotic 0.87,
-    // Raw 0.92 and Dub 0.93, Ostgut 0.955 (most of the motion rolled per block). Hypnotic rolled every bar while the mix
-    // was dull (Phase 2); with the balance fitted to the references (Phase 3: highs +10 dB) the hats and the ping weigh
-    // more in the onset profiles, and 0.15 meets 0.87 (0.84 .. 0.87 over three seeds): its difference is the ping's cycles.
-    const int styleId = p.getInt(p.id(Module::Compose, 0, compose::Style));
-    switch (static_cast<Style>(styleId)) {
-    case Style::Hypnotic: plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.15f; break;
-    case Style::Dub:      plan.mutation = 0.125f; plan.motionScale = 0.8f; plan.reroll = 0.25f; break;
-    case Style::RawPeak:  plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.3f; break;
-    default:              plan.mutation = 0.25f;  plan.motionScale = 1.0f; plan.reroll = 0.15f; break;
-    }
+    // The style's restlessness (RackPlan, Style.h), after the reference measurement's bar similarity (PLAN 13.4):
+    // Hypnotic 0.87, Raw 0.92 and Dub 0.93, Ostgut 0.955 (most of the motion rolled per block). Hypnotic rolled every
+    // bar while the mix was dull (Phase 2); with the balance fitted to the references (Phase 3: highs +10 dB) the hats and
+    // the ping weigh more in the onset profiles, and 0.15 meets 0.87 (0.84 .. 0.87 over three seeds): its difference is
+    // the ping's cycles.
+    plan.mutation = st.mutation;
+    plan.motionScale = st.motionScale;
+    plan.reroll = st.reroll;
+    plan.fillChance = st.fillChance;
     for (int i = 0; i < kNumLayers; ++i) {
         const LayerDef& d = kLayers[i];
         const float u = rng.uniform();
@@ -213,10 +240,10 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed)
     }
     plan.clapB = rng.uniform() < 0.3f;
     plan.tomLane = rng.uniform() < 0.5f ? 9 : 10;
-    plan.keyRoot = p.getInt(p.id(Module::Compose, 0, compose::Key));
-    plan.scale = p.getInt(p.id(Module::Compose, 0, compose::Scale));
-    plan.swing = styleId == static_cast<int>(Style::Dub) ? 50.0f : p.get(p.id(Module::Compose, 0, compose::Swing));
-    plan.humanizeMs = p.get(p.id(Module::Compose, 0, compose::Humanize));
+    plan.keyRoot = st.keyRoot;
+    plan.scale = st.scale;
+    plan.swing = st.swing;
+    plan.humanizeMs = st.humanizeMs;
     // The bass's root: the octave of the key's root between 41 and 82 Hz (E1 .. E2), never under 35 Hz (Dok. 8.4).
     plan.bassRoot = 24 + plan.keyRoot;
     if (midiToHz(plan.bassRoot) < 41.0) plan.bassRoot += 12;
@@ -262,7 +289,7 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed)
         LayerId candidates[] = { LayerId::TomConga, LayerId::Rim, LayerId::Shaker };
         for (int i = 2; i > 0; --i) std::swap(candidates[i], candidates[rng.below(i + 1)]);
         static const int kPeriods[] = { 3, 5, 6, 7, 12 };
-        const int polys = rng.uniform() < 0.5f ? (rng.uniform() < 0.5f ? 2 : 1) : 0;
+        const int polys = rng.uniform() < st.polymeterChance ? (rng.uniform() < 0.5f ? 2 : 1) : 0;
         for (int c = 0; c < 3; ++c) {
             const int li = static_cast<int>(candidates[c]);
             if (c < polys) {
@@ -339,9 +366,10 @@ BarSpec emptyBar(int bar, double beat, double bpm)
     return s;
 }
 
-void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float density, bool* on, const bool* busy)
+void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float density, bool* on, const bool* busy, uint32_t variant)
 {
     const int li = static_cast<int>(id);
+    const uint64_t sd = seedOf(plan, li, variant);
     const LayerDef& d = kLayers[li];
     for (int s = 0; s < kSteps; ++s) on[s] = false;
     if (density <= 0.0f) return;
@@ -351,14 +379,14 @@ void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float densi
         for (int s = 0; s < kSteps; ++s) {
             const int pos = cyclePos(plan, li, bar, s);
             if (!(plan.cycle[li] & (uint64_t(1) << pos))) continue;
-            on[s] = density >= 1.0f || roll(plan.seed, li, kCycle, static_cast<uint64_t>(block) * 64 + pos) < density;
+            on[s] = density >= 1.0f || roll(sd, li, kCycle, static_cast<uint64_t>(block) * 64 + pos) < density;
         }
         return;
     }
     if (plan.euclid[li] != 0) {
         for (int s = 0; s < kSteps; ++s) {
             if (!(plan.euclid[li] & (1u << s))) continue;
-            on[s] = density >= 1.0f || roll(plan.seed, li, kBase, static_cast<uint64_t>(block) * 16 + s) < density;
+            on[s] = density >= 1.0f || roll(sd, li, kBase, static_cast<uint64_t>(block) * 16 + s) < density;
         }
     } else {
         bool prev1 = false, prev2 = false;
@@ -369,26 +397,26 @@ void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float densi
             float u, q = p * std::min(density, 1.0f);
             switch (d.kind) {
             case LayerKind::Anchor:
-                u = roll(plan.seed, li, kBase, static_cast<uint64_t>(block) * 16 + s);
+                u = roll(sd, li, kBase, static_cast<uint64_t>(block) * 16 + s);
                 break;
             case LayerKind::Loop: {
                 // Bar 1 (and 3) of the loop is the base roll; bars 2 and 4 re-roll the style's share of the open steps
                 // (RackPlan::mutation; Dok. 8.2's "Mutation nur in Takt 2 bzw. 2/4").
                 const int pos = (bar % 32) % std::max(1, plan.loopBars[li]);
-                u = roll(plan.seed, li, kBase, static_cast<uint64_t>(block) * 16 + s);
+                u = roll(sd, li, kBase, static_cast<uint64_t>(block) * 16 + s);
                 if (pos == 1 || pos == 3) {
                     const uint64_t salt = pos == 1 ? kMutA : kMutB;
-                    if (roll(plan.seed, li, salt, static_cast<uint64_t>(block) * 64 + s) < plan.mutation)
-                        u = roll(plan.seed, li, salt, static_cast<uint64_t>(block) * 64 + 16 + s);
+                    if (roll(sd, li, salt, static_cast<uint64_t>(block) * 64 + s) < plan.mutation)
+                        u = roll(sd, li, salt, static_cast<uint64_t>(block) * 64 + 16 + s);
                 }
                 break;
             }
             default:
                 // The ghost chain (Erg. 7): the layer's own last two steps, the others' ghosts, the half bar before. A step
                 // is rolled anew this bar with the style's reroll share, else it keeps its roll of the block.
-                u = roll(plan.seed, li, kMotion, static_cast<uint64_t>(bar) * 16 + s);
-                if (plan.reroll < 1.0f && roll(plan.seed, li, kMutB, static_cast<uint64_t>(bar) * 16 + s) >= plan.reroll)
-                    u = roll(plan.seed, li, kMotion, 0x100000000ull + static_cast<uint64_t>(block) * 16 + s);
+                u = roll(sd, li, kMotion, static_cast<uint64_t>(bar) * 16 + s);
+                if (plan.reroll < 1.0f && roll(sd, li, kMutB, static_cast<uint64_t>(bar) * 16 + s) >= plan.reroll)
+                    u = roll(sd, li, kMotion, 0x100000000ull + static_cast<uint64_t>(block) * 16 + s);
                 q *= plan.motionScale;
                 if (prev1) q *= 0.5f;
                 else if (prev2) q *= 0.75f;
@@ -420,7 +448,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
         const LayerId table = (id == LayerId::ClapA && plan.clapB) ? LayerId::ClapB : id;
         const LayerDef& d = kLayers[static_cast<int>(table)];
         const bool motion = d.kind == LayerKind::Motion;
-        rollSteps(plan, table, spec.bar, spec.block, spec.density[i], on[i], motion ? busy : nullptr);
+        rollSteps(plan, table, spec.bar, spec.block, spec.density[i], on[i], motion ? busy : nullptr, spec.variant);
         if (motion || d.perc)
             for (int s = 0; s < kSteps; ++s) busy[s] = busy[s] || on[i][s];
     }
@@ -448,7 +476,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
     // the quarter stays the kick's), never a snare roll.
     bool fill = false;
     if (spec.fills && spec.active[L(LayerId::TomConga)] && (spec.bar % 8) == 7
-        && roll(plan.seed, L(LayerId::TomConga), kFill, static_cast<uint64_t>(spec.bar)) < plan.fillChance) {
+        && roll(seedOf(plan, L(LayerId::TomConga), spec.variant), L(LayerId::TomConga), kFill, static_cast<uint64_t>(spec.bar)) < plan.fillChance) {
         fill = true;
         for (int s = 13; s < kSteps; ++s) on[L(LayerId::TomConga)][s] = true;
     }
@@ -471,7 +499,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
             NoteEvent n;
             // Velocity: the step's (a cyclic or Euclidean layer: its loudest step's), a random spread, the collision dip.
             const float base = pattern || d.vel[s] <= 0.0f ? baseVelocity(d) : d.vel[s];
-            float vel = base + d.velRandom * (2.0f * roll(plan.seed, i, kVel, static_cast<uint64_t>(spec.bar) * 16 + s) - 1.0f);
+            float vel = base + d.velRandom * (2.0f * roll(seedOf(plan, i, spec.variant), i, kVel, static_cast<uint64_t>(spec.bar) * 16 + s) - 1.0f);
             double offMs = plan.offsetMs[i];
             const bool kickHere = on[L(LayerId::Kick)][s] || on[L(LayerId::GhostKick)][s];
             const bool hatHere = on[L(LayerId::ClosedHat)][s] || on[L(LayerId::RollingHat)][s] || on[L(LayerId::OpenHat)][s];
@@ -486,8 +514,8 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
             if ((s & 1) == 1) beat += swingBeats * d.swing;
             if (!kickLike && plan.humanizeMs > 0.0f) {
                 // Half-normal from two uniforms (Box-Muller's radius), never early.
-                const double u1 = std::max(1.0e-9, static_cast<double>(roll(plan.seed, i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + s)));
-                const double u2 = roll(plan.seed, i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + 16 + s);
+                const double u1 = std::max(1.0e-9, static_cast<double>(roll(seedOf(plan, i, spec.variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + s)));
+                const double u2 = roll(seedOf(plan, i, spec.variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + 16 + s);
                 const double g = std::sqrt(-2.0 * std::log(u1)) * std::cos(6.283185307179586 * u2);
                 offMs += std::min(10.0, std::fabs(g) * plan.humanizeMs);
             }
@@ -503,7 +531,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
                 // Root ostinato; the alphabet's other tones only on the last two sixteenths (Dok. 8.6).
                 int interval = 0;
                 if (plan.bassSize > 1 && s >= 14) {
-                    const int k = 1 + static_cast<int>(roll(plan.seed, i, kBase, 1000 + static_cast<uint64_t>(spec.bar) * 2 + (s - 14)) * static_cast<float>(plan.bassSize - 1));
+                    const int k = 1 + static_cast<int>(roll(seedOf(plan, i, spec.variant), i, kBase, 1000 + static_cast<uint64_t>(spec.bar) * 2 + (s - 14)) * static_cast<float>(plan.bassSize - 1));
                     interval = plan.bassSet[std::min(k, plan.bassSize - 1)];
                 }
                 n.pitch = plan.bassRoot + interval;
@@ -534,12 +562,12 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
                 // the flat seventh and the minor third 0.1 each, within the scale (Dok. 8.6's alphabet, a 303 idiom).
                 n.part = Part::Acid;
                 const uint64_t key = static_cast<uint64_t>(spec.block) * 16 + s;
-                const float u = roll(plan.seed, i, kAcid, key);
+                const float u = roll(seedOf(plan, i, spec.variant), i, kAcid, key);
                 int iv = u < 0.45f ? 0 : (u < 0.65f ? 12 : (u < 0.75f ? 7 : (u < 0.85f ? 10 : (u < 0.95f ? 3 : 5))));
-                if (!inScale(plan.scale, iv)) iv = 0;
+                if (!inScale(plan.scale, iv) || !(plan.acidMask & (1u << (iv % 12)))) iv = 0;
                 n.pitch = plan.acidRoot + iv;
-                n.accent = roll(plan.seed, i, kAcid, 1000 + key) < 0.3f;
-                n.slide = roll(plan.seed, i, kAcid, 2000 + key) < 0.2f;
+                n.accent = roll(seedOf(plan, i, spec.variant), i, kAcid, 1000 + key) < 0.3f;
+                n.slide = roll(seedOf(plan, i, spec.variant), i, kAcid, 2000 + key) < 0.2f;
                 if (n.slide) n.length = 0.3;   // the gate holds into the next sixteenth
             } else {
                 n.part = percPart(layerLane(plan, id));

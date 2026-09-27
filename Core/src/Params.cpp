@@ -21,6 +21,8 @@ const char* const kPercRoleNames[kNumPercRoles] = { "Closed Hat", "Rolling Hat",
 namespace {
 
 const char* const kLowOwnerNames[] = { "Rumble", "Sub" };
+const char* const kFormChoiceNames[] = { "Auto", "Arc", "Peak", "Endless" };
+const char* const kMorphToNames[] = { "Off", "Hypnotic", "Ostgut", "Dub", "Raw Peak" };
 const char* const kKickEngineNames[] = { "Sweep", "Resonator", "909" };
 const char* const kKickTuneNames[] = { "Free", "Key", "Fifth", "Flat Seventh" };
 const char* const kKickClipNames[] = { "Soft", "Hard" };
@@ -55,6 +57,12 @@ const ParamDesc kComposeParams[compose::Count] = {
     { "swing",     "Swing",     "%",    50.0f,  66.0f,  53.0f, Curve::Linear },   // MPC scale, Dok. 8.3
     { "humanize",  "Humanize",  "ms",    0.0f,  10.0f,   3.0f, Curve::Linear },
     { "low_owner", "Low End",   "",      0.0f,   1.0f,   0.0f, Curve::Choice, kLowOwnerNames },
+    { "auto",      "Auto",      "",      0.0f,   1.0f,   1.0f, Curve::Toggle },
+    { "form",      "Form",      "",      0.0f,   3.0f,   0.0f, Curve::Choice, kFormChoiceNames },
+    { "morph_to",  "Morph To",  "",      0.0f,   4.0f,   0.0f, Curve::Choice, kMorphToNames },
+    { "morph",     "Morph",     "",      0.0f,   1.0f,   0.5f, Curve::Linear },
+    { "dub_share", "Dub Share", "",      0.0f,   1.0f,   0.0f, Curve::Linear },
+    { "hypnotic_share", "Hypnotic Share", "", 0.0f, 1.0f, 0.0f, Curve::Linear },
 };
 
 /**
@@ -181,6 +189,7 @@ const ParamDesc kMixParams[mix::Count] = {
     { "drum_sat",   "Drum Saturation", "", 0.0f,   1.0f,     0.35f, Curve::Linear },
     { "duck_low",   "Duck Low",   "dB",   0.0f,    18.0f,    10.0f, Curve::Linear },
     { "duck_mid",   "Duck Mid",   "dB",   0.0f,    12.0f,     3.0f, Curve::Linear },
+    { "low_cut",    "Group Low Cut", "Hz", 20.0f,   500.0f,    20.0f, Curve::Log },   // off at 20 Hz
 };
 
 /**

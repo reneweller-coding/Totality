@@ -175,6 +175,8 @@ private:
     float drumSat_ = 0.35f;
     // Master.
     Svf sideHp1_, sideHp2_;
+    Svf groupHp_[2][2];              ///< the group high pass (mix.low_cut), fourth order, per channel
+    bool groupHpOn_ = false;
     float masterGain_ = 1.0f, clipDrive_ = 1.0f;
     float trimGain_ = 1.0f, trimTarget_ = 1.0f, trimCoef_ = 0.0f;
     std::vector<float> lateTrims_;   ///< setLevelTrims: the corrections found while playing

@@ -135,13 +135,36 @@ struct RackPlan {
     int shuttleBars = 0;                ///< it plays every shuttleBars-th bar (2 or 4), 0: never
     int droneNote = 57;                 ///< the drone's note (tonic or fifth; the voice keeps it above 150 Hz)
     int acidRoot = 45;                  ///< the 303 line's root, an octave over the bass's
+    uint16_t acidMask = 0x0FFF;         ///< Phase 4: the pitch classes above the root the 303 may play (bit k: k semitones)
     /** @} */
+    /**
+     * @brief Phase 4: each layer's own seed for its rolls (PLAN 7.8). All start as the track's seed; the composer
+     *        draws one layer anew by giving it another, so a layer is locked while the rest is rerolled and back.
+     */
+    uint64_t layerSeed[kNumLayers] = {};
 };
+
+/** @brief What a track decides about its rack before the rack draws its plan (Phase 4: from the style's profile). */
+struct RackSettings {
+    int keyRoot = 9;                    ///< pitch class of the key
+    int scale = 0;                      ///< compose.scale
+    float swing = 53.0f;                ///< MPC swing, per cent
+    float humanizeMs = 3.0f;            ///< jitter's standard deviation
+    float mutation = 0.25f;             ///< RackPlan::mutation
+    float motionScale = 1.0f;           ///< RackPlan::motionScale
+    float reroll = 0.15f;               ///< RackPlan::reroll
+    float polymeterChance = 0.5f;       ///< one or two cyclic percussion layers
+    float fillChance = 0.25f;           ///< RackPlan::fillChance
+};
+/** @brief The settings the knobs describe: compose.key, scale, swing, humanize, and compose.style's profile. */
+RackSettings rackSettings(const ParamStore& p);
 /**
- * @brief Makes the plan of a track from the knobs (compose.*) and a seed.
- * @param p    the knobs
+ * @brief Makes the plan of a track.
+ * @param s    what the track decided
  * @param seed the track's pattern seed
  */
+RackPlan makeRackPlan(const RackSettings& s, uint64_t seed);
+/** @brief makeRackPlan(rackSettings(p), seed). */
 RackPlan makeRackPlan(const ParamStore& p, uint64_t seed);
 
 /** @brief What the form asks of the rack in one bar. */
@@ -155,6 +178,7 @@ struct BarSpec {
     float density[kNumLayers] = {};         ///< a factor on the probabilities below one (1 = the full groove)
     bool muteStep[kSteps] = {};             ///< steps where nothing but the kick plays ("mute one expected hit", Dok. 8.5)
     bool fills = true;                      ///< fills allowed in this bar
+    uint32_t variant = 0;                   ///< Phase 4: the block's candidate (PLAN 7.9); 0 the plain rolls
 };
 /** @brief A BarSpec with every layer off and every density at one. */
 BarSpec emptyBar(int bar, double beat, double bpm);
@@ -172,7 +196,8 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
  *        the displacement -- without the rules that involve the other layers (for the tests and the displays).
  * @param busy steps the other ghosts and percussion already took (the ghost chain's cross factor), or null
  */
-void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float density, bool* on, const bool* busy = nullptr);
+void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float density, bool* on, const bool* busy = nullptr,
+               uint32_t variant = 0);
 
 /** @brief k onsets spread as evenly as possible over n steps, the first on step 0 (Toussaint's Euclidean rhythm). */
 uint64_t euclidMask(int k, int n);

@@ -13,6 +13,8 @@
 #include "umb/Midi.h"
 #include "umb/Params.h"
 #include "umb/Score.h"
+#include "umb/SetFile.h"
+#include "umb/compose/Composer.h"
 #include "umb/compose/Study.h"
 #include "umb/fx/Cloud.h"
 #include "umb/fx/Dub.h"
@@ -630,6 +632,166 @@ void testStudyForm()
     }
 }
 
+/** The composer's grammar (PLAN 7.2, Dok. 8.5) on 32 tracks, eight seeds of every style: one operation at every block
+ *  boundary, everything on four-bar lines, returns on 16-bar lines, no tonal material in the first and last 32 bars
+ *  (but the Endless), the Endless without kick-out, the sub bass exactly where it owns the low end and from the body on,
+ *  two layers entering in the second half, the whole pool entering, the harmony check (Dok. 8.9), a loudness mark. */
+void testComposer()
+{
+    section("the composer's grammar");
+    int tracks = 0, badOps = 0, badLines = 0, badReturns = 0, badTonal = 0, badEndless = 0, badBass = 0, badLate = 0,
+        badPool = 0, badHarmony = 0, badLevel = 0;
+    std::string first;
+    const auto fail = [&](int& counter, const std::string& what) { ++counter; if (first.empty()) first = what; };
+    int forms[3] = {};
+    for (int style = 0; style < 4; ++style) {
+        for (uint64_t seed = 1; seed <= 8; ++seed) {
+            auto p = std::make_unique<ParamStore>();
+            p->set(p->find("compose.style"), static_cast<float>(style));
+            TrackInfo info;
+            const Score s = composeTrack(*p, seed, TrackRequest{}, nullptr, std::string(), &info);
+            ++tracks;
+            ++forms[static_cast<int>(info.form)];
+            const std::string who = fmt("%s seed %d (%s)", kStyleNames[style], static_cast<int>(seed), kFormNames[static_cast<int>(info.form)]);
+            const int blocks = info.bars / 32;
+            const bool endless = info.form == FormType::Endless;
+            // One staircase operation at every block boundary.
+            for (int b = 0; b < blocks; ++b) {
+                int n = 0;
+                for (const BlockOp& o : s.ops)
+                    if (std::fabs(o.beat - 128.0 * b) < 1e-9 && o.kind != OpKind::KickOut && o.kind != OpKind::Return) ++n;
+                if (n != 1) { fail(badOps, who + fmt(": %d operations at block %d", n, b + 1)); break; }
+            }
+            for (const BlockOp& o : s.ops) {
+                if (std::fabs(std::fmod(o.beat, 16.0)) > 1e-9) fail(badLines, who + fmt(": an operation at beat %.2f", o.beat));
+                if (o.kind == OpKind::Return && std::fabs(std::fmod(o.beat, 64.0)) > 1e-9) fail(badReturns, who + ": a return off the 16-bar lines");
+                if (endless && o.kind == OpKind::KickOut) fail(badEndless, who + ": a kick-out");
+            }
+            // Tonal material, the bass, the harmony.
+            std::set<int> pcs, bassPcs;
+            int bassNotes = 0, firstBass = 1 << 30;
+            bool offScale = false;
+            for (const NoteEvent& n : s.notes) {
+                const bool tonal = n.part == Part::Bass || n.part == Part::Acid || n.part == Part::Chord || n.part == Part::Drone
+                                || n.part == Part::Ping;
+                if (n.part == Part::Texture && !endless && (n.beat < 128.0 || n.beat >= s.lengthBeats - 128.0))
+                    fail(badTonal, who + ": texture at the edge");
+                if (!tonal) continue;
+                if (!endless && (n.beat < 128.0 || n.beat >= s.lengthBeats - 128.0)) fail(badTonal, who + fmt(": %s at beat %.1f", kPartNames[static_cast<int>(n.part)], n.beat));
+                const int pc = ((n.pitch - info.key) % 12 + 12) % 12;
+                pcs.insert(pc);
+                offScale = offScale || !inScale(info.scale, pc);
+                if (n.part == Part::Bass) { ++bassNotes; bassPcs.insert(pc); firstBass = std::min(firstBass, static_cast<int>(n.beat / 4.0)); }
+            }
+            if (info.subOwns != (bassNotes > 0)) fail(badBass, who + fmt(": %d bass notes, sub %d", bassNotes, info.subOwns ? 1 : 0));
+            if (bassNotes > 0 && !endless && firstBass < info.bassBar) fail(badBass, who + fmt(": the bass from bar %d", firstBass + 1));
+            if (pcs.size() > 4 || bassPcs.size() > 2 || offScale)
+                fail(badHarmony, who + fmt(": %zu pitch classes, bass %zu%s", pcs.size(), bassPcs.size(), offScale ? ", off the scale" : ""));
+            // Two layers entering in the second half; the whole pool in.
+            if (!endless) {
+                int late = 0;
+                for (const BlockOp& o : s.ops) if (o.kind == OpKind::Add && o.beat >= s.lengthBeats / 2.0) ++late;
+                if (late < 2) fail(badLate, who + fmt(": %d layers enter in the second half", late));
+            }
+            if (info.layers.size() < 5) fail(badPool, who + fmt(": only %zu layers", info.layers.size()));
+            if (s.levels.size() != 1 || s.levels[0].peakBeat < info.introBars * 4.0 || s.levels[0].peakBeat >= info.outroBar * 4.0 + (endless ? 1.0 : 0.0))
+                fail(badLevel, who + ": the loudness mark");
+        }
+    }
+    check(badOps == 0, "exactly one operation at every block boundary", badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
+    first.clear();
+    check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
+    check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted)", first);
+    check(badEndless == 0, "the Endless without a kick-out", first);
+    check(badBass == 0, "a bass line exactly where the sub owns the low end, from the body on", first);
+    check(badHarmony == 0, "at most four pitch classes, the bass at most two, all in the scale (Dok. 8.9)", first);
+    check(badLate == 0, "at least two layers enter in the second half", first);
+    check(badPool == 0, "at least four layers beside the kick", first);
+    check(badLevel == 0, "a loudness mark in the body", first);
+}
+
+/** Curation: the same seed gives the same track; rerolling one unit changes it and leaves the others bit for bit. */
+void testCuration()
+{
+    section("curation");
+    auto p = std::make_unique<ParamStore>();
+    p->set(p->find("compose.style"), 1.0f);
+    const Score a = composeTrack(*p, 42), b = composeTrack(*p, 42);
+    const auto sameNotes = [](const Score& x, const Score& y) {
+        if (x.notes.size() != y.notes.size()) return false;
+        for (size_t i = 0; i < x.notes.size(); ++i)
+            if (x.notes[i].beat != y.notes[i].beat || x.notes[i].pitch != y.notes[i].pitch || x.notes[i].part != y.notes[i].part
+                || x.notes[i].velocity != y.notes[i].velocity) return false;
+        return true;
+    };
+    const auto sameGestures = [](const Score& x, const Score& y) {
+        if (x.gestures.size() != y.gestures.size()) return false;
+        for (size_t i = 0; i < x.gestures.size(); ++i)
+            if (x.gestures[i].param != y.gestures[i].param || x.gestures[i].beat != y.gestures[i].beat || x.gestures[i].to != y.gestures[i].to) return false;
+        return true;
+    };
+    check(sameNotes(a, b) && sameGestures(a, b), "the same seed, the same track");
+    // The hands drawn again: other gestures, the same notes.
+    Curation hands;
+    hands.reroll("hands");
+    const Score h = composeTrack(*p, 42, TrackRequest{}, &hands);
+    check(sameNotes(a, h) && !sameGestures(a, h), "rerolling the hands keeps every note");
+    // One block drawn again: its bars change at most, every other bar stays.
+    Curation blk;
+    blk.reroll("block4");
+    const Score k = composeTrack(*p, 42, TrackRequest{}, &blk);
+    std::vector<NoteEvent> outA, outK;
+    int changedInside = 0;
+    // A bar's notes may start a few ms before it (the rim, early on a collision): the block is 384 .. 512 less 0.05 beats.
+    const auto inside = [](const NoteEvent& n) { return n.beat >= 384.0 - 0.05 && n.beat < 512.0 - 0.05; };
+    for (const NoteEvent& n : a.notes) if (!inside(n)) outA.push_back(n);
+    for (const NoteEvent& n : k.notes) if (!inside(n)) outK.push_back(n);
+    Score sa, sk;
+    sa.notes = outA;
+    sk.notes = outK;
+    for (const NoteEvent& n : k.notes) if (inside(n)) ++changedInside;
+    std::string where = fmt("%d notes in it", changedInside);
+    for (size_t i = 0; i < std::min(sa.notes.size(), sk.notes.size()); ++i)
+        if (sa.notes[i].beat != sk.notes[i].beat || sa.notes[i].pitch != sk.notes[i].pitch || sa.notes[i].part != sk.notes[i].part
+            || sa.notes[i].velocity != sk.notes[i].velocity) {
+            where = fmt("first difference at beat %.3f (%s) against %.3f (%s); %zu and %zu notes outside", sa.notes[i].beat,
+                        kPartNames[static_cast<int>(sa.notes[i].part)], sk.notes[i].beat, kPartNames[static_cast<int>(sk.notes[i].part)],
+                        sa.notes.size(), sk.notes.size());
+            break;
+        }
+    check(sameNotes(sa, sk) && !sameNotes(a, k), "rerolling block 4 changes its bars only", where);
+    // One layer's patterns drawn again: it changes; the layers no rule ties to it (kick, bass, ping, chord, 303, drone)
+    // stay. (The others may move: one hat per step, the ghost chain, the collision dip.)
+    Curation lay;
+    lay.reroll("rack.ch");
+    const Score l = composeTrack(*p, 42, TrackRequest{}, &lay);
+    const int chPart = static_cast<int>(percPart(0));
+    const auto untied = [](Part part) {
+        return part == Part::Kick || part == Part::Bass || part == Part::Ping || part == Part::Chord || part == Part::Acid || part == Part::Drone;
+    };
+    Score ua, ul, ca, cl;
+    for (const NoteEvent& n : a.notes) { if (untied(n.part)) ua.notes.push_back(n); if (static_cast<int>(n.part) == chPart) ca.notes.push_back(n); }
+    for (const NoteEvent& n : l.notes) { if (untied(n.part)) ul.notes.push_back(n); if (static_cast<int>(n.part) == chPart) cl.notes.push_back(n); }
+    check(sameNotes(ua, ul) && !sameNotes(ca, cl), "rerolling the offbeat hat changes it and keeps the untied layers",
+          fmt("%zu and %zu hat notes", ca.notes.size(), cl.notes.size()));
+    // The .umbset round trip.
+    const std::string path = "umb_selftest.umbset";
+    SetFile sf;
+    sf.seed = 42;
+    sf.minutes = 7.0;
+    sf.curation = blk;
+    p->set(p->find("chord.level"), -7.5f);
+    const bool saved = saveSet(path.c_str(), sf, *p);
+    auto q = std::make_unique<ParamStore>();
+    SetFile back;
+    std::string error;
+    const bool loaded = loadSet(path.c_str(), back, *q, &error);
+    std::remove(path.c_str());
+    check(saved && loaded && back.seed == 42 && back.curation.count("block4") == 1 && q->get(q->find("chord.level")) == -7.5f
+              && q->getInt(q->find("compose.style")) == 1,
+          "a .umbset keeps seed, rerolls and changed knobs", error);
+}
+
 /** A module instance's knobs as the engine hands them to a voice. */
 std::vector<float> moduleValues(const ParamStore& p, Module m, int instance = 0)
 {
@@ -1138,6 +1300,8 @@ const TestSection kSections[] = {
     { "testHarmony", testHarmony },
     { "testDub", testDub },
     { "testLeveler", testLeveler },
+    { "testComposer", testComposer },
+    { "testCuration", testCuration },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },

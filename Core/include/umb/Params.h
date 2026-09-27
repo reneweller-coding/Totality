@@ -72,6 +72,13 @@ enum : int { Bpm, Key, Scale, Style, Minutes,
              Swing,      ///< MPC swing in per cent (50 = straight), on the layers that swing (PLAN 6.6)
              Humanize,   ///< standard deviation of the random timing, ms (never on the kick)
              LowOwner,   ///< who owns the band under 80 Hz: the rumble or the sub bass (PLAN 5.2)
+             // Phase 4: the composer (compose/Composer.h, Style.h).
+             Auto,           ///< the composer draws tempo, key, scale and the low end's owner from the style (else the knobs)
+             Form,           ///< Auto, Arc, Peak or Endless (PLAN 7.2)
+             MorphTo,        ///< Off or a style the profile is morphed towards (PLAN 7.6)
+             Morph,          ///< how far, 0..1
+             DubShare,       ///< Dok. 8.0's axis: the profile pulled towards Dub, 0..1
+             HypnoticShare,  ///< and towards Hypnotic, 0..1
              Count };
 }
 /**
@@ -109,7 +116,9 @@ namespace mix {
 enum : int { HatsLevel, HatsCut, PercLevel, PercCut,
              // Phase 3: the drum bus's saturation (Dok. 8.7: three or four stages at 10 to 20 %), the multiband duck of the
              // pads and returns (Dok. 8.7: 20-200 Hz 8-12 dB, 200 Hz-2 kHz 2-4 dB).
-             DrumSat, DuckLow, DuckMid, Count };
+             DrumSat, DuckLow, DuckMid,
+             // Phase 4: the track's group high pass (Dok. 8.5: "Master-/Gruppen-HP 20 -> 200..400 Hz und zurueck").
+             LowCut, Count };
 }
 /** @brief Parameters of the master (PLAN 8). */
 namespace master {

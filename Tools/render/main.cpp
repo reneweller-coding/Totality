@@ -14,6 +14,8 @@
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
 #include "umb/WavWriter.h"
+#include "umb/SetFile.h"
+#include "umb/compose/Composer.h"
 #include "umb/compose/Study.h"
 #include "umb/pattern/Rack.h"
 #include <chrono>
@@ -32,9 +34,10 @@ namespace {
 
 void usage()
 {
-    std::printf("umb_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--set \"key=value; ...\"]\n"
+    std::printf("umb_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
+                "           [--set \"key=value; ...\"] [--reroll unit] [--save-set f.umbset] [--load-set f.umbset] [--study]\n"
                 "           [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512]\n"
-                "           [--bench] [--list]\n");
+                "           [--bench] [--list] [--stats] [--patterns]\n");
 }
 
 } // namespace
@@ -44,14 +47,24 @@ int main(int argc, char** argv)
     uint64_t seed = 1;
     double rate = 48000.0;
     int block = 512;
-    std::string out, midi, stems, set;
-    bool bench = false, list = false, stats = false, patterns = false;
+    std::string out, midi, stems, set, saveSetPath, loadSetPath;
+    bool bench = false, list = false, stats = false, patterns = false, study = false, seedGiven = false;
     float minutes = -1.0f, bpm = -1.0f;
-    int low = -1;
+    int low = -1, form = -1;
+    Curation curation;
     for (int i = 1; i < argc; ++i) {
         const char* a = argv[i];
         auto next = [&]() -> const char* { return i + 1 < argc ? argv[++i] : ""; };
-        if (!std::strcmp(a, "--seed")) seed = std::strtoull(next(), nullptr, 10);
+        if (!std::strcmp(a, "--seed")) { seed = std::strtoull(next(), nullptr, 10); seedGiven = true; }
+        else if (!std::strcmp(a, "--form")) {
+            const std::string f = next();
+            form = f == "arc" ? 0 : f == "peak" ? 1 : f == "endless" ? 2 : -2;
+            if (form == -2) { usage(); return 2; }
+        }
+        else if (!std::strcmp(a, "--reroll")) curation.reroll(next());
+        else if (!std::strcmp(a, "--save-set")) saveSetPath = next();
+        else if (!std::strcmp(a, "--load-set")) loadSetPath = next();
+        else if (!std::strcmp(a, "--study")) study = true;
         else if (!std::strcmp(a, "--minutes")) minutes = static_cast<float>(std::atof(next()));
         else if (!std::strcmp(a, "--bpm")) bpm = static_cast<float>(std::atof(next()));
         else if (!std::strcmp(a, "--low")) low = std::strcmp(next(), "sub") == 0 ? 1 : 0;
@@ -74,14 +87,34 @@ int main(int argc, char** argv)
         for (int id = 0; id < p.count(); ++id) std::printf("%-28s %s\n", p.key(id).c_str(), p.format(id).c_str());
         return 0;
     }
+    std::string error;
+    if (!loadSetPath.empty()) {
+        SetFile sf;
+        if (!loadSet(loadSetPath.c_str(), sf, p, &error)) { std::fprintf(stderr, "--load-set: %s\n", error.c_str()); return 2; }
+        if (!seedGiven) seed = sf.seed;
+        for (const auto& r : sf.curation.rerolls) curation.rerolls[r.first] += r.second;
+        if (sf.minutes > 0.0 && minutes <= 0.0f) minutes = static_cast<float>(sf.minutes);
+    }
     if (minutes > 0.0f) p.set(p.id(Module::Compose, 0, compose::Minutes), minutes);
     if (bpm > 0.0f) p.set(p.id(Module::Compose, 0, compose::Bpm), bpm);
     if (low >= 0) p.set(p.id(Module::Compose, 0, compose::LowOwner), static_cast<float>(low));
-    std::string error;
     if (!set.empty() && !p.parseText(set, &error)) { std::fprintf(stderr, "--set: %s\n", error.c_str()); return 2; }
+    if (!saveSetPath.empty()) {
+        SetFile sf;
+        sf.seed = seed;
+        sf.minutes = p.get(p.id(Module::Compose, 0, compose::Minutes));
+        sf.curation = curation;
+        if (!saveSet(saveSetPath.c_str(), sf, p)) { std::fprintf(stderr, "cannot write %s\n", saveSetPath.c_str()); return 1; }
+        std::printf("set: %s\n", saveSetPath.c_str());
+    }
 
     const auto t0 = std::chrono::steady_clock::now();
-    Score score = composeStudy(p, seed);
+    TrackRequest req;
+    if (bpm > 0.0f) req.bpm = bpm;           // what the command line names, the composer does not draw
+    if (low >= 0) req.lowOwner = low;
+    if (form >= 0) req.form = static_cast<FormType>(form);
+    TrackInfo info;
+    Score score = study ? composeStudy(p, seed) : composeTrack(p, seed, req, &curation, std::string(), &info);
     // The Leveler: the loudest part to the style's target (PLAN 8.5), before a sample is written.
     const std::vector<LevelReading> levels = bench ? std::vector<LevelReading>{} : levelScore(score, p);
     const auto t1 = std::chrono::steady_clock::now();
@@ -89,13 +122,26 @@ int main(int argc, char** argv)
     engine->load(score);
 
     std::printf("Umbra %s  seed %llu  %.1f BPM  key %s  %s  %.0f bars  %.1f s\n", UMB_VERSION,
-                static_cast<unsigned long long>(seed), p.get(p.id(Module::Compose, 0, compose::Bpm)),
-                kKeyNames[score.keyRoot], p.getInt(p.id(Module::Compose, 0, compose::LowOwner)) == 1 ? "sub owns the low end" : "rumble owns the low end",
+                static_cast<unsigned long long>(seed), score.tempo.bpmAt(0.0),
+                kKeyNames[score.keyRoot], (study ? p.getInt(p.id(Module::Compose, 0, compose::LowOwner)) == 1 : info.subOwns) ? "sub owns the low end" : "rumble owns the low end",
                 score.lengthBeats / 4.0, engine->lengthSeconds());
     std::printf("kick tuned to %.1f Hz; %zu notes, %zu automation curves, %zu operations\n",
                 static_cast<double>(Kick::tuneToKey(score.keyRoot, p.getInt(p.id(Module::Kick, 0, kick::Tune)),
                                                     p.get(p.id(Module::Kick, 0, kick::PitchEnd)))),
                 score.notes.size(), score.gestures.size(), score.ops.size());
+    if (!study) {
+        std::printf("%s, %s, %s %s (%s), %s; intro %d bars, body from bar %d, outro from bar %d, loudest from bar %d\n",
+                    info.style.c_str(), kFormNames[static_cast<int>(info.form)], kKeyNames[info.key], kScaleNames[info.scale],
+                    info.camelot.c_str(), info.subOwns ? "sub bass" : "rumble", info.introBars, info.bassBar + 1,
+                    info.outroBar + 1, info.peakBar + 1);
+        for (size_t r = 0; r < info.reductions.size(); ++r)
+            std::printf("kick-out bars %d .. %d, return bar %d\n", info.reductions[r] + 1, info.returns[r], info.returns[r] + 1);
+        std::string layers;
+        for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
+        std::printf("layers in order: %s\n", layers.c_str());
+        std::printf("corridor over the body: bar similarity %.3f, micro-change %.2f dB, %.1f onsets a bar\n", info.similarity,
+                    info.micro, info.density);
+    }
     for (const LevelReading& r : levels)
         std::printf("level: the loudest part (bar %.0f) measured %.1f LUFS, target %.1f, trim %+.1f dB (%.1f after the first)\n",
                     score.levels.empty() ? 0.0 : score.levels[0].peakBeat / 4.0 + 1.0, r.measured, r.target, r.trim, r.after);

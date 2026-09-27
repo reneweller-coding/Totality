@@ -141,6 +141,7 @@ void Engine::seek(double beat)
     cutEnv_ = 0.0f;
     sideHp1_.reset();
     sideHp2_.reset();
+    for (auto& ch : groupHp_) for (Svf& f : ch) f.reset();
     haveKick_ = false;
     subNote_ = bassNote_ = acidNote_ = droneNote_ = -1;
     // The loudness correction at the new place, at once.
@@ -269,6 +270,13 @@ void Engine::updateCell()
     for (Svf& f : percLp_) f.setQ(std::min(v[mix::PercCut], 0.45f * fs), 0.7071f, fs);
     drumSat_ = v[mix::DrumSat];
     padsDuck_.set(v[mix::DuckLow], v[mix::DuckMid], 60.0f, 250.0f);
+    // The group high pass: off at its floor (the sweep of the form raises it over 8 to 16 bars and lets it fall back).
+    groupHpOn_ = v[mix::LowCut] > 20.5f;
+    if (!groupHpOn_) for (auto& ch : groupHp_) for (Svf& f : ch) f.reset();   // back at the floor: no stale state later
+    for (auto& ch : groupHp_) {
+        ch[0].setK(v[mix::LowCut], 1.8477590f, fs);
+        ch[1].setK(v[mix::LowCut], 0.7653669f, fs);
+    }
     fxDuck_.set(v[mix::DuckLow], v[mix::DuckMid], 60.0f, 250.0f);
 
     readPlayed(Module::Space, 0, v);
@@ -478,6 +486,11 @@ void Engine::renderSpan(float* L, float* R, int n)
         }
         float l = drumL_[k] + subBuf_[k] + pingL_[k] + bassL_[k] + acidL_[k] + chordL_[k] + texL_[k] + roomL_[k];
         float r = drumR_[k] + subBuf_[k] + pingR_[k] + bassR_[k] + acidR_[k] + chordR_[k] + texR_[k] + roomR_[k];
+        if (groupHpOn_) {
+            float lp, bp, hp;
+            groupHp_[0][0].tick(l, lp, bp, hp); groupHp_[0][1].tick(hp, lp, bp, l);
+            groupHp_[1][0].tick(r, lp, bp, hp); groupHp_[1][1].tick(hp, lp, bp, r);
+        }
         // The side under Mono Below goes (PLAN 8.2).
         const float mid = 0.5f * (l + r);
         float side = 0.5f * (l - r), lp, bp, hp;

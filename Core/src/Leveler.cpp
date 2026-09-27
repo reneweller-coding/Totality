@@ -6,6 +6,7 @@
 #include "umb/Leveler.h"
 #include "umb/Engine.h"
 #include "umb/Loudness.h"
+#include "umb/compose/Style.h"
 #include <algorithm>
 #include <memory>
 #include <optional>
@@ -44,13 +45,8 @@ std::optional<float> measure(Engine& e, const Score& s, double beat, double seco
 float styleTargetLufs(int style)
 {
     // The references' loudest 20 seconds per profile, the median (Tools/ref_stats.json, loud20: Hypnotic -10.0, Ostgut
-    // -9.5, Dub -11.5, Raw -9.4), rounded to half dB.
-    switch (static_cast<Style>(style)) {
-    case Style::Hypnotic: return -10.0f;
-    case Style::Dub:      return -11.5f;
-    case Style::RawPeak:  return -9.5f;
-    default:              return -9.5f;    // Ostgut
-    }
+    // -9.5, Dub -11.5, Raw -9.4), rounded to half dB; kept in the profiles (Style.h).
+    return styleProfile(static_cast<Style>(style)).peakLufs;
 }
 
 std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, double seconds, const std::function<bool()>& stop)
