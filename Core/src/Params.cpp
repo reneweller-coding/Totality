@@ -281,7 +281,9 @@ const ParamDesc kDroneParams[drone::Count] = {
     { "attack",     "Attack",     "s",    0.01f, 20.0f,   4.0f, Curve::Log },
     { "release",    "Release",    "s",    0.01f, 20.0f,   6.0f, Curve::Log },
     { "plate_send", "Plate Send", "",     0.0f,   1.0f,   0.4f, Curve::Linear },
-    { "room_send",  "Room Send",  "",     0.0f,   1.0f,   0.2f, Curve::Linear },
+    // A sustained voice fills the room's FDN far more than a hit: with the room's +22 dB (fitted on the hats, the perc and
+    // the ping, Engine) a send of 0.2 put the room 6 dB over the drone itself (a set, 27.09.2026). 0.02: 14 dB under it.
+    { "room_send",  "Room Send",  "",     0.0f,   1.0f,  0.02f, Curve::Linear },
 };
 
 /** The texture (Dok. 8.4: vinyl crackle, mains hum, noise erosion at -20 to -30 dB). */
@@ -336,11 +338,45 @@ const ParamDesc kCloudParams[cloud::Count] = {
     { "plate_send", "Plate Send", "",     0.0f,    1.0f,    0.5f, Curve::Linear },
 };
 
+/**
+ * A DJ mixer channel (PLAN 7.7): the isolator's bands split at 200 Hz and 2.5 kHz (Linkwitz-Riley), each from a kill at
+ * -60 dB to +6; the filter a low pass below 0 (20 kHz down to 20 Hz at -1), a high pass above (20 Hz up to 20 kHz at 1).
+ */
+const ParamDesc kDeckParams[deck::Count] = {
+    { "fader",   "Fader",   "dB", -60.0f, 6.0f, 0.0f, Curve::Linear },
+    { "low",     "Low",     "dB", -60.0f, 6.0f, 0.0f, Curve::Linear },
+    { "mid",     "Mid",     "dB", -60.0f, 6.0f, 0.0f, Curve::Linear },
+    { "high",    "High",    "dB", -60.0f, 6.0f, 0.0f, Curve::Linear },
+    { "filter",  "Filter",  "",    -1.0f, 1.0f, 0.0f, Curve::Linear },
+    { "fx_send", "FX Send", "",     0.0f, 1.0f, 0.0f, Curve::Linear },
+};
+
+/** The DJ mixer's effects: a dotted-eighth tape echo and a long hall on one send (breaks where a track has none). */
+const ParamDesc kDjFxParams[djfx::Count] = {
+    { "echo_time",   "Echo Time",   "",    0.0f,  5.0f,  2.0f, Curve::Choice, kEchoTimeNames },
+    { "feedback",    "Feedback",    "",    0.0f,  1.0f, 0.45f, Curve::Linear },
+    { "echo_return", "Echo Return", "dB", -60.0f, 6.0f, -3.0f, Curve::Linear },
+    { "hall_decay",  "Hall Decay",  "s",   0.5f, 12.0f,  5.0f, Curve::Log },
+    { "hall_return", "Hall Return", "dB", -60.0f, 12.0f, 6.0f, Curve::Linear },
+};
+
+const char* const kDramaturgyChoiceNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat" };
+const char* const kJourneyNames[] = { "Stay", "Wander" };
+const char* const kBlendNames[] = { "16 bars", "32 bars" };
+/** The set (PLAN 7.1, 7.7). */
+const ParamDesc kSetParams[set::Count] = {
+    { "dramaturgy", "Dramaturgy", "", 0.0f, 4.0f, 1.0f, Curve::Choice, kDramaturgyChoiceNames },
+    { "journey",    "Styles",     "", 0.0f, 1.0f, 1.0f, Curve::Choice, kJourneyNames },
+    { "loops",      "Live Loops", "", 0.0f, 1.0f, 0.3f, Curve::Linear },
+    { "fx_breaks",  "FX Breaks",  "", 0.0f, 1.0f, 0.3f, Curve::Linear },
+    { "blend",      "Blend",      "", 0.0f, 1.0f, 1.0f, Curve::Choice, kBlendNames },
+};
+
 /** The 303 line's own defaults on the synth table (PLAN 5.3): the diode ladder, resonant, a longer accent, a slide. */
 const char* const kDefaultAcid =
     "acid.level=-14; acid.filter=Diode Ladder (303); acid.cutoff=600; acid.resonance=0.72; acid.env_amount=2.5; acid.decay=220;"
     "acid.accent=0.6; acid.sub_osc=0; acid.amp_sustain=0.8; acid.amp_release=60; acid.glide=60; acid.drive=0.5; acid.key_track=0.3;"
-    "acid.low_cut=120; acid.high_cut=9000; acid.dub_send=0.25; acid.room_send=0.1; acid.duck=4; acid.pan=0.1\n";
+    "acid.low_cut=120; acid.high_cut=9000; acid.dub_send=0.25; acid.room_send=0.01; acid.duck=4; acid.pan=0.1\n";
 
 /**
  * The ping (PLAN 5.5, Erg. 1): a carrier of 200 to 600 Hz (the notes decide), a modulator at sqrt 2 times it, an index of
@@ -464,6 +500,9 @@ const ModuleSpec kModules[static_cast<int>(Module::Count)] = {
     { "texture", kTextureParams, texture::Count, 1 },
     { "dub",     kDubParams,     dub::Count,     1 },
     { "cloud",   kCloudParams,   cloud::Count,   1 },
+    { "deck",    kDeckParams,    deck::Count,    kDecks },
+    { "djfx",    kDjFxParams,    djfx::Count,    1 },
+    { "set",     kSetParams,     set::Count,     1 },
 };
 
 bool isDiscrete(Curve c) { return c == Curve::Int || c == Curve::Choice || c == Curve::Toggle; }

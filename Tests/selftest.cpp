@@ -15,6 +15,7 @@
 #include "umb/Score.h"
 #include "umb/SetFile.h"
 #include "umb/compose/Composer.h"
+#include "umb/compose/Set.h"
 #include "umb/compose/Study.h"
 #include "umb/fx/Cloud.h"
 #include "umb/fx/Dub.h"
@@ -792,6 +793,104 @@ void testCuration()
           "a .umbset keeps seed, rerolls and changed knobs", error);
 }
 
+/** The set (PLAN 7.7): deterministic; tracks alternating on two decks without overlapping on one; every swap on a 32-bar
+ *  line of both tracks; the tempo monotonic within 1 BPM a track; only one deck ever owns the low band. */
+void testSet()
+{
+    section("the set");
+    auto p = std::make_unique<ParamStore>();
+    p->parseText("set.loops=1; set.fx_breaks=1");
+    SetInfo a, b;
+    const SetScore s = composeSet(*p, 5, 40.0, nullptr, &a);
+    const SetScore t = composeSet(*p, 5, 40.0, nullptr, &b);
+    bool same = a.tracks.size() == b.tracks.size();
+    for (int d = 0; d < kDecks && same; ++d) {
+        same = s.decks[d].notes.size() == t.decks[d].notes.size() && s.decks[d].gestures.size() == t.decks[d].gestures.size();
+        for (size_t i = 0; same && i < s.decks[d].notes.size(); ++i)
+            same = s.decks[d].notes[i].beat == t.decks[d].notes[i].beat && s.decks[d].notes[i].pitch == t.decks[d].notes[i].pitch;
+    }
+    check(same && a.tracks.size() >= 5, "the same seed, the same set", fmt("%zu tracks, %zu loops, %zu breaks", a.tracks.size(), a.loops.size(), a.breaks.size()));
+    int badDeck = 0, badLine = 0, badTempo = 0;
+    for (size_t i = 0; i < a.tracks.size(); ++i) {
+        const SetTrack& k = a.tracks[i];
+        if (i >= 1 && a.tracks[i - 1].deck == k.deck) ++badDeck;
+        if (i >= 2 && a.tracks[i - 2].end > k.start) ++badDeck;
+        if (i >= 1) {
+            const SetTrack& o = a.tracks[i - 1];
+            if (std::fabs(std::fmod(k.swapIn - k.start, 128.0)) > 1e-9 || std::fabs(std::fmod(k.swapIn - o.start, 128.0)) > 1e-9) ++badLine;
+            if (k.info.bpm < o.info.bpm - 1e-6 || k.info.bpm > o.info.bpm + 1.0f + 1e-6) ++badTempo;   // Peak: rising, at most 1 BPM
+        }
+    }
+    check(badDeck == 0, "the tracks alternate between the decks and never overlap on one", fmt("%d", badDeck));
+    check(badLine == 0, "every bass swap on a 32-bar line of both tracks", fmt("%d", badLine));
+    check(badTempo == 0, "the tempo rises by at most 1 BPM a track (Peak)", fmt("%d", badTempo));
+    // The low band: at the middle of every bar, at most one deck with a track sounding has it open.
+    int owners = 0, bars = 0, worst = 0;
+    for (double beat = 2.0; beat < s.lengthBeats; beat += 4.0) {
+        int open = 0;
+        for (int d = 0; d < kDecks; ++d) {
+            bool sounding = false;
+            for (const SetTrack& k : a.tracks) if (k.deck == d && beat >= k.start && beat < k.end) sounding = true;
+            for (const SetLoop& l : a.loops) if (d == 2 && beat >= l.start && beat < l.end) sounding = true;
+            if (!sounding) continue;
+            const int id = p->id(Module::Deck, d, deck::Low);
+            const float v = p->fromNormalised(id, p->toNormalised(id, p->get(id)) + s.decks[d].gestureOffset(id, beat));
+            if (v > -59.9f) ++open;
+        }
+        ++bars;
+        worst = std::max(worst, open);
+        if (open > 1) ++owners;
+    }
+    check(owners == 0 && worst == 1, "only one deck ever owns the low band", fmt("%d of %d bars with two", owners, bars));
+    // The swap in samples: the outgoing deck's low band starts to close and the incoming one's to open in the same sample.
+    {
+        auto e = std::make_unique<Engine>();
+        e->params().parseText("set.loops=1; set.fx_breaks=1");
+        e->prepare(48000.0, 512);
+        e->loadSet(s);
+        const SetTrack& in = a.tracks[1];
+        const SetTrack& out = a.tracks[0];
+        const int64_t swap = static_cast<int64_t>(std::ceil(s.decks[0].tempo.secondsAt(in.swapIn) * 48000.0));
+        e->seek(in.swapIn - 8.0);
+        const int64_t from = static_cast<int64_t>(std::llround(s.decks[0].tempo.secondsAt(in.swapIn - 8.0) * 48000.0));
+        std::vector<float> L(512), R(512);
+        int64_t at = from;
+        while (at < swap) { const int m = static_cast<int>(std::min<int64_t>(512, swap - at)); e->process(L.data(), R.data(), m); at += m; }
+        const float outBefore = e->lowGain(out.deck), inBefore = e->lowGain(in.deck);
+        e->process(L.data(), R.data(), 1);
+        const float outAfter = e->lowGain(out.deck), inAfter = e->lowGain(in.deck);
+        check(outBefore == 1.0f && inBefore < 1e-6f && outAfter < 1.0f && inAfter > 0.0f, "the bass swap in one sample",
+              fmt("out %.4f -> %.4f, in %.2e -> %.4f", outBefore, outAfter, inBefore, inAfter));
+    }
+    // Two decks at once: blocks of 1, 37 and 512 give the same bits over the first swap.
+    {
+        const SetTrack& in = a.tracks[1];
+        const auto render = [&](int block) {
+            auto e = std::make_unique<Engine>();
+            e->params().parseText("set.loops=1; set.fx_breaks=1");
+            e->prepare(48000.0, block);
+            e->loadSet(s);
+            e->seek(in.swapIn - 8.0);
+            std::vector<float> out(2 * 288000), L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
+            for (int done = 0; done < 288000;) {
+                const int m = std::min(block, 288000 - done);
+                e->process(L.data(), R.data(), m);
+                for (int i = 0; i < m; ++i) { out[static_cast<size_t>(2 * (done + i))] = L[static_cast<size_t>(i)]; out[static_cast<size_t>(2 * (done + i) + 1)] = R[static_cast<size_t>(i)]; }
+                done += m;
+            }
+            return out;
+        };
+        const std::vector<float> x = render(512), y = render(37), z = render(1);
+        size_t first = x.size();
+        for (size_t i = 0; i < x.size() && first == x.size(); ++i)
+            if (std::memcmp(&x[i], &y[i], sizeof(float)) != 0 || std::memcmp(&x[i], &z[i], sizeof(float)) != 0) first = i;
+        double peak = 0.0;
+        for (float v : x) peak = std::max(peak, static_cast<double>(std::fabs(v)));
+        check(first == x.size() && peak > 0.1, "two decks over a swap: 1 and 37 equal 512, bit for bit",
+              first == x.size() ? fmt("peak %.2f", peak) : fmt("first difference at %.4f s", first / 96000.0));
+    }
+}
+
 /** A module instance's knobs as the engine hands them to a voice. */
 std::vector<float> moduleValues(const ParamStore& p, Module m, int instance = 0)
 {
@@ -1302,6 +1401,7 @@ const TestSection kSections[] = {
     { "testLeveler", testLeveler },
     { "testComposer", testComposer },
     { "testCuration", testCuration },
+    { "testSet", testSet },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },

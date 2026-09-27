@@ -138,4 +138,17 @@ struct Score {
     float gestureOffset(int param, double beat) const;
 };
 
+/**
+ * @brief A set (PLAN 7.7): what each deck plays, one after another on it -- the tracks, their automation, the DJ
+ *        mixer's moves on the deck's own channel (module deck, instance = the deck) -- all on the set's tempo map
+ *        (every deck's Score::tempo is the same), and the set's own markers.
+ */
+struct SetScore {
+    static constexpr int kDecks = 3;     ///< as Params.h kDecks
+    Score decks[kDecks];                 ///< deck A, B, C
+    double lengthBeats = 0.0;            ///< the set's length
+    std::vector<Marker> markers;         ///< tracks, blends, bass swaps
+    std::vector<Gesture> gestures;       ///< the set's own automation (the mixer's effects, module djfx)
+};
+
 } // namespace umb

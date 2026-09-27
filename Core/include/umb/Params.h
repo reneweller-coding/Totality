@@ -62,7 +62,13 @@ enum class Module : int { Compose = 0, Kick, Rumble, Sub, Perc, Mix, Master,
                            *  texture, the dub chain (tape echo, springs, plate). */
                           Bass, Acid, Chord, Drone, Texture, Dub,
                           /** Phase 3: the granular cloud of the ping and the chord (Cloud.h). */
-                          Cloud, Count };
+                          Cloud,
+                          /** Phase 4: the DJ mixer -- a channel per deck (three instances), and its effects. */
+                          Deck, DjFx,
+                          /** Phase 4: the set composer (compose/Set.h). */
+                          Set, Count };
+
+constexpr int kDecks = 3;        ///< the decks of a set (PLAN 3): two for the tracks, a third for the loops
 
 constexpr int kPercLanes = 12;   ///< instances of the percussion module (the lanes of the kit)
 
@@ -154,6 +160,23 @@ namespace dub {
 enum : int { EchoTime, Feedback, Tone, LowCut, Wow, Flutter, Drive, EchoReturn, Spring, SpringDecay, PlateDecay,
              PlateDamping, PlatePreDelay, PlateLowCut, PlateReturn, PingSend, HatsSend, PercSend, Count };
 }
+/** @brief Parameters of a DJ mixer channel (PLAN 7.7): fader, the isolator's three bands (kill at -60 dB), a bipolar
+ *         filter (below 0 a low pass, above 0 a high pass), the send into the mixer's effects. */
+namespace deck {
+enum : int { Fader, Low, Mid, High, Filter, FxSend, Count };
+}
+/** @brief Parameters of the DJ mixer's effects: a tempo echo and a hall on one send. */
+namespace djfx {
+enum : int { EchoTime, Feedback, EchoReturn, HallDecay, HallReturn, Count };
+}
+/** @brief Parameters of the set (PLAN 7.1, 7.7): its dramaturgy, whether the styles wander with its energy, how often
+ *         a loop of the last track plays on under the next, how often a break comes from the mixer's effects, the
+ *         blend's length. */
+namespace set {
+enum : int { Dramaturgy, Journey, Loops, FxBreaks, BlendBars, Count };
+}
+/** @brief The set's dramaturgies (PLAN 7.1). */
+enum class Dramaturgy : int { WarmUp = 0, Peak, Closing, Sunday, Flat, Count };
 /** @brief Parameters of the granular cloud (PLAN 5.7, Cloud.h). */
 namespace cloud {
 enum : int { Level, Density, Size, Pitch, Spray, PingSend, ChordSend, PlateSend, Count };

@@ -44,6 +44,15 @@ struct LevelReading {
 std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, double seconds = 20.0,
                                      const std::function<bool()>& stop = {});
 
+/**
+ * @brief Levels every track of a set: each deck's tracks as levelScore does (a deck alone, without the mixer's moves); a
+ *        mark without a target (a live loop on the third deck, Set.h) takes the correction of the track whose loudest
+ *        part it names.
+ * @return the readings of decks A and B, in deck order
+ */
+std::vector<LevelReading> levelSet(SetScore& set, const ParamStore& params, double seconds = 20.0,
+                                   const std::function<bool()>& stop = {});
+
 /** @brief The loudness the loudest part of a track of style @p style should measure, LUFS (PLAN 8.5). */
 float styleTargetLufs(int style);
 

@@ -28,7 +28,9 @@ add_library(UmbraCore STATIC
     src/compose/GestureEngine.cpp
     src/compose/Corridor.cpp
     src/compose/Composer.cpp
+    src/compose/Set.cpp
     src/SetFile.cpp
+    src/Deck.cpp
     src/Engine.cpp
 )
 target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
