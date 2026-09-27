@@ -154,6 +154,7 @@ void Deck::seek(int64_t sample)
     padsDuck_.reset();
     fxDuck_.reset();
     glue_.reset();
+    resetStems();
     for (Svf& f : hatsLp_) f.reset();
     for (Svf& f : percLp_) f.reset();
     for (auto& ch : groupHp_) for (Svf& f : ch) f.reset();
@@ -286,7 +287,10 @@ void Deck::updateCell(int64_t sample)
     padsDuck_.set(v[mix::DuckLow], v[mix::DuckMid], 60.0f, 250.0f);
     // The group high pass: off at its floor (the sweep of the form raises it over 8 to 16 bars and lets it fall back).
     groupHpOn_ = v[mix::LowCut] > 20.5f;
-    if (!groupHpOn_) for (auto& ch : groupHp_) for (Svf& f : ch) f.reset();   // back at the floor: no stale state later
+    if (!groupHpOn_) {   // back at the floor: no stale state later
+        for (auto& ch : groupHp_) for (Svf& f : ch) f.reset();
+        for (StemBus& s : stemBus_) for (auto& ch : s.hp) for (Svf& f : ch) f.reset();
+    }
     for (auto& ch : groupHp_) {
         ch[0].setK(v[mix::LowCut], 1.8477590f, fs);
         ch[1].setK(v[mix::LowCut], 0.7653669f, fs);
@@ -395,8 +399,19 @@ void Deck::dispatch(const Ev& e)
     }
 }
 
-void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR, int stemOffset)
+void Deck::resetStems()
 {
+    for (StemBus& s : stemBus_) {
+        for (auto& ch : s.hp) for (Svf& f : ch) f.reset();
+        s.tilt[0] = s.tilt[1] = 0.0f;
+    }
+    for (auto& r : stemPads_) r = padsDuck_.replica();
+    for (auto& r : stemFx_) r = fxDuck_.replica();
+}
+
+void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR)
+{
+    const bool stems = stemL != nullptr;
     // The sources.
     kick_.process(kickBuf_.data(), bodyBuf_.data(), n);
     rumble_.process(bodyBuf_.data(), rumbleBuf_.data(), n);
@@ -440,6 +455,7 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         // The drum bus: three stages of saturation mixed in (Dok. 8.7: "3 or 4 drum buss units at 10 or 20 % wet").
         const float mono = kickBuf_[k] + rumbleBuf_[k];
         float dl = mono + busH[0][i] + busP[0][i], dr = mono + busH[1][i] + busP[1][i];
+        const float inL = dl, inR = dr;
         if (drumSat_ > 0.0f) {
             const float m = 0.43f * drumSat_;   // 15 % a stage at the default 0.35
             static const float kDrive[3] = { 1.5f, 2.0f, 2.5f };
@@ -447,6 +463,10 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
                 dl += m * (std::tanh(d * dl) / d - dl);
                 dr += m * (std::tanh(d * dr) / d - dr);
             }
+        }
+        if (stems) {   // the saturation's gain on the sum, for its parts
+            satGain_[0][i] = inL != 0.0f ? dl / inL : 1.0f;
+            satGain_[1][i] = inR != 0.0f ? dr / inR : 1.0f;
         }
         drumL_[k] = dl;
         drumR_[k] = dr;
@@ -465,6 +485,17 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
     }
     room_.process(roomInL_.data(), roomInR_.data(), roomL_.data(), roomR_.data(), n);
     dub_.process(echoInL_.data(), echoInR_.data(), plateInL_.data(), plateInR_.data(), dubL_.data(), dubR_.data(), n);
+    if (stems) {
+        // The parts of the pads and of the returns, before their ducks.
+        for (int i = 0; i < n; ++i) {
+            const size_t k = static_cast<size_t>(i);
+            stemL[kStemChord][i] = chordL_[k]; stemR[kStemChord][i] = chordR_[k];
+            stemL[kStemDrone][i] = droneL_[k]; stemR[kStemDrone][i] = droneR_[k];
+            stemL[kStemRoom][i] = roomL_[k] * roomReturn_; stemR[kStemRoom][i] = roomR_[k] * roomReturn_;
+            stemL[kStemDub][i] = dubL_[k]; stemR[kStemDub][i] = dubR_[k];
+            stemL[kStemCloud][i] = cloudL_[k]; stemR[kStemCloud][i] = cloudR_[k];
+        }
+    }
     // The pads (chord and drone) and the returns step aside for the kick, band by band.
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
@@ -473,29 +504,31 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         roomL_[k] = roomL_[k] * roomReturn_ + dubL_[k] + cloudL_[k];
         roomR_[k] = roomR_[k] * roomReturn_ + dubR_[k] + cloudR_[k];
     }
-    padsDuck_.process(chordL_.data(), chordR_.data(), n);
-    fxDuck_.process(roomL_.data(), roomR_.data(), n);
+    padsDuck_.process(chordL_.data(), chordR_.data(), n, stems ? padsGains_ : nullptr);
+    fxDuck_.process(roomL_.data(), roomR_.data(), n, stems ? fxGains_ : nullptr);
+    if (stems) {
+        MultibandDucker::apply(stemPads_[0], padsGains_, stemL[kStemChord], stemR[kStemChord], n);
+        MultibandDucker::apply(stemPads_[1], padsGains_, stemL[kStemDrone], stemR[kStemDrone], n);
+        MultibandDucker::apply(stemFx_[0], fxGains_, stemL[kStemRoom], stemR[kStemRoom], n);
+        MultibandDucker::apply(stemFx_[1], fxGains_, stemL[kStemDub], stemR[kStemDub], n);
+        MultibandDucker::apply(stemFx_[2], fxGains_, stemL[kStemCloud], stemR[kStemCloud], n);
+        for (int i = 0; i < n; ++i) {
+            const size_t k = static_cast<size_t>(i);
+            auto put = [&](int s, float l, float r) { stemL[s][i] = l; stemR[s][i] = r; };
+            put(kStemKick, kickBuf_[k] * satGain_[0][i], kickBuf_[k] * satGain_[1][i]);
+            put(kStemRumble, rumbleBuf_[k] * satGain_[0][i], rumbleBuf_[k] * satGain_[1][i]);
+            put(kStemSub, subBuf_[k], subBuf_[k]);
+            put(kStemHats, busH[0][i] * satGain_[0][i], busH[1][i] * satGain_[1][i]);
+            put(kStemPerc, busP[0][i] * satGain_[0][i], busP[1][i] * satGain_[1][i]);
+            put(kStemPing, pingL_[k], pingR_[k]);
+            put(kStemBass, bassL_[k], bassR_[k]);
+            put(kStemAcid, acidL_[k], acidR_[k]);
+            put(kStemTexture, texL_[k], texR_[k]);
+        }
+    }
 
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
-        if (stemL != nullptr) {
-            const int o = stemOffset + i;
-            auto put = [&](int s, float l, float r) { stemL[s][o] += l; stemR[s][o] += r; };
-            put(kStemKick, kickBuf_[k], kickBuf_[k]);
-            put(kStemRumble, rumbleBuf_[k], rumbleBuf_[k]);
-            put(kStemSub, subBuf_[k], subBuf_[k]);
-            put(kStemHats, busH[0][i], busH[1][i]);
-            put(kStemPerc, busP[0][i], busP[1][i]);
-            put(kStemPing, pingL_[k], pingR_[k]);
-            put(kStemRoom, roomL_[k] - dubL_[k] - cloudL_[k], roomR_[k] - dubR_[k] - cloudR_[k]);
-            put(kStemBass, bassL_[k], bassR_[k]);
-            put(kStemAcid, acidL_[k], acidR_[k]);
-            put(kStemChord, chordL_[k] - droneL_[k], chordR_[k] - droneR_[k]);
-            put(kStemDrone, droneL_[k], droneR_[k]);
-            put(kStemTexture, texL_[k], texR_[k]);
-            put(kStemDub, dubL_[k], dubR_[k]);
-            put(kStemCloud, cloudL_[k], cloudR_[k]);
-        }
         float l = drumL_[k] + subBuf_[k] + pingL_[k] + bassL_[k] + acidL_[k] + chordL_[k] + texL_[k] + roomL_[k];
         float r = drumR_[k] + subBuf_[k] + pingR_[k] + bassR_[k] + acidR_[k] + chordR_[k] + texR_[k] + roomR_[k];
         if (groupHpOn_) {
@@ -511,14 +544,34 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         drumL_[k] = L[i];   // the glue's dry signal (the drum bus is spent)
         drumR_[k] = R[i];
     }
-    glue_.process(L, R, n);
+    glue_.process(L, R, n, stems ? glueGains_ : nullptr);
     // The glue in parallel, then the Leveler's trim: after the glue, which would otherwise halve every correction (a
     // ratio of 2 far over its threshold).
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
         trimGain_ += (trimTarget_ - trimGain_) * trimCoef_;
+        trimGains_[i] = trimGain_;
         L[i] = (drumL_[k] + kGlueMix * (L[i] - drumL_[k])) * trimGain_;
         R[i] = (drumR_[k] + kGlueMix * (R[i] - drumR_[k])) * trimGain_;
+    }
+    if (!stems) return;
+    // The stems through their own group high pass and tilt, then the glue's and the trim's gains.
+    for (int s = 0; s < kStems; ++s) {
+        StemBus& b = stemBus_[s];
+        for (int c = 0; c < 2; ++c) for (int q = 0; q < 2; ++q) b.hp[c][q].copyCoefficients(groupHp_[c][q]);
+        float* ch[2] = { stemL[s], stemR[s] };
+        for (int c = 0; c < 2; ++c) {
+            for (int i = 0; i < n; ++i) {
+                float x = ch[c][i];
+                if (groupHpOn_) {
+                    float lp, bp, hp;
+                    b.hp[c][0].tick(x, lp, bp, hp); b.hp[c][1].tick(hp, lp, bp, x);
+                }
+                b.tilt[c] += tiltCoef_ * (x - b.tilt[c]);
+                x = b.tilt[c] + tiltHigh_ * (x - b.tilt[c]);
+                ch[c][i] = x * (1.0f + kGlueMix * (glueGains_[i] - 1.0f)) * trimGains_[i];
+            }
+        }
     }
 }
 

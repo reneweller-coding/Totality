@@ -84,8 +84,8 @@ public:
         if (W_ > 0.0f && 2.0 * std::fabs(d) <= W_) return x + (1.0 / R_ - 1.0) * (d + W_ / 2.0) * (d + W_ / 2.0) / (2.0 * W_);
         return T_ + d / R_;
     }
-    /** @brief Processes a stereo block in place. */
-    void process(float* L, float* R, int n)
+    /** @brief Processes a stereo block in place; with @p gains, keeps each sample's gain (for the stems). */
+    void process(float* L, float* R, int n, float* gains = nullptr)
     {
         for (int i = 0; i < n; ++i) {
             const double peak = std::max(std::fabs(static_cast<double>(L[i])), std::fabs(static_cast<double>(R[i])));
@@ -96,6 +96,7 @@ public:
             const float g = static_cast<float>(std::pow(10.0, -yL_ / 20.0));
             L[i] *= g;
             R[i] *= g;
+            if (gains != nullptr) gains[i] = g;
             reduction_ = static_cast<float>(yL_);
         }
     }

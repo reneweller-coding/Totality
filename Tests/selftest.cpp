@@ -7,6 +7,7 @@
  * user's rule for Ephemeris, 24.09.2026).
  */
 #include "umb/Clock.h"
+#include "umb/Cue.h"
 #include "umb/Engine.h"
 #include "umb/Leveler.h"
 #include "umb/Loudness.h"
@@ -35,6 +36,23 @@
 #include <set>
 #include <string>
 #include <vector>
+#if defined(_WIN32)
+  #ifndef NOMINMAX
+    #define NOMINMAX
+  #endif
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  using socklen_t = int;
+#else
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <sys/socket.h>
+  #include <sys/time.h>
+  #include <unistd.h>
+#endif
 
 using namespace umb;
 using namespace umbtest;
@@ -937,6 +955,98 @@ void runSynth(MonoSynth& s, const std::vector<float>& v, float minCut, std::vect
 }
 
 /** The bass synth plays in tune, the 303 slides to its next note, and every filter model stays bounded when pushed. */
+/** The score cues (Cue.h, PLAN 10.3): the OSC bytes, the marks of a track, the tap, a datagram through the loopback. */
+void testCues()
+{
+    section("score cues (OSC)");
+    const char* d = "8A";
+    const std::vector<uint8_t> key = oscMessage("/umb/key", "s", nullptr, nullptr, &d);
+    const uint8_t keyWant[20] = { '/', 'u', 'm', 'b', '/', 'k', 'e', 'y', 0, 0, 0, 0, ',', 's', 0, 0, '8', 'A', 0, 0 };
+    const int32_t five = 5;
+    const float bpm = 132.0f;
+    const std::vector<uint8_t> beat = oscMessage("/umb/beat", "if", &five, &bpm, nullptr);
+    const uint8_t beatWant[24] = { '/', 'u', 'm', 'b', '/', 'b', 'e', 'a', 't', 0, 0, 0, ',', 'i', 'f', 0, 0, 0, 0, 5, 0x43, 0x04, 0, 0 };
+    check(key.size() == 20 && std::memcmp(key.data(), keyWant, 20) == 0 && beat.size() == 24 && std::memcmp(beat.data(), beatWant, 24) == 0,
+          "OSC 1.0 byte layout (padding to four bytes, big-endian numbers)", fmt("%zu and %zu bytes", key.size(), beat.size()));
+
+    auto p = std::make_unique<ParamStore>();
+    TrackInfo info;
+    const Score score = composeTrack(*p, 5, TrackRequest{}, nullptr, std::string(), &info);
+    const std::vector<CueMark> marks = cueMarksOf(score, *p);
+    int blocks = 0, ops = 0, keys = 0, named = 0;
+    bool ordered = true, camelot = true;
+    for (size_t i = 0; i < marks.size(); ++i) {
+        if (i > 0 && marks[i].beat < marks[i - 1].beat) ordered = false;
+        if (marks[i].kind == CueKind::Block) { ++blocks; named += marks[i].text[0] != 0; }
+        if (marks[i].kind == CueKind::Op) { ++ops; named += marks[i].text[0] != 0; }
+        if (marks[i].kind == CueKind::Key) { ++keys; camelot = camelot && std::string(marks[i].text) == camelotOf(info.key); }
+    }
+    int wantOps = 0;
+    for (const BlockOp& o : score.ops) wantOps += o.kind != OpKind::End && o.kind != OpKind::Hold;
+    check(ordered && blocks == static_cast<int>(score.markers.size()) && ops == wantOps && named == blocks + ops && keys == 1 && camelot,
+          "the marks of a track: every block and operation named, its key as a Camelot label",
+          fmt("%d blocks, %d operations, %d key (%s)", blocks, ops, keys, camelotOf(info.key).c_str()));
+
+    // The tap over the whole track in blocks: every mark once, a cue per beat and per bar.
+    CueTap tap;
+    CueRing ring;
+    int got = 0, beats = 0, bars = 0, lost = 0;
+    const double step = 0.37;
+    for (double b = 0.0; b < score.lengthBeats; b += step) {
+        lost += tap.scan(marks, b, b + step, 130.0f, 0, 0, 1000000, ring);
+        Cue c;
+        while (ring.pop(c)) {
+            if (c.kind == CueKind::Beat) ++beats;
+            else if (c.kind == CueKind::Bar) ++bars;
+            else ++got;
+        }
+    }
+    const int wantBeats = static_cast<int>(std::ceil(score.lengthBeats));
+    check(lost == 0 && got == static_cast<int>(marks.size()) && std::abs(beats - wantBeats) <= 1 && std::abs(bars - (wantBeats + 3) / 4) <= 1,
+          "the tap sends every mark once, a cue per beat and per bar", fmt("%d of %zu marks, %d beats, %d bars, %d lost", got, marks.size(), beats, bars, lost));
+
+    // The sender, for real: a datagram through the loopback to a socket of the test's own.
+    const std::vector<uint8_t> want = oscOf([] { Cue c; c.kind = CueKind::Op; std::strcpy(c.text, "add ride"); return c; }());
+    std::vector<uint8_t> heard;
+#if defined(_WIN32)
+    WSADATA wsa;
+    WSAStartup(MAKEWORD(2, 2), &wsa);
+    const SOCKET rx = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    DWORD timeout = 2000;
+    setsockopt(rx, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+#else
+    const int rx = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    timeval timeout{ 2, 0 };
+    setsockopt(rx, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+#endif
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+    bind(rx, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    socklen_t len = sizeof(addr);
+    getsockname(rx, reinterpret_cast<sockaddr*>(&addr), &len);
+    CueSender sender;
+    if (sender.start("127.0.0.1", ntohs(addr.sin_port))) {
+        Cue c;
+        c.kind = CueKind::Op;
+        std::strcpy(c.text, "add ride");
+        c.dueNanos = CueSender::nowNanos();
+        sender.ring().push(c);
+        char buf[256];
+        const auto n = recv(rx, buf, sizeof(buf), 0);
+        if (n > 0) heard.assign(buf, buf + n);
+        sender.stop();
+    }
+#if defined(_WIN32)
+    closesocket(rx);
+    WSACleanup();
+#else
+    close(rx);
+#endif
+    check(heard == want, "the sender's datagram arrives through the loopback, byte for byte", fmt("%zu bytes", heard.size()));
+}
+
 void testSynth()
 {
     section("the bass synth and the 303");
@@ -1317,6 +1427,79 @@ void testBlockSizes()
     check(firstE == d.size() && firstF == d.size(), "every voice at once: 1 and 37 equal 512, bit for bit", where);
 }
 
+/** Renders @p beats from @p from of a set with block size @p block: the output, and with @p stems the stems' sum and the
+ *  mix as it enters the master (Engine::setPremasterTap). */
+struct StemRun { std::vector<float> out, sum, pre; };
+StemRun renderStems(const SetScore& set, const ParamStore& knobs, double from, double beats, int block, bool stems)
+{
+    auto e = std::make_unique<Engine>();
+    for (int id = 0; id < e->params().count(); ++id) e->params().set(id, knobs.get(id));
+    e->prepare(48000.0, block);
+    e->loadSet(set);
+    e->seek(from);
+    const TempoMap& tm = set.decks[0].tempo;
+    const int n = static_cast<int>((tm.secondsAt(from + beats) - tm.secondsAt(from)) * 48000.0);
+    std::vector<std::vector<float>> sl(Engine::kStems, std::vector<float>(static_cast<size_t>(block))), sr = sl;
+    std::vector<float*> pl, pr;
+    for (int k = 0; k < Engine::kStems; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
+    std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block)), preL(static_cast<size_t>(block)), preR = preL;
+    if (stems) { e->setStems(pl.data(), pr.data()); e->setPremasterTap(preL.data(), preR.data()); }
+    StemRun run;
+    for (int done = 0; done < n;) {
+        const int m = std::min(block, n - done);
+        e->process(L.data(), R.data(), m);
+        for (int i = 0; i < m; ++i) {
+            const size_t k = static_cast<size_t>(i);
+            run.out.push_back(L[k]);
+            run.out.push_back(R[k]);
+            if (!stems) continue;
+            float sumL = 0.0f, sumR = 0.0f;
+            for (int s = 0; s < Engine::kStems; ++s) { sumL += sl[static_cast<size_t>(s)][k]; sumR += sr[static_cast<size_t>(s)][k]; }
+            run.sum.push_back(sumL);
+            run.sum.push_back(sumR);
+            run.pre.push_back(preL[k]);
+            run.pre.push_back(preR[k]);
+        }
+        done += m;
+    }
+    return run;
+}
+
+/** The stems (Engine::Stem): they sum to the mix as it enters the master -- a track, a blend with the isolators, the
+ *  filters and the bass swap, a break through the mixer's effects -- and switching them on leaves the mix as it was. */
+void testStems()
+{
+    section("stems");
+    auto p = std::make_unique<ParamStore>();
+    p->parseText("set.loops=1; set.fx_breaks=1");
+    SetInfo info;
+    const SetScore set = composeSet(*p, 5, 16.0, nullptr, &info);
+    auto residual = [](const StemRun& r) {
+        double peak = 0.0, err = 0.0;
+        for (size_t i = 0; i < r.pre.size(); ++i) {
+            peak = std::max(peak, std::fabs(static_cast<double>(r.pre[i])));
+            err = std::max(err, std::fabs(static_cast<double>(r.sum[i]) - r.pre[i]));
+        }
+        return std::pair<double, double>{ peak, err };
+    };
+    struct Window { const char* what; double from, beats; };
+    std::vector<Window> windows = { { "a track's body", 64.0, 64.0 } };
+    if (info.tracks.size() >= 2) windows.push_back({ "a blend and its bass swap", std::max(0.0, info.tracks[1].swapIn - 64.0), 96.0 });
+    if (!info.breaks.empty()) windows.push_back({ "a break through the mixer's effects", std::max(0.0, info.breaks[0] - 16.0), 64.0 });
+    for (const Window& w : windows) {
+        const StemRun r = renderStems(set, *p, w.from, w.beats, 37, true);
+        const auto [peak, err] = residual(r);
+        const double db = 20.0 * std::log10(std::max(err, 1e-12) / std::max(peak, 1e-12));
+        check(peak > 0.01 && db < -100.0, fmt("%s: the stems sum to the mix before the master", w.what).c_str(),
+              fmt("peak %.3f, largest difference %.1f dB under it", peak, db));
+    }
+    check(windows.size() == 3, "the set has a blend and a break to test", fmt("%zu tracks, %zu breaks", info.tracks.size(), info.breaks.size()));
+    const Window& w = windows.back();
+    const StemRun with = renderStems(set, *p, w.from, w.beats, 512, true), without = renderStems(set, *p, w.from, w.beats, 512, false);
+    check(with.out.size() == without.out.size() && std::memcmp(with.out.data(), without.out.data(), with.out.size() * sizeof(float)) == 0,
+          "the mix with stems is the mix without, bit for bit", fmt("%zu samples", with.out.size() / 2));
+}
+
 /** The master: the true peak under the ceiling, the low end mono. */
 void testMaster()
 {
@@ -1405,6 +1588,8 @@ const TestSection kSections[] = {
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },
+    { "testCues", testCues },
+    { "testStems", testStems },
 };
 
 } // namespace

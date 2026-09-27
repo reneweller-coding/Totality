@@ -82,9 +82,11 @@ public:
     int64_t nextRestChange(int64_t sample) const;
     /**
      * @brief Renders @p n samples from @p sample into @p L and @p R (replaced): at most up to the next raster line and the
-     *        next note. Adds its stems at @p stemOffset into @p stemL / @p stemR if they are not null.
+     *        next note. With @p stemL / @p stemR, also writes its stems there (replaced, from index 0): each through its
+     *        own copy of the linear stages (group high pass, tilt, the ducks' crossovers) and times the gains the
+     *        nonlinear ones gave the whole (the drum bus, the glue) and the trim, so they sum to L and R.
      */
-    void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR, int stemOffset);
+    void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR);
     /** @brief The score it plays. */
     const Score& score() const { return score_; }
     /** @brief Whether it has a score. */
@@ -181,6 +183,14 @@ private:
     std::vector<float> pingL_, pingR_, bassL_, bassR_, acidL_, acidR_, chordL_, chordR_, droneL_, droneR_, texL_, texR_;
     std::vector<float> roomInL_, roomInR_, roomL_, roomR_, echoInL_, echoInR_, plateInL_, plateInR_, dubL_, dubR_;
     std::vector<float> drumL_, drumR_, cloudInL_, cloudInR_, cloudL_, cloudR_;
+
+    // The stems' own copies of the linear stages (render() with stems), and the gains of the nonlinear ones.
+    struct StemBus { Svf hp[2][2]; float tilt[2] = {}; };
+    StemBus stemBus_[kStems];
+    MultibandDucker::Replica stemPads_[2], stemFx_[3];   ///< chord, drone; room, dub, cloud
+    float satGain_[2][kRaster] = {}, padsGains_[2 * kRaster] = {}, fxGains_[2 * kRaster] = {}, glueGains_[kRaster] = {},
+          trimGains_[kRaster] = {};
+    void resetStems();
 };
 
 } // namespace umb

@@ -32,8 +32,12 @@ add_library(UmbraCore STATIC
     src/SetFile.cpp
     src/Deck.cpp
     src/Engine.cpp
+    src/Cue.cpp
 )
 target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if(WIN32)
+    target_link_libraries(UmbraCore PUBLIC ws2_32)   # the cue sender's UDP socket (Cue.h)
+endif()
 target_compile_features(UmbraCore PUBLIC cxx_std_20)
 if(MSVC)
     target_compile_options(UmbraCore PRIVATE /W4 /permissive- /utf-8)

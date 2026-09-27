@@ -61,12 +61,23 @@ public:
     void set(float lowDb, float midDb, float holdMs, float releaseMs);
     /** @brief A kick. */
     void trigger(double late) { duck_.trigger(late); }
-    /** @brief Ducks @p L and @p R in place. */
-    void process(float* L, float* R, int n);
+    /** @brief Ducks @p L and @p R in place; with @p gains, keeps each sample's low and mid gain (two a sample). */
+    void process(float* L, float* R, int n, float* gains = nullptr);
 
 private:
     /** @brief One channel's crossover: the first and second sections of each LR4, the low band's allpass. */
     struct Bands { Svf split1, low2, high2, split2, mid2, top2, ap; };
+    static float band(Bands& b, float x, float gl, float gm);
+
+public:
+    /** @brief A stem's own crossover: the duck is linear in what it ducks, so the stems' ducks sum to the whole's. */
+    struct Replica { Bands b[2]; };
+    /** @brief A replica with this ducker's crossover and a clear state. */
+    Replica replica() const;
+    /** @brief Ducks a stem in place with the gains process() kept. */
+    static void apply(Replica& r, const float* gains, float* L, float* R, int n);
+
+private:
     Ducker duck_;
     Bands b_[2];
     float lowDepth_ = 0.7f, midDepth_ = 0.3f;

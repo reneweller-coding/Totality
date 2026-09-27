@@ -93,29 +93,48 @@ void MultibandDucker::set(float lowDb, float midDb, float holdMs, float releaseM
     duck_.set(1.0f, 1.0f, holdMs, releaseMs);
 }
 
-void MultibandDucker::process(float* L, float* R, int n)
+float MultibandDucker::band(Bands& b, float x, float gl, float gm)
+{
+    float lp, bp, hp, l1, h1;
+    b.split1.tick(x, l1, bp, h1);
+    const float low = b.low2.lp(l1);
+    b.high2.tick(h1, lp, bp, hp);
+    const float high = hp;
+    b.split2.tick(high, l1, bp, h1);
+    const float mid = b.mid2.lp(l1);
+    b.top2.tick(h1, lp, bp, hp);
+    const float top = hp;
+    // The low band through the 2 kHz crossover's allpass (LP2^2 + HP2^2 = x - 2 k bp), in phase with the others.
+    b.ap.tick(low, lp, bp, hp);
+    const float lowAp = low - 2.0f * kSqrt2 * bp;
+    return lowAp * gl + mid * gm + top;
+}
+
+void MultibandDucker::process(float* L, float* R, int n, float* gains)
 {
     float* ch[2] = { L, R };
     for (int i = 0; i < n; ++i) {
         duck_.next();
         const float a = duck_.amount();
         const float gl = 1.0f - lowDepth_ * a, gm = 1.0f - midDepth_ * a;
-        for (int c = 0; c < 2; ++c) {
-            Bands& b = b_[c];
-            float lp, bp, hp, l1, h1;
-            b.split1.tick(ch[c][i], l1, bp, h1);
-            const float low = b.low2.lp(l1);
-            b.high2.tick(h1, lp, bp, hp);
-            const float high = hp;
-            b.split2.tick(high, l1, bp, h1);
-            const float mid = b.mid2.lp(l1);
-            b.top2.tick(h1, lp, bp, hp);
-            const float top = hp;
-            // The low band through the 2 kHz crossover's allpass (LP2^2 + HP2^2 = x - 2 k bp), in phase with the others.
-            b.ap.tick(low, lp, bp, hp);
-            const float lowAp = low - 2.0f * kSqrt2 * bp;
-            ch[c][i] = lowAp * gl + mid * gm + top;
-        }
+        if (gains != nullptr) { gains[2 * i] = gl; gains[2 * i + 1] = gm; }
+        for (int c = 0; c < 2; ++c) ch[c][i] = band(b_[c], ch[c][i], gl, gm);
+    }
+}
+
+MultibandDucker::Replica MultibandDucker::replica() const
+{
+    Replica r{ { b_[0], b_[1] } };
+    for (Bands& b : r.b)
+        for (Svf* f : { &b.split1, &b.low2, &b.high2, &b.split2, &b.mid2, &b.top2, &b.ap }) f->reset();
+    return r;
+}
+
+void MultibandDucker::apply(Replica& r, const float* gains, float* L, float* R, int n)
+{
+    for (int i = 0; i < n; ++i) {
+        L[i] = band(r.b[0], L[i], gains[2 * i], gains[2 * i + 1]);
+        R[i] = band(r.b[1], R[i], gains[2 * i], gains[2 * i + 1]);
     }
 }
 

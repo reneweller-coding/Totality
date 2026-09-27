@@ -34,10 +34,13 @@ namespace umb {
 /** @brief Plays a track or a set. Not thread-safe except for parameter writes (ParamStore is atomic). */
 class Engine {
 public:
-    /** @brief The stems (Deck::Stem): every deck's stem of one kind summed, before the mixer. */
+    /**
+     * @brief The stems: the decks' (Deck::Stem), every deck's stem of one kind summed after its mixer channel, and the
+     *        mixer's effects. They sum to the mix as it enters the master (mono below, level, cut, clipper, limiter).
+     */
     enum Stem : int { kStemKick = 0, kStemRumble, kStemSub, kStemHats, kStemPerc, kStemPing, kStemRoom, kStemBass, kStemAcid,
-                      kStemChord, kStemDrone, kStemTexture, kStemDub, kStemCloud, kStems };
-    static_assert(static_cast<int>(kStems) == static_cast<int>(Deck::kStems), "the stems are the deck's");
+                      kStemChord, kStemDrone, kStemTexture, kStemDub, kStemCloud, kStemMixFx, kStems };
+    static_assert(static_cast<int>(kStemMixFx) == static_cast<int>(Deck::kStems), "the stems are the deck's and the mixer's");
     /** @brief Name of stem @p s. */
     static const char* stemName(int s);
     /** @brief The raster the parameters and the automation are read on, in samples. */
@@ -73,10 +76,14 @@ public:
     /** @brief The value of parameter @p id as deck A plays it: the knob plus its score's automation. */
     float played(int id) const { return decks_[0].played(id); }
     /**
-     * @brief Stems: from now on every process() call also writes, per stem, what the decks put into it (before the
-     *        mixer) into @p left[s] and @p right[s], each at least the block long. Null switches them off.
+     * @brief Stems: from now on every process() call also writes the stems (Stem) into @p left[s] and @p right[s], each
+     *        at least the block long. Null switches them off. Set them before the first sample: each stem runs through
+     *        copies of the filters it passes, which start from silence.
      */
     void setStems(float* const* left, float* const* right) { stemL_ = left; stemR_ = right; }
+    /** @brief The mix as it enters the master into @p left and @p right on every process() call (the stems' sum; for the
+     *         tests). Null switches it off. */
+    void setPremasterTap(float* left, float* right) { preL_ = left; preR_ = right; }
     /** @brief Deck taps: from now on every process() call also writes each deck after its mixer channel (before the
      *         effects and the master) into @p left[d] and @p right[d]. Null switches them off. */
     void setDeckTaps(float* const* left, float* const* right) { tapL_ = left; tapR_ = right; }
@@ -160,7 +167,16 @@ private:
     float* const* stemR_ = nullptr;
     float* const* tapL_ = nullptr;
     float* const* tapR_ = nullptr;
+    float* preL_ = nullptr;
+    float* preR_ = nullptr;
     int tapOffset_ = 0;
+    // The stems: each deck's (Deck::render writes them), and their copies of the mixer channel's filters.
+    std::vector<float> deckStems_;                   ///< kDecks x Deck::kStems x 2 channels x kRaster
+    float* deckStemL_[kDecks][Deck::kStems] = {};
+    float* deckStemR_[kDecks][Deck::kStems] = {};
+    ThreeBand stemBands_[kDecks][Deck::kStems][2];
+    Svf stemFilt_[kDecks][Deck::kStems][2];
+    float chGains_[4][kRaster] = {};                 ///< a channel's isolator gains and fader, sample by sample
 };
 
 } // namespace umb

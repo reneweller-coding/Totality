@@ -17,7 +17,7 @@ constexpr float kSqrt2 = 1.41421356f;
 const char* Engine::stemName(int s)
 {
     static const char* const kNames[kStems] = { "kick", "rumble", "sub", "hats", "perc", "ping", "room", "bass", "acid",
-                                                "chord", "drone", "texture", "dub", "cloud" };
+                                                "chord", "drone", "texture", "dub", "cloud", "djfx" };
     return s >= 0 && s < kStems ? kNames[s] : "";
 }
 
@@ -54,6 +54,14 @@ void Engine::prepare(double sampleRate, int maxBlock)
     for (int d = 0; d < kDecks; ++d) decks_[d].prepare(&params_, sampleRate, d);
     const float fs = static_cast<float>(sampleRate);
     for (Channel& c : ch_) for (ThreeBand& b : c.bands) b.set(fs);
+    for (auto& deck : stemBands_) for (auto& stem : deck) for (ThreeBand& b : stem) b.set(fs);
+    deckStems_.assign(static_cast<size_t>(kDecks * Deck::kStems * 2 * kRaster), 0.0f);
+    for (int d = 0; d < kDecks; ++d)
+        for (int s = 0; s < Deck::kStems; ++s) {
+            float* base = deckStems_.data() + static_cast<size_t>(((d * Deck::kStems + s) * 2) * kRaster);
+            deckStemL_[d][s] = base;
+            deckStemR_[d][s] = base + kRaster;
+        }
     smooth_ = 1.0f - std::exp(-1.0f / (0.001f * fs));
     djEcho_.prepare(sampleRate, 3.0, 0x444A4543484Full);   // "DJECHO"
     djHall_.prepare(sampleRate);
@@ -119,6 +127,8 @@ void Engine::seek(double beat)
     stepCursor_ = 0;
     while (stepCursor_ < steps_.size() && steps_[stepCursor_] < sample_) ++stepCursor_;
     for (Track& t : tracks_) { t.cursor = t.gestures.size(); t.offset = 0.0f; }
+    for (auto& deck : stemBands_) for (auto& stem : deck) for (ThreeBand& b : stem) b.reset();
+    for (auto& deck : stemFilt_) for (auto& stem : deck) for (Svf& f : stem) f.reset();
     for (Channel& c : ch_) {
         for (ThreeBand& b : c.bands) b.reset();
         for (Svf& f : c.filt) f.reset();
@@ -176,6 +186,7 @@ void Engine::updateCell()
             for (Svf& s : c.filt) s.setQ(std::min(f, 0.45f * fs), 0.9f, fs);
         } else {
             for (Svf& s : c.filt) s.reset();
+            for (auto& stem : stemFilt_[d]) for (Svf& s : stem) s.reset();
         }
     }
     if (fxOn_) {
@@ -233,6 +244,33 @@ void Engine::mix(float* L, float* R, int n)
             R[i] += r;
             if (tapL_ != nullptr) { tapL_[d][tapOffset_ + i] = l; tapR_[d][tapOffset_ + i] = r; }
             if (fxOn_) { sendL_[static_cast<size_t>(i)] += l * c.send; sendR_[static_cast<size_t>(i)] += r * c.send; }
+            if (stemL_ != nullptr) { chGains_[0][i] = c.g[0]; chGains_[1][i] = c.g[1]; chGains_[2][i] = c.g[2]; chGains_[3][i] = c.gFader; }
+        }
+        if (stemL_ == nullptr) continue;
+        // The deck's stems through their own copies of its channel (the same gains, the filters' own states).
+        const bool filtered = std::fabs(c.filter) >= 0.01f;
+        for (int s = 0; s < Deck::kStems; ++s) {
+            const float* in[2] = { deckStemL_[d][s], deckStemR_[d][s] };
+            float* out[2] = { stemL_[s] + tapOffset_, stemR_[s] + tapOffset_ };
+            for (int ch = 0; ch < 2; ++ch) {
+                ThreeBand& b = stemBands_[d][s][ch];
+                Svf& f = stemFilt_[d][s][ch];
+                f.copyCoefficients(c.filt[ch]);
+                for (int i = 0; i < n; ++i) {
+                    float x = in[ch][i];
+                    if (isSet_) {
+                        float lo, mi, hi;
+                        b.process(x, lo, mi, hi);
+                        x = (lo * chGains_[0][i] + mi * chGains_[1][i] + hi * chGains_[2][i]) * chGains_[3][i];
+                        if (filtered) {
+                            float lp, bp, hp;
+                            f.tick(x, lp, bp, hp);
+                            x = c.filter < 0.0f ? lp : hp;
+                        }
+                    }
+                    out[ch][i] += x;
+                }
+            }
         }
     }
     if (fxOn_) {
@@ -242,12 +280,24 @@ void Engine::mix(float* L, float* R, int n)
             L[i] += fxL_[static_cast<size_t>(i)] * echoReturn_;
             R[i] += fxR_[static_cast<size_t>(i)] * echoReturn_;
         }
+        if (stemL_ != nullptr)
+            for (int i = 0; i < n; ++i) {
+                stemL_[kStemMixFx][tapOffset_ + i] = fxL_[static_cast<size_t>(i)] * echoReturn_;
+                stemR_[kStemMixFx][tapOffset_ + i] = fxR_[static_cast<size_t>(i)] * echoReturn_;
+            }
         djHall_.process(sendL_.data(), sendR_.data(), fxL_.data(), fxR_.data(), n);
         for (int i = 0; i < n; ++i) {
             L[i] += fxL_[static_cast<size_t>(i)] * hallReturn_;
             R[i] += fxR_[static_cast<size_t>(i)] * hallReturn_;
         }
+        if (stemL_ != nullptr)
+            for (int i = 0; i < n; ++i) {
+                stemL_[kStemMixFx][tapOffset_ + i] += fxL_[static_cast<size_t>(i)] * hallReturn_;
+                stemR_[kStemMixFx][tapOffset_ + i] += fxR_[static_cast<size_t>(i)] * hallReturn_;
+            }
     }
+    if (preL_ != nullptr)
+        for (int i = 0; i < n; ++i) { preL_[tapOffset_ + i] = L[i]; preR_[tapOffset_ + i] = R[i]; }
     // The master: the side under Mono Below goes (PLAN 8.2), the level, the vinyl cut, the clipper, the limiter.
     for (int i = 0; i < n; ++i) {
         const float mid = 0.5f * (L[i] + R[i]);
@@ -314,7 +364,9 @@ bool Engine::process(float* L, float* R, int n)
             for (int s = 0; s < kStems; ++s)
                 for (int i = 0; i < len; ++i) { stemL_[s][done + i] = 0.0f; stemR_[s][done + i] = 0.0f; }
         for (int d = 0; d < kDecks; ++d)
-            if (playing_[d]) decks_[d].render(sample_, deckL_[d].data(), deckR_[d].data(), len, stemL_, stemR_, done);
+            if (playing_[d])
+                decks_[d].render(sample_, deckL_[d].data(), deckR_[d].data(), len, stemL_ != nullptr ? deckStemL_[d] : nullptr,
+                                 stemL_ != nullptr ? deckStemR_[d] : nullptr);
         if (tapL_ != nullptr)
             for (int d = 0; d < kDecks; ++d)
                 for (int i = 0; i < len; ++i) { tapL_[d][done + i] = 0.0f; tapR_[d][done + i] = 0.0f; }
