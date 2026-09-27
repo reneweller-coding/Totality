@@ -82,7 +82,13 @@ void Engine::load(const Score& score)
     s.decks[0] = score;
     s.lengthBeats = score.lengthBeats;
     loadSet(s);
-    isSet_ = false;   // a track alone: no isolator, no filter in its path
+    isSet_ = live_;   // a track alone: no isolator, no filter in its path -- unless it is played live
+}
+
+void Engine::setLive(bool on)
+{
+    live_ = on;
+    for (Deck& d : decks_) d.setLive(on);
 }
 
 void Engine::loadSet(const SetScore& set)
@@ -109,8 +115,22 @@ void Engine::loadSet(const SetScore& set)
         if (t < 0) { t = static_cast<int>(tracks_.size()); tracks_.push_back(Track{ x.param, {}, 0, 0.0f }); }
         tracks_[static_cast<size_t>(t)].gestures.push_back(x);
     }
-    // The mixer's effects run where a deck sends into them.
-    fxOn_ = false;
+    // The cues: every deck's marks and the set's tracks.
+    cueMarks_.clear();
+    for (int d = 0; d < kDecks; ++d) {
+        if (!decks_[d].loaded()) continue;
+        const std::vector<CueMark> m = cueMarksOf(set.decks[d], params_);
+        cueMarks_.insert(cueMarks_.end(), m.begin(), m.end());
+    }
+    {
+        Score names;
+        names.markers = set.markers;
+        const std::vector<CueMark> m = cueMarksOf(names, params_);
+        cueMarks_.insert(cueMarks_.end(), m.begin(), m.end());
+    }
+    std::stable_sort(cueMarks_.begin(), cueMarks_.end(), [](const CueMark& a, const CueMark& b) { return a.beat < b.beat; });
+    // The mixer's effects run where a deck sends into them (and always live: the throw).
+    fxOn_ = live_;
     for (int d = 0; d < kDecks; ++d)
         for (const Gesture& x : set.decks[d].gestures)
             if (x.param == params_.id(Module::Deck, d, deck::FxSend)) fxOn_ = true;
@@ -144,6 +164,7 @@ void Engine::seek(double beat)
     cutEnv_ = 0.0f;
     sideHp1_.reset();
     sideHp2_.reset();
+    for (Svf& f : perfFilt_) f.reset();
     cellDirty_ = true;
 }
 
@@ -187,6 +208,17 @@ void Engine::updateCell()
         } else {
             for (Svf& s : c.filt) s.reset();
             for (auto& stem : stemFilt_[d]) for (Svf& s : stem) s.reset();
+        }
+    }
+    // The performer (live only): the master filter, the echo throw.
+    if (live_) {
+        perfFilter_ = params_.get(params_.id(Module::Perform, 0, perform::Filter));
+        perfThrow_ = params_.get(params_.id(Module::Perform, 0, perform::Throw));
+        if (std::fabs(perfFilter_) >= 0.01f) {
+            const float f = perfFilter_ < 0.0f ? 20000.0f * std::exp2(10.0f * perfFilter_) : 20.0f * std::exp2(10.0f * perfFilter_);
+            for (Svf& s : perfFilt_) s.setQ(std::min(f, 0.45f * fs), 0.9f, fs);
+        } else {
+            for (Svf& s : perfFilt_) s.reset();
         }
     }
     if (fxOn_) {
@@ -271,6 +303,21 @@ void Engine::mix(float* L, float* R, int n)
                     out[ch][i] += x;
                 }
             }
+        }
+    }
+    if (live_) {
+        // The performer's master filter over the decks, then the throw of what is heard into the echo.
+        const bool filtered = std::fabs(perfFilter_) >= 0.01f;
+        for (int i = 0; i < n; ++i) {
+            if (filtered) {
+                float lp, bp, hp;
+                perfFilt_[0].tick(L[i], lp, bp, hp);
+                L[i] = perfFilter_ < 0.0f ? lp : hp;
+                perfFilt_[1].tick(R[i], lp, bp, hp);
+                R[i] = perfFilter_ < 0.0f ? lp : hp;
+            }
+            sendL_[static_cast<size_t>(i)] += L[i] * perfThrow_;
+            sendR_[static_cast<size_t>(i)] += R[i] * perfThrow_;
         }
     }
     if (fxOn_) {

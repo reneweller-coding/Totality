@@ -194,6 +194,11 @@ void Deck::updateCell(int64_t sample)
         t.cursor = c;
         t.offset = c == none ? 0.0f : gestureValue(t.gestures[c], beat);
     }
+    // The performer's mutes (live only): a muted group's notes are not played, its tails ring out.
+    mutes_ = 0;
+    if (live_)
+        for (int k = 0; k < perform::kMutes; ++k)
+            if (params_->getBool(params_->id(Module::Perform, 0, perform::MuteKick + k))) mutes_ |= 1u << k;
 
     float c[64];
     readPlayed(Module::Compose, 0, c);
@@ -332,6 +337,7 @@ void Deck::dispatch(const Ev& e)
     const Part part = static_cast<Part>(e.part);
     switch (part) {
     case Part::Kick: {
+        if (muted(perform::MuteKick)) return;
         kick_.trigger(e.velocity, e.late);
         const double c = kick_.asymptoticPhase(), f0 = kick_.tunedEndHz();
         rumble_.kick(e.late, c, f0);
@@ -354,10 +360,13 @@ void Deck::dispatch(const Ev& e)
             return;
         }
         if (part == Part::Bass) {
-            bass_.noteOn(e.pitch, e.velocity, e.late, e.accent, e.slide);
-            bassNote_ = e.id;
+            if (!muted(perform::MuteBass)) {
+                bass_.noteOn(e.pitch, e.velocity, e.late, e.accent, e.slide);
+                bassNote_ = e.id;
+            }
             if (!subOwns_) return;   // the sine plays the line only where the sub owns the low end
         }
+        if (muted(perform::MuteSub)) return;
         double phase = -1.0;
         if (sub_.locked() && haveKick_) {
             // The kick's phase at the note's ideal start, f0 dt + c, carried to the note's pitch.
@@ -373,27 +382,30 @@ void Deck::dispatch(const Ev& e)
     }
     case Part::Acid:
         if (e.on == 0) { if (e.id == acidNote_) { acid_.noteOff(); acidNote_ = -1; } return; }
+        if (muted(perform::MuteBass)) return;
         acid_.noteOn(e.pitch, e.velocity, e.late, e.accent, e.slide);
         acidNote_ = e.id;
         return;
     case Part::Chord:
         if (e.on == 0) chord_.noteOff(e.pitch);
-        else chord_.noteOn(e.pitch, e.velocity, e.late);
+        else if (!muted(perform::MutePads)) chord_.noteOn(e.pitch, e.velocity, e.late);
         return;
     case Part::Drone:
         if (e.on == 0) { if (e.id == droneNote_) { drone_.noteOff(); droneNote_ = -1; } return; }
+        if (muted(perform::MutePads)) return;
         drone_.noteOn(e.pitch, e.velocity);
         droneNote_ = e.id;
         return;
     case Part::Texture:
-        texture_.gate(e.on != 0);
+        texture_.gate(e.on != 0 && !muted(perform::MutePads));
         return;
     case Part::Ping:
+        if (muted(perform::MutePing)) return;
         ping_.noteOn(e.pitch, e.velocity, e.late, static_cast<uint32_t>(e.id));
         return;
     default: {
         const int lane = laneOf(part);
-        if (lane >= 0) kit_.trigger(lane, e.velocity, e.shift, e.late);
+        if (lane >= 0 && !muted(laneIsHat_[lane] ? perform::MuteHats : perform::MutePerc)) kit_.trigger(lane, e.velocity, e.shift, e.late);
         return;
     }
     }

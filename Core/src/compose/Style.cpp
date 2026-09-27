@@ -286,7 +286,35 @@ StyleProfile profileOf(const ParamStore& p)
     StyleProfile s = styleProfile(style);
     const int to = p.getInt(p.id(Module::Compose, 0, compose::MorphTo));
     if (to > 0) s = morphProfile(s, styleProfile(static_cast<Style>(to - 1)), p.get(p.id(Module::Compose, 0, compose::Morph)), p);
-    return axisProfile(s, p.get(p.id(Module::Compose, 0, compose::DubShare)), p.get(p.id(Module::Compose, 0, compose::HypnoticShare)), p);
+    s = axisProfile(s, p.get(p.id(Module::Compose, 0, compose::DubShare)), p.get(p.id(Module::Compose, 0, compose::HypnoticShare)), p);
+    // A style of the user's own: its numbers over the profile's (the pool, the recipe and the sounds stay the profile's).
+    if (p.getBool(p.id(Module::Custom, 0, custom::Use))) {
+        const auto c = [&](int k) { return p.get(p.id(Module::Custom, 0, k)); };
+        const auto ci = [&](int k) { return p.getInt(p.id(Module::Custom, 0, k)); };
+        s.bpmLow = std::min(c(custom::BpmLow), c(custom::BpmHigh));
+        s.bpmHigh = std::max(c(custom::BpmLow), c(custom::BpmHigh));
+        s.arcWeight = c(custom::ArcWeight);
+        s.peakWeight = c(custom::PeakWeight);
+        s.endlessWeight = c(custom::EndlessWeight);
+        if (s.arcWeight + s.peakWeight + s.endlessWeight <= 0.0f) s.arcWeight = 1.0f;
+        s.subChance = c(custom::SubChance);
+        s.blocksLow = std::min(ci(custom::BlocksLow), ci(custom::BlocksHigh));
+        s.blocksHigh = std::max(ci(custom::BlocksLow), ci(custom::BlocksHigh));
+        s.mutation = c(custom::Mutation);
+        s.reroll = c(custom::Reroll);
+        s.polymeterChance = c(custom::Polymeter);
+        s.fillChance = c(custom::Fill);
+        s.edgeChance = c(custom::Edge);
+        s.maxReduction = ci(custom::MaxReduction);
+        s.swingLow = std::min(c(custom::SwingLow), c(custom::SwingHigh));
+        s.swingHigh = std::max(c(custom::SwingLow), c(custom::SwingHigh));
+        s.eventRate = c(custom::EventRate);
+        s.throwShare = c(custom::ThrowShare);
+        s.densityCap = ci(custom::DensityCap);
+        s.simTarget = c(custom::Similarity);
+        s.peakLufs = c(custom::PeakLufs);
+    }
+    return s;
 }
 
 } // namespace umb

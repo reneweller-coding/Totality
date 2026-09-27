@@ -1500,6 +1500,61 @@ void testStems()
           "the mix with stems is the mix without, bit for bit", fmt("%zu samples", with.out.size() / 2));
 }
 
+/** Renders @p seconds of @p score from beat @p from, live or not, with @p knobs ("perform.mute_kick=1"): the output and
+ *  the kick's stem. */
+std::pair<std::vector<float>, std::vector<float>> renderLive(const Score& score, bool live, const char* knobs, double from, double seconds)
+{
+    auto e = std::make_unique<Engine>();
+    e->params().parseText(knobs);
+    e->setLive(live);
+    e->prepare(48000.0, 256);
+    e->load(score);
+    e->seek(from);
+    std::vector<std::vector<float>> sl(Engine::kStems, std::vector<float>(256)), sr = sl;
+    std::vector<float*> pl, pr;
+    for (int k = 0; k < Engine::kStems; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
+    e->setStems(pl.data(), pr.data());
+    std::vector<float> out, kick, L(256), R(256);
+    const int n = static_cast<int>(seconds * 48000.0);
+    for (int done = 0; done < n; done += 256) {
+        e->process(L.data(), R.data(), 256);
+        for (int i = 0; i < 256; ++i) { out.push_back(L[static_cast<size_t>(i)]); out.push_back(R[static_cast<size_t>(i)]); kick.push_back(sl[Engine::kStemKick][static_cast<size_t>(i)]); }
+    }
+    return { out, kick };
+}
+
+/** The performer (PLAN 10.1, Perform; Engine::setLive): nothing without live play; live, a mute silences its group, the
+ *  master filter takes the highs, the throw feeds the echo; the cue marks are there. */
+void testPerform()
+{
+    section("perform (live)");
+    auto p = std::make_unique<ParamStore>();
+    const Score score = composeTrack(*p, 9);
+    const double from = 128.0;
+    const auto energy = [](const std::vector<float>& x) { double s = 0.0; for (float v : x) s += static_cast<double>(v) * v; return s; };
+    // High-band energy: the first difference.
+    const auto highs = [](const std::vector<float>& x) { double s = 0.0; for (size_t i = 2; i < x.size(); ++i) { const double d = x[i] - x[i - 2]; s += d * d; } return s; };
+    const auto plain = renderLive(score, false, "", from, 6.0);
+    const auto ignored = renderLive(score, false, "perform.mute_kick=1; perform.filter=-0.6; perform.throw=1", from, 6.0);
+    check(plain.first == ignored.first, "without live play the perform module does nothing (renders and exports)");
+    const auto live = renderLive(score, true, "", from, 6.0);
+    const auto noKick = renderLive(score, true, "perform.mute_kick=1", from, 6.0);
+    const double kickLive = energy(live.second), kickMuted = energy(std::vector<float>(noKick.second.begin() + 48000, noKick.second.end()));
+    check(kickLive > 1.0 && kickMuted < 1e-6 * kickLive, "a muted kick falls silent (after the last one rings out)",
+          fmt("kick stem energy %.1f live, %.2g muted", kickLive, kickMuted));
+    const auto dark = renderLive(score, true, "perform.filter=-0.6", from, 6.0);
+    const double drop = 10.0 * std::log10(highs(live.first) / std::max(1e-12, highs(dark.first)));
+    check(drop > 15.0, "the master filter takes the highs", fmt("%.1f dB less above the cutoff", drop));
+    const auto thrown = renderLive(score, true, "perform.throw=1; djfx.echo_return=0", from, 6.0);
+    check(energy(thrown.first) > 1.05 * energy(live.first), "the throw feeds the mixer's echo",
+          fmt("%+.1f dB", 10.0 * std::log10(energy(thrown.first) / energy(live.first))));
+    auto e = std::make_unique<Engine>();
+    e->prepare(48000.0, 256);
+    e->load(score);
+    check(e->cueMarks().size() == cueMarksOf(score, e->params()).size() && !e->cueMarks().empty(), "the engine has the score's cue marks",
+          fmt("%zu marks", e->cueMarks().size()));
+}
+
 /** The master: the true peak under the ceiling, the low end mono. */
 void testMaster()
 {
@@ -1590,6 +1645,7 @@ const TestSection kSections[] = {
     { "testMidi", testMidi },
     { "testCues", testCues },
     { "testStems", testStems },
+    { "testPerform", testPerform },
 };
 
 } // namespace

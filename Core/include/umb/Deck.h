@@ -87,6 +87,8 @@ public:
      *        nonlinear ones gave the whole (the drum bus, the glue) and the trim, so they sum to L and R.
      */
     void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR);
+    /** @brief Live play (Engine::setLive): the performer's mutes act. */
+    void setLive(bool on) { live_ = on; }
     /** @brief The score it plays. */
     const Score& score() const { return score_; }
     /** @brief Whether it has a score. */
@@ -132,6 +134,9 @@ private:
     int index_ = 0;
     double sampleRate_ = 48000.0;
     bool loaded_ = false;
+    bool live_ = false;
+    uint32_t mutes_ = 0;   ///< the performer's muted groups (perform::MuteKick ..), bit k for group k
+    bool muted(int param) const { return ((mutes_ >> (param - perform::MuteKick)) & 1u) != 0; }
     Score score_;
     std::vector<Ev> events_;
     size_t evCursor_ = 0;

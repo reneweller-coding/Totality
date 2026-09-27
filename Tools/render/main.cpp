@@ -10,6 +10,7 @@
  * Without --out nothing is written and the render only measures (the loudness report, the time it took).
  */
 #include "umb/Engine.h"
+#include "umb/Export.h"
 #include "umb/Leveler.h"
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
@@ -44,12 +45,6 @@ void usage()
 }
 
 
-/** @brief A cue: seconds and a label. */
-struct CueAt {
-    double seconds;
-    std::string label;
-};
-
 std::string jsonEscape(const std::string& s)
 {
     std::string o;
@@ -59,18 +54,6 @@ std::string jsonEscape(const std::string& s)
         else o += c;
     }
     return o;
-}
-
-/** @brief The cues of a track (PLAN 9): the bass's entry, the kick-outs and returns, the outro, at set beat @p at. */
-void trackCues(const TrackInfo& t, double at, const TempoMap& tempo, const std::string& prefix, std::vector<CueAt>& out)
-{
-    const auto sec = [&](int bar) { return tempo.secondsAt(at + 4.0 * bar); };
-    if (t.bassBar > 0) out.push_back({ sec(t.bassBar), prefix + "Bass in" });
-    for (size_t r = 0; r < t.reductions.size(); ++r) {
-        out.push_back({ sec(t.reductions[r]), prefix + "Kick out" });
-        out.push_back({ sec(t.returns[r]), prefix + "Return" });
-    }
-    if (t.outroBar < t.bars) out.push_back({ sec(t.outroBar), prefix + "Outro" });
 }
 
 /** @brief A track's info as JSON. */
@@ -126,95 +109,6 @@ bool writeScoreJson(const std::string& path, const Score& notes, const std::vect
     for (size_t i = 0; i < pts.size(); ++i) std::fprintf(f, "%s[%.4f,%.3f]", i ? "," : "", pts[i].beat, pts[i].bpm);
     std::fprintf(f, "],\n\"length\":%.4f\n}\n", notes.lengthBeats);
     return std::fclose(f) == 0;
-}
-
-bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, double rate)
-{
-    FILE* f = std::fopen(path.c_str(), "wb");
-    if (f == nullptr) return false;
-    std::fprintf(f, "[\n");
-    for (size_t i = 0; i < cues.size(); ++i)
-        std::fprintf(f, "{\"seconds\":%.4f,\"sample\":%lld,\"label\":\"%s\"}%s\n", cues[i].seconds,
-                     static_cast<long long>(std::llround(cues[i].seconds * rate)), jsonEscape(cues[i].label).c_str(),
-                     i + 1 < cues.size() ? "," : "");
-    std::fprintf(f, "]\n");
-    return std::fclose(f) == 0;
-}
-
-/**
- * @brief DJ loops (PLAN 9): 4 and 8 bars of a track's loudest block, seamless -- the bars rendered three times over, the
- *        last pass kept, so its start carries the tails of the pass before it as a loop played round does -- as the mix
- *        and as kick, hats and perc alone (the stems, before the master).
- */
-bool renderLoops(const ParamStore& knobs, const Score& track, const TrackInfo& info, const std::string& dir, double rate)
-{
-    std::error_code ec;
-    std::filesystem::create_directories(dir, ec);
-    for (int bars : { 4, 8 }) {
-        const double src = 4.0 * info.peakBar, len = 4.0 * bars;
-        Score loop;
-        loop.clear(track.tempo.bpmAt(src));
-        loop.seed = track.seed;
-        loop.keyRoot = track.keyRoot;
-        loop.scale = track.scale;
-        for (int pass = 0; pass < 3; ++pass)
-            for (NoteEvent n : track.notes)
-                if (n.beat >= src - 0.05 && n.beat < src + len - 0.05) { n.beat = n.beat - src + pass * len; loop.notes.push_back(n); }
-        // Every knob where the track has it at the loop's start.
-        std::vector<int> ids;
-        for (const Gesture& g : track.gestures) ids.push_back(g.param);
-        std::sort(ids.begin(), ids.end());
-        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
-        for (int id : ids) {
-            Gesture g;
-            g.param = id;
-            g.beat = 0.0;
-            g.length = 0.0;
-            g.from = g.to = track.gestureOffset(id, src + 0.01);
-            g.shape = GestureShape::Step;
-            loop.gestures.push_back(g);
-        }
-        loop.levels.push_back(LevelMark{ 0.0, 0.0, -10.0f, track.trimAt(src) });
-        loop.lengthBeats = 3.0 * len;
-        loop.sort();
-        auto e = std::make_unique<Engine>();
-        e->params().copyValuesFrom(knobs);
-        e->prepare(rate, 512);
-        e->load(loop);
-        const int64_t from = std::llround(loop.tempo.secondsAt(2.0 * len) * rate);
-        const int64_t count = std::llround(loop.tempo.secondsAt(len) * rate);
-        std::vector<std::vector<float>> sl(Engine::kStems, std::vector<float>(512)), sr = sl;
-        std::vector<float*> pl, pr;
-        for (int s = 0; s < Engine::kStems; ++s) { pl.push_back(sl[static_cast<size_t>(s)].data()); pr.push_back(sr[static_cast<size_t>(s)].data()); }
-        e->setStems(pl.data(), pr.data());
-        const std::string base = dir + "/loop" + std::to_string(bars);
-        WavWriter mixW, kickW, hatsW, percW;
-        if (!mixW.open((base + ".wav").c_str(), static_cast<int>(rate), 2, WavFormat::Pcm24)
-            || !kickW.open((base + "_kick.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)
-            || !hatsW.open((base + "_hats.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)
-            || !percW.open((base + "_perc.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)) return false;
-        std::vector<float> L(512), R(512);
-        for (int64_t at = 0; at < from + count;) {
-            const int m = static_cast<int>(std::min<int64_t>(512, from + count - at));
-            e->process(L.data(), R.data(), m);
-            // Only the last pass is written.
-            const int skip = static_cast<int>(std::clamp<int64_t>(from - at, 0, m));
-            if (skip < m) {
-                mixW.write(L.data() + skip, R.data() + skip, m - skip);
-                kickW.write(pl[Engine::kStemKick] + skip, pr[Engine::kStemKick] + skip, m - skip);
-                hatsW.write(pl[Engine::kStemHats] + skip, pr[Engine::kStemHats] + skip, m - skip);
-                percW.write(pl[Engine::kStemPerc] + skip, pr[Engine::kStemPerc] + skip, m - skip);
-            }
-            at += m;
-        }
-        mixW.close();
-        kickW.close();
-        hatsW.close();
-        percW.close();
-        std::printf("loop: %s.wav (+ _kick, _hats, _perc), %d bars from bar %d, %lld samples\n", base.c_str(), bars, info.peakBar + 1,
-                    static_cast<long long>(count));
-    }
-    return true;
 }
 
 } // namespace
@@ -386,7 +280,10 @@ int main(int argc, char** argv)
                 if (!writeScoreJson(scoreJson, score, { { 0.0, 0 } }, { info }, ops, {})) { std::fprintf(stderr, "cannot write %s\n", scoreJson.c_str()); return 1; }
                 std::printf("score: %s\n", scoreJson.c_str());
             }
-            if (!loopsDir.empty() && !planOnly && !renderLoops(p, score, info, loopsDir, rate)) { std::fprintf(stderr, "cannot write the loops\n"); return 1; }
+            if (!loopsDir.empty() && !planOnly) {
+                if (!renderLoops(p, score, info, loopsDir, rate)) { std::fprintf(stderr, "cannot write the loops\n"); return 1; }
+                std::printf("loops: %s (4 and 8 bars from bar %d, each with _kick, _hats, _perc)\n", loopsDir.c_str(), info.peakBar + 1);
+            }
         }
     } else {
         // A set (PLAN 7.7): its tracks on the decks, levelled one by one, mixed.
@@ -420,17 +317,8 @@ int main(int argc, char** argv)
         // The set's cues: every track, every swap, every loop.
         std::vector<std::pair<double, int>> where;
         std::vector<TrackInfo> infos;
-        for (size_t i = 0; i < si.tracks.size(); ++i) {
-            const SetTrack& t = si.tracks[i];
-            const std::string name = "T" + std::to_string(i + 1);
-            cues.push_back({ tm.secondsAt(t.start), name + " " + t.info.style + " " + kFormNames[static_cast<int>(t.info.form)] + " " + t.info.camelot });
-            if (i > 0) cues.push_back({ tm.secondsAt(t.swapIn), "Swap to " + name });
-            for (size_t r = 0; r < t.info.reductions.size(); ++r) cues.push_back({ tm.secondsAt(t.start + 4.0 * t.info.reductions[r]), name + " kick out" });
-            where.push_back({ t.start, t.deck });
-            infos.push_back(t.info);
-        }
-        for (const SetLoop& l : si.loops) cues.push_back({ tm.secondsAt(l.start), "Loop of T" + std::to_string(l.from + 1) });
-        std::sort(cues.begin(), cues.end(), [](const CueAt& a, const CueAt& b) { return a.seconds < b.seconds; });
+        for (const SetTrack& t : si.tracks) { where.push_back({ t.start, t.deck }); infos.push_back(t.info); }
+        cues = setCues(si, tm);
         infoTitle = std::string("Umbra set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
         if (!scoreJson.empty()) {
             std::vector<std::pair<BlockOp, int>> ops;   // every deck's operations, with the deck

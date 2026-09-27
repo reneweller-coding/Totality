@@ -370,6 +370,52 @@ const ParamDesc kSetParams[set::Count] = {
     { "loops",      "Live Loops", "", 0.0f, 1.0f, 0.3f, Curve::Linear },
     { "fx_breaks",  "FX Breaks",  "", 0.0f, 1.0f, 0.3f, Curve::Linear },
     { "blend",      "Blend",      "", 0.0f, 1.0f, 1.0f, Curve::Choice, kBlendNames },
+    { "minutes",    "Set Length", "min", 0.0f, 240.0f, 0.0f, Curve::Linear },
+};
+
+/** The performer's controls (live only). */
+const ParamDesc kPerformParams[perform::Count] = {
+    { "filter",     "Master Filter", "",  -1.0f, 1.0f, 0.0f, Curve::Linear },
+    { "throw",      "Echo Throw",    "",   0.0f, 1.0f, 0.0f, Curve::Linear },
+    { "mute_kick",  "Mute Kick",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_sub",   "Mute Sub",      "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_hats",  "Mute Hats",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_perc",  "Mute Perc",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_ping",  "Mute Ping",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_bass",  "Mute Bass",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    { "mute_pads",  "Mute Pads",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+};
+
+/** The OSC cues (Cue.h). */
+const ParamDesc kCueParams[cue::Count] = {
+    { "enabled", "OSC Cues", "", 0.0f,    1.0f,     0.0f,    Curve::Toggle },
+    { "port",    "OSC Port", "", 1024.0f, 65535.0f, 9000.0f, Curve::Int },
+};
+
+/** A style of the user's own (Style tab): the defaults are the Hypnotic profile's numbers. */
+const ParamDesc kCustomParams[custom::Count] = {
+    { "use",            "Use Custom Style", "",     0.0f,   1.0f,   0.0f, Curve::Toggle },
+    { "bpm_low",        "Tempo Low",        "BPM", 120.0f, 140.0f, 128.0f, Curve::Linear },
+    { "bpm_high",       "Tempo High",       "BPM", 120.0f, 140.0f, 133.0f, Curve::Linear },
+    { "arc",            "Arc Weight",       "",      0.0f,   1.0f,   0.5f, Curve::Linear },
+    { "peak",           "Peak Weight",      "",      0.0f,   1.0f,   0.2f, Curve::Linear },
+    { "endless",        "Endless Weight",   "",      0.0f,   1.0f,   0.3f, Curve::Linear },
+    { "sub_chance",     "Sub Owns Low",     "",      0.0f,   1.0f,   0.3f, Curve::Linear },
+    { "blocks_low",     "Blocks Low",       "",      4.0f,  12.0f,   6.0f, Curve::Int },
+    { "blocks_high",    "Blocks High",      "",      4.0f,  12.0f,   8.0f, Curve::Int },
+    { "mutation",       "Mutation",         "",      0.0f,   1.0f,  0.25f, Curve::Linear },
+    { "reroll",         "Reroll",           "",      0.0f,   1.0f,  0.15f, Curve::Linear },
+    { "polymeter",      "Polymeter",        "",      0.0f,   1.0f,   0.8f, Curve::Linear },
+    { "fill",           "Fills",            "",      0.0f,   1.0f,  0.15f, Curve::Linear },
+    { "edge",           "Filtered Edges",   "",      0.0f,   1.0f,   0.5f, Curve::Linear },
+    { "max_reduction",  "Longest Kick-out", "bars",  4.0f,  32.0f,  32.0f, Curve::Int },
+    { "swing_low",      "Swing Low",        "%",    50.0f,  62.0f,  51.0f, Curve::Linear },
+    { "swing_high",     "Swing High",       "%",    50.0f,  62.0f,  56.0f, Curve::Linear },
+    { "event_rate",     "Events",           "",      0.0f,   1.0f,  0.35f, Curve::Linear },
+    { "throw_share",    "Throw Share",      "",      0.0f,   1.0f,   0.5f, Curve::Linear },
+    { "density_cap",    "Density Cap",      "",      3.0f,  12.0f,   9.0f, Curve::Int },
+    { "similarity",     "Bar Similarity",   "",      0.7f,   1.0f,  0.90f, Curve::Linear },
+    { "peak_lufs",      "Target LUFS",      "LUFS", -14.0f, -7.0f, -10.0f, Curve::Linear },
 };
 
 /** The 303 line's own defaults on the synth table (PLAN 5.3): the diode ladder, resonant, a longer accent, a slide. */
@@ -503,6 +549,9 @@ const ModuleSpec kModules[static_cast<int>(Module::Count)] = {
     { "deck",    kDeckParams,    deck::Count,    kDecks },
     { "djfx",    kDjFxParams,    djfx::Count,    1 },
     { "set",     kSetParams,     set::Count,     1 },
+    { "perform", kPerformParams, perform::Count, 1 },
+    { "cue",     kCueParams,     cue::Count,     1 },
+    { "custom",  kCustomParams,  custom::Count,  1 },
 };
 
 bool isDiscrete(Curve c) { return c == Curve::Int || c == Curve::Choice || c == Curve::Toggle; }

@@ -19,6 +19,7 @@
  * **Loading** allocates and must not run on the audio thread (as in Ephemeris).
  */
 #pragma once
+#include "umb/Cue.h"
 #include "umb/Deck.h"
 #include "umb/Oversample.h"
 #include "umb/Params.h"
@@ -84,6 +85,14 @@ public:
     /** @brief The mix as it enters the master into @p left and @p right on every process() call (the stems' sum; for the
      *         tests). Null switches it off. */
     void setPremasterTap(float* left, float* right) { preL_ = left; preR_ = right; }
+    /**
+     * @brief Live play (the plugin; before load): the mixer is in the path of a single track too, and the perform module
+     *        acts -- the mutes, the master filter, the echo throw into the mixer's echo. Off (renders, exports, the
+     *        default): the score plays as it was composed, and the stems sum to the mix.
+     */
+    void setLive(bool on);
+    /** @brief The cue marks of what is loaded (Cue.h: blocks, operations, keys, a set's tracks), for CueTap::scan(). */
+    const std::vector<CueMark>& cueMarks() const { return cueMarks_; }
     /** @brief Deck taps: from now on every process() call also writes each deck after its mixer channel (before the
      *         effects and the master) into @p left[d] and @p right[d]. Null switches them off. */
     void setDeckTaps(float* const* left, float* const* right) { tapL_ = left; tapR_ = right; }
@@ -169,6 +178,11 @@ private:
     float* const* tapR_ = nullptr;
     float* preL_ = nullptr;
     float* preR_ = nullptr;
+    // Live play (setLive).
+    bool live_ = false;
+    float perfFilter_ = 0.0f, perfThrow_ = 0.0f;
+    Svf perfFilt_[2];
+    std::vector<CueMark> cueMarks_;
     int tapOffset_ = 0;
     // The stems: each deck's (Deck::render writes them), and their copies of the mixer channel's filters.
     std::vector<float> deckStems_;                   ///< kDecks x Deck::kStems x 2 channels x kRaster

@@ -66,7 +66,10 @@ enum class Module : int { Compose = 0, Kick, Rumble, Sub, Perc, Mix, Master,
                           /** Phase 4: the DJ mixer -- a channel per deck (three instances), and its effects. */
                           Deck, DjFx,
                           /** Phase 4: the set composer (compose/Set.h). */
-                          Set, Count };
+                          Set,
+                          /** Phase 5: the performer's controls (live only, Engine::setLive), the OSC cues (Cue.h), a
+                           *  style of the user's own (the Style tab; compose/Style.h). */
+                          Perform, Cue, Custom, Count };
 
 constexpr int kDecks = 3;        ///< the decks of a set (PLAN 3): two for the tracks, a third for the loops
 
@@ -173,7 +176,29 @@ enum : int { EchoTime, Feedback, EchoReturn, HallDecay, HallReturn, Count };
  *         a loop of the last track plays on under the next, how often a break comes from the mixer's effects, the
  *         blend's length. */
 namespace set {
-enum : int { Dramaturgy, Journey, Loops, FxBreaks, BlendBars, Count };
+enum : int { Dramaturgy, Journey, Loops, FxBreaks, BlendBars,
+             Minutes,   ///< the plugin's length of a set; 0: a single track (compose.minutes)
+             Count };
+}
+/**
+ * @brief The performer's controls (PLAN 10.1, Perform): the master filter (bipolar as a channel's), the echo throw of the
+ *        whole mix into the mixer's echo, and a mute per group of parts -- a muted part's notes are not played, its tails
+ *        ring out. Live only (Engine::setLive): a render or an export plays the score as it was composed.
+ */
+namespace perform {
+enum : int { Filter, Throw, MuteKick, MuteSub, MuteHats, MutePerc, MutePing, MuteBass, MutePads, Count };
+constexpr int kMutes = MutePads - MuteKick + 1;   ///< the groups: kick (and its rumble), sub, hats, perc, ping, bass and 303, pads
+}
+/** @brief The OSC cues (Cue.h): on or off, and the UDP port. */
+namespace cue {
+enum : int { Enabled, Port, Count };
+}
+/** @brief A style of the user's own (the Style tab): with Use, its numbers replace those of the profile the knobs describe
+ *         (profileOf); the defaults are Hypnotic's. */
+namespace custom {
+enum : int { Use, BpmLow, BpmHigh, ArcWeight, PeakWeight, EndlessWeight, SubChance, BlocksLow, BlocksHigh, Mutation, Reroll,
+             Polymeter, Fill, Edge, MaxReduction, SwingLow, SwingHigh, EventRate, ThrowShare, DensityCap, Similarity, PeakLufs,
+             Count };
 }
 /** @brief The set's dramaturgies (PLAN 7.1). */
 enum class Dramaturgy : int { WarmUp = 0, Peak, Closing, Sunday, Flat, Count };
