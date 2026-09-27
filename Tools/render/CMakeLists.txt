@@ -1,0 +1,6 @@
+add_executable(umb_render main.cpp)
+target_link_libraries(umb_render PRIVATE UmbraCore)
+if(MSVC)
+    target_compile_options(umb_render PRIVATE /W4 /permissive- /utf-8)
+    target_compile_definitions(umb_render PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()

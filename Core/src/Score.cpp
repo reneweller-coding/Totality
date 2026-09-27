@@ -1,0 +1,67 @@
+/**
+ * @file Score.cpp
+ * @brief Automation curves and score housekeeping.
+ * @note The curves are copied from Ephemeris `Core/src/Score.cpp` at d047d79 (27.09.2026).
+ */
+#include "umb/Score.h"
+#include <algorithm>
+
+namespace umb {
+
+const char* const kPartNames[kNumParts] = {
+    "kick", "sub", "perc1", "perc2", "perc3", "perc4", "perc5", "perc6", "perc7", "perc8", "perc9", "perc10", "perc11",
+    "perc12",
+};
+
+const char* const kOpNames[] = { "add", "remove", "swap", "hold", "kick out", "return", "start", "end" };
+
+double gestureShape(GestureShape shape, double t)
+{
+    t = t < 0.0 ? 0.0 : (t > 1.0 ? 1.0 : t);
+    switch (shape) {
+    case GestureShape::MinimumJerk: return t * t * t * (10.0 + t * (-15.0 + 6.0 * t));
+    case GestureShape::Linear:      return t;
+    case GestureShape::EaseIn:      return t * t;
+    case GestureShape::EaseOut:     return 1.0 - (1.0 - t) * (1.0 - t);
+    case GestureShape::Step:        return 1.0;
+    }
+    return t;
+}
+
+float gestureValue(const Gesture& g, double beat)
+{
+    if (beat < g.beat) return g.from;
+    if (g.length <= 0.0 || g.shape == GestureShape::Step || beat >= g.beat + g.length) return g.to;
+    const double p = gestureShape(g.shape, (beat - g.beat) / g.length);
+    return static_cast<float>(static_cast<double>(g.from) + p * (static_cast<double>(g.to) - static_cast<double>(g.from)));
+}
+
+void Score::sort()
+{
+    std::stable_sort(notes.begin(), notes.end(), [](const NoteEvent& a, const NoteEvent& b) { return a.beat < b.beat; });
+    std::stable_sort(gestures.begin(), gestures.end(), [](const Gesture& a, const Gesture& b) { return a.beat < b.beat; });
+    std::stable_sort(ops.begin(), ops.end(), [](const BlockOp& a, const BlockOp& b) { return a.beat < b.beat; });
+    std::stable_sort(markers.begin(), markers.end(), [](const Marker& a, const Marker& b) { return a.beat < b.beat; });
+}
+
+void Score::clear(double bpm)
+{
+    tempo.setConstant(bpm);
+    lengthBeats = 0.0;
+    notes.clear();
+    gestures.clear();
+    ops.clear();
+    markers.clear();
+}
+
+float Score::gestureOffset(int param, double beat) const
+{
+    const Gesture* latest = nullptr;
+    for (const Gesture& g : gestures) {
+        if (g.param != param || g.beat > beat) continue;
+        if (latest == nullptr || g.beat >= latest->beat) latest = &g;
+    }
+    return latest == nullptr ? 0.0f : gestureValue(*latest, beat);
+}
+
+} // namespace umb
