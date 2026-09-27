@@ -27,6 +27,7 @@
 #include "umb/fx/Dynamics.h"
 #include "umb/fx/Reverb.h"
 #include "umb/fx/TapeEcho.h"
+#include <atomic>
 #include <cstdint>
 #include <vector>
 
@@ -96,6 +97,15 @@ public:
     enum class Quality { Desktop, Quest };
     /** @brief Sets the quality (before load; any time is safe, the cloud's tail is cut). */
     void setQuality(Quality q) { for (Deck& d : decks_) d.setQuest(q == Quality::Quest); }
+    /**
+     * @brief Counts the times the engine wrote a track's knob settings onto the knobs (Score::knobs): a track began on
+     *        deck A or B, or a jump landed in another. The knobs then show that track's sounds and mix -- its presets,
+     *        its style's settings -- and every deck plays from its own track's values, moved by as much as a hand turns
+     *        a knob away from what was written on it. The plugin tells the host when the count changes.
+     */
+    uint32_t soundsVersion() const { return soundsVersion_.load(std::memory_order_relaxed); }
+    /** @brief The deck whose track's knob settings the knobs show, -1 before any. */
+    int leadDeck() const { return lead_; }
     /** @brief The cue marks of what is loaded (Cue.h: blocks, operations, keys, a set's tracks), for CueTap::scan(). */
     const std::vector<CueMark>& cueMarks() const { return cueMarks_; }
     /** @brief Deck taps: from now on every process() call also writes each deck after its mixer channel (before the
@@ -183,6 +193,13 @@ private:
     float* const* tapR_ = nullptr;
     float* preL_ = nullptr;
     float* preR_ = nullptr;
+    // The knob settings (soundsVersion): what the engine wrote on each knob (NaN: never), the deck they came from.
+    std::vector<float> shown_;
+    int lead_ = -1;
+    double leadGroup_ = -1.0;
+    std::atomic<uint32_t> soundsVersion_{ 0 };
+    /** @brief Puts deck @p d's knob settings on the knobs. */
+    void showKnobs(int d);
     // Live play (setLive).
     bool live_ = false;
     float perfFilter_ = 0.0f, perfThrow_ = 0.0f;

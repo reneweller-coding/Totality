@@ -7,6 +7,7 @@
 #include "umb/Profile.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace umb {
 
@@ -52,7 +53,8 @@ void Engine::prepare(double sampleRate, int maxBlock)
 {
     sampleRate_ = sampleRate;
     maxBlock_ = std::max(1, maxBlock);
-    for (int d = 0; d < kDecks; ++d) decks_[d].prepare(&params_, sampleRate, d);
+    shown_.assign(static_cast<size_t>(params_.count()), std::numeric_limits<float>::quiet_NaN());
+    for (int d = 0; d < kDecks; ++d) { decks_[d].prepare(&params_, sampleRate, d); decks_[d].setShown(shown_.data()); }
     const float fs = static_cast<float>(sampleRate);
     for (Channel& c : ch_) for (ThreeBand& b : c.bands) b.set(fs);
     for (auto& deck : stemBands_) for (auto& stem : deck) for (ThreeBand& b : stem) b.set(fs);
@@ -166,7 +168,22 @@ void Engine::seek(double beat)
     sideHp1_.reset();
     sideHp2_.reset();
     for (Svf& f : perfFilt_) f.reset();
+    lead_ = -1;
+    leadGroup_ = -1.0;
     cellDirty_ = true;
+}
+
+void Engine::showKnobs(int d)
+{
+    for (int id = 0; id < params_.count(); ++id) {
+        const float b = decks_[d].baseOf(id);
+        if (!(b == b)) continue;
+        params_.set(id, b);
+        shown_[static_cast<size_t>(id)] = params_.get(id);
+    }
+    lead_ = d;
+    leadGroup_ = decks_[d].knobGroup();
+    soundsVersion_.fetch_add(1, std::memory_order_relaxed);
 }
 
 float Engine::setPlayed(int id) const
@@ -402,6 +419,16 @@ bool Engine::process(float* L, float* R, int n)
             const bool plays = decks_[d].loaded() && decks_[d].playsAt(sample_);
             if (plays && (cell || !playing_[d])) decks_[d].updateCell(sample_);
             playing_[d] = plays;
+        }
+        // The knobs show the knob settings of the track that began last on deck A or B (the loops' deck C only while
+        // they have none): written when that changes. The sound does not wait for it -- every deck plays from its own.
+        {
+            int lead = -1;
+            double at = -1.0;
+            for (int d = 0; d < 2; ++d) if (decks_[d].knobGroup() >= 0.0 && decks_[d].knobGroup() > at) { at = decks_[d].knobGroup(); lead = d; }
+            if (lead < 0 && decks_[2].knobGroup() >= 0.0) lead = 2;
+            for (Deck& d : decks_) d.takeNewGroup();
+            if (lead >= 0 && (lead != lead_ || decks_[lead].knobGroup() != leadGroup_)) showKnobs(lead);
         }
         if (cell) updateCell();
         for (int d = 0; d < kDecks; ++d) if (playing_[d]) decks_[d].dispatchUntil(sample_);

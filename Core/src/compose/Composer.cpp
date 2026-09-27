@@ -3,6 +3,7 @@
  * @brief One track: form, harmony, rack, layers, candidates, events, hands, sounds (Composer.h).
  */
 #include "umb/compose/Composer.h"
+#include "umb/Presets.h"
 #include "umb/Dsp.h"
 #include "umb/compose/Corridor.h"
 #include "umb/compose/GestureEngine.h"
@@ -74,12 +75,32 @@ int groupOf(LayerId id)
     }
 }
 
+/** @brief The knobs the composer sets on every track (its KnobSets): every synth's sound, every knob a style names. */
+const std::vector<int>& managedKnobs(const ParamStore& p)
+{
+    static const std::vector<int> ids = [&p] {
+        std::set<int> s;
+        for (int id = 0; id < p.count(); ++id) {
+            const Module m = p.moduleOf(id);
+            if (hasPresets(m) && !presetLeaves(m, p.indexOf(id))) s.insert(id);
+        }
+        for (int st = 0; st < 4; ++st) {
+            const StyleProfile& prof = styleProfile(static_cast<Style>(st));
+            for (const SoundValue& v : prof.recipe) if (const int id = p.find(v.key); id >= 0) s.insert(id);
+            for (const SoundRange& r : prof.sounds) if (const int id = p.find(r.key); id >= 0) s.insert(id);
+        }
+        return std::vector<int>(s.begin(), s.end());
+    }();
+    return ids;
+}
+
 /** @brief The values a track sets on the knobs, and gestures in those values (offsets from the knobs underneath). */
 struct TrackKnobs {
     const ParamStore& p;
     std::map<int, float> value;   ///< real units
     float get(int id) const { const auto it = value.find(id); return it == value.end() ? p.get(id) : it->second; }
-    float offset(int id, float v) const { return p.toNormalised(id, v) - p.toNormalised(id, p.get(id)); }
+    /** @brief A gesture's offset: from the track's own value where it sets the knob (a KnobSet), else from the knob. */
+    float offset(int id, float v) const { return p.toNormalised(id, v) - p.toNormalised(id, get(id)); }
     Gesture ramp(int id, double beat, double length, float from, float to, GestureShape shape, uint8_t hand) const
     {
         Gesture g;
@@ -305,26 +326,57 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     partBands(plan, bands);
 
     // ---------------------------------------------------------------- sounds
+    // A factory preset per synth (Presets.h), drawn by the fit of its group to the profile's style mix -- a lane of the kit
+    // among the presets made for its role -- then the style's mix (its recipe), then its ranges: a knob a preset sets is
+    // held inside the style's range, a knob no preset sets is drawn in it. Every knob the composer manages is set, at the
+    // track's start, as an absolute value (Score::knobs): the knobs show them while the track plays (Engine.h).
     Rng sr = streamOf(seed, cur, unit, "sounds");
     TrackKnobs knobs{ p, {} };
+    std::vector<SoundPick> picks;
+    const bool pickSounds = p.getBool(pid(Module::Compose, 0, compose::PickSounds));
+    static const Module kSynths[] = { Module::Kick, Module::Rumble, Module::Sub, Module::Ping, Module::Bass, Module::Acid, Module::Chord,
+                                      Module::Drone, Module::Texture, Module::Perc };
+    if (pickSounds) {
+        for (Module m : kSynths) {
+            const int instances = m == Module::Perc ? kPercLanes : 1;
+            for (int inst = 0; inst < instances; ++inst) {
+                const int role = m == Module::Perc ? p.getInt(pid(Module::Perc, inst, perc::Role)) : -1;
+                const int index = pickPreset(m, prof.styleMix, role, sr);
+                if (index < 0) continue;
+                for (const auto& [k, v] : presetKnobs(m, inst, factoryPresets(m)[static_cast<size_t>(index)])) knobs.value[pid(m, inst, k)] = v;
+                picks.push_back(SoundPick{ 0.0, static_cast<int>(m), inst, index });
+            }
+        }
+    }
     for (const SoundValue& v : prof.recipe) { const int id = p.find(v.key); if (id >= 0) knobs.value[id] = v.value; }
     for (const SoundRange& r : prof.sounds) {
         const float u = sr.uniform();
         const int id = p.find(r.key);
         if (id < 0) continue;
-        const float nl = p.toNormalised(id, std::max(r.low, p.desc(id).minValue)), nh = p.toNormalised(id, std::min(r.high, p.desc(id).maxValue));
+        const float lo = std::max(r.low, p.desc(id).minValue), hi = std::min(r.high, p.desc(id).maxValue);
+        const auto set = knobs.value.find(id);
+        if (set != knobs.value.end()) { set->second = std::clamp(set->second, lo, hi); continue; }   // a preset's: held in range
+        const float nl = p.toNormalised(id, lo), nh = p.toNormalised(id, hi);
         knobs.value[id] = p.fromNormalised(id, nl + u * (nh - nl));
     }
     knobs.value[pid(Module::Compose, 0, compose::Key)] = static_cast<float>(key);
     knobs.value[pid(Module::Compose, 0, compose::Scale)] = static_cast<float>(scale);
     knobs.value[pid(Module::Compose, 0, compose::LowOwner)] = subOwns ? 1.0f : 0.0f;
+    // Every knob any style sets, set by every track -- its own value or the knob as it stands -- so no track on a deck
+    // plays on with the last one's, and the knobs always show the whole of what plays.
+    for (const int id : managedKnobs(p)) knobs.value.emplace(id, p.get(id));
 
     Score sc;
     sc.clear(bpm);
     sc.seed = seed;
     sc.keyRoot = key;
     sc.scale = scale;
-    for (const auto& kv : knobs.value) sc.gestures.push_back(knobs.step(kv.first, 0.0, kv.second));
+    for (const auto& kv : knobs.value) {
+        const Module m = p.moduleOf(kv.first);
+        const bool sound = hasPresets(m) && !presetLeaves(m, p.indexOf(kv.first));
+        sc.knobs.push_back(KnobSet{ 0.0, kv.first, kv.second, sound ? 0 : 1 });
+    }
+    sc.sounds = picks;
 
     // ---------------------------------------------------------------- events on the body's 8-bar lines
     Rng er = streamOf(seed, cur, unit, "events");
@@ -749,7 +801,12 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // ---------------------------------------------------------------- the loudest part, the length, what the track tells
     int peakBlock = bodyFirst;
     if (form == FormType::Endless) peakBlock = blocks / 2;
-    else if (form == FormType::Peak && redReturn >= 0) peakBlock = std::min(bodyEnd - 1, redReturn / 32 + (redReturn % 32 == 0 ? 0 : 1));
+    else if (form == FormType::Peak && redReturn >= 0) {
+        // The densest block from the return on: a layer may still enter after it (28.09.2026, a texture's did).
+        const int from = std::min(bodyEnd - 1, redReturn / 32 + (redReturn % 32 == 0 ? 0 : 1));
+        int most = -1;
+        for (int b = from; b < bodyEnd; ++b) if (targetCount(b) >= most) { most = targetCount(b); peakBlock = b; }
+    }
     else {
         int most = -1;
         for (int b = bodyFirst; b < bodyEnd; ++b)

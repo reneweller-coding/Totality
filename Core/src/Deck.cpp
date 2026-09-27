@@ -65,6 +65,10 @@ void Deck::clear()
     mixerSteps_.clear();
     plays_.clear();
     lateTrims_.clear();
+    base_.assign(static_cast<size_t>(params_ != nullptr ? params_->count() : 0), std::numeric_limits<float>::quiet_NaN());
+    knobCursor_ = 0;
+    knobGroup_ = -1.0;
+    newGroup_ = false;
     evCursor_ = 0;
 }
 
@@ -140,6 +144,11 @@ void Deck::seek(int64_t sample)
     // A jump back to the start plays what is due at it; elsewhere the voices fall silent.
     if (sample == 0) evCursor_ = 0;
     for (Track& t : tracks_) { t.cursor = t.gestures.size(); t.offset = 0.0f; }
+    // The knob settings again from the start: the next cell takes those due where the deck now is.
+    std::fill(base_.begin(), base_.end(), std::numeric_limits<float>::quiet_NaN());
+    knobCursor_ = 0;
+    knobGroup_ = -1.0;
+    newGroup_ = false;
     kick_.reset();
     rumble_.reset();
     sub_.reset();
@@ -171,10 +180,35 @@ void Deck::seek(int64_t sample)
 float Deck::played(int id) const
 {
     const float knob = params_->get(id);
-    if (id < 0 || id >= static_cast<int>(trackOf_.size()) || trackOf_[static_cast<size_t>(id)] < 0) return knob;
+    float value = knob;
+    if (id >= 0 && static_cast<size_t>(id) < base_.size()) {
+        const float b = base_[static_cast<size_t>(id)];
+        if (b == b) {
+            // The track's own value; where a hand has turned the knob away from what the engine wrote on it, by as much.
+            value = b;
+            const float s = shown_ != nullptr ? shown_[id] : std::numeric_limits<float>::quiet_NaN();
+            if (s == s && knob != s)
+                value = params_->fromNormalised(id, params_->toNormalised(id, b) + params_->toNormalised(id, knob) - params_->toNormalised(id, s));
+        }
+    }
+    if (id < 0 || id >= static_cast<int>(trackOf_.size()) || trackOf_[static_cast<size_t>(id)] < 0) return value;
     const float off = tracks_[static_cast<size_t>(trackOf_[static_cast<size_t>(id)])].offset;
-    if (off == 0.0f) return knob;
-    return params_->fromNormalised(id, params_->toNormalised(id, knob) + off);
+    if (off == 0.0f) return value;
+    return params_->fromNormalised(id, params_->toNormalised(id, value) + off);
+}
+
+void Deck::applyKnobs(double beat)
+{
+    // One beat early: a track's sounds are in place before its first note (its deck rests until then).
+    while (knobCursor_ < score_.knobs.size() && score_.knobs[knobCursor_].beat <= beat + 1.0) {
+        const KnobSet& k = score_.knobs[knobCursor_++];
+        if (k.beat != knobGroup_) {
+            std::fill(base_.begin(), base_.end(), std::numeric_limits<float>::quiet_NaN());
+            knobGroup_ = k.beat;
+            newGroup_ = true;
+        }
+        if (k.param >= 0 && static_cast<size_t>(k.param) < base_.size()) base_[static_cast<size_t>(k.param)] = k.value;
+    }
 }
 
 void Deck::readPlayed(Module m, int instance, float* out) const
@@ -188,6 +222,7 @@ void Deck::updateCell(int64_t sample)
 {
     const double seconds = static_cast<double>(sample) / sampleRate_;
     const double beat = score_.tempo.beatAt(seconds);
+    applyKnobs(beat);
     for (Track& t : tracks_) {
         // The latest curve that has started (curves are sorted by beat; cursor == size() means none yet).
         const size_t none = t.gestures.size();

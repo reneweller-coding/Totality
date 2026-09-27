@@ -73,6 +73,7 @@ struct StyleProfile {
     std::vector<SoundValue> recipe;      ///< knobs set at every track's start
     std::vector<SoundRange> sounds;      ///< knobs drawn per track
     float peakLufs;                      ///< what a track's loudest part should measure (Leveler.h)
+    float styleMix[4];                   ///< how much of Hypnotic, Ostgut, Dub and Raw it is (the presets' fit, Presets.h)
 };
 
 /** @brief The profile of a style. */

@@ -5,6 +5,7 @@
  */
 #include "umb/Score.h"
 #include <algorithm>
+#include <limits>
 
 namespace umb {
 
@@ -43,6 +44,18 @@ void Score::sort()
     std::stable_sort(ops.begin(), ops.end(), [](const BlockOp& a, const BlockOp& b) { return a.beat < b.beat; });
     std::stable_sort(markers.begin(), markers.end(), [](const Marker& a, const Marker& b) { return a.beat < b.beat; });
     std::stable_sort(levels.begin(), levels.end(), [](const LevelMark& a, const LevelMark& b) { return a.beat < b.beat; });
+    std::stable_sort(knobs.begin(), knobs.end(), [](const KnobSet& a, const KnobSet& b) { return a.beat < b.beat; });
+    std::stable_sort(sounds.begin(), sounds.end(), [](const SoundPick& a, const SoundPick& b) { return a.beat < b.beat; });
+}
+
+float Score::knobAt(int param, double beat) const
+{
+    float v = std::numeric_limits<float>::quiet_NaN();
+    for (const KnobSet& k : knobs) {
+        if (k.beat > beat + 1e-9) break;
+        if (k.param == param) v = k.value;
+    }
+    return v;
 }
 
 float Score::trimAt(double beat) const
@@ -64,6 +77,8 @@ void Score::clear(double bpm)
     ops.clear();
     markers.clear();
     levels.clear();
+    knobs.clear();
+    sounds.clear();
 }
 
 float Score::gestureOffset(int param, double beat) const

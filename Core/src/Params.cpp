@@ -63,6 +63,7 @@ const ParamDesc kComposeParams[compose::Count] = {
     { "morph",     "Morph",     "",      0.0f,   1.0f,   0.5f, Curve::Linear },
     { "dub_share", "Dub Share", "",      0.0f,   1.0f,   0.0f, Curve::Linear },
     { "hypnotic_share", "Hypnotic Share", "", 0.0f, 1.0f, 0.0f, Curve::Linear },
+    { "pick_sounds", "Composer's Sounds", "", 0.0f, 1.0f, 1.0f, Curve::Toggle },
 };
 
 /**

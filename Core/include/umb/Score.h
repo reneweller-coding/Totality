@@ -105,6 +105,28 @@ struct LevelMark {
     float trimDb = 0.0f;        ///< the correction (levelScore); 0 until measured
 };
 
+/**
+ * @brief A knob a track sets, from a beat on (28.09.2026, after Ephemeris' KnobSet): the sound of a synth as a program
+ *        change -- the preset the composer chose for the track (Presets.h) -- and the mix its style sets. Unlike a gesture
+ *        it is no offset: the deck that plays the track plays from this value, the knobs show it (Engine.h), and a hand
+ *        that turns the knob turns it from there. The knob settings of one beat are a group: a new group on a deck
+ *        replaces the last one's.
+ */
+struct KnobSet {
+    double beat = 0.0;    ///< from where it holds (a track's start)
+    int param = -1;       ///< the parameter
+    float value = 0.0f;   ///< its value, real units
+    int kind = 0;         ///< 0 a sound (a preset's knob), 1 a setting of the mix or the composer
+};
+
+/** @brief The factory preset the composer chose for a synth of a track (Presets.h), from where it holds. */
+struct SoundPick {
+    double beat = 0.0;   ///< from where it holds (a track's start)
+    int module = 0;      ///< the synth's Module, as an int
+    int instance = 0;    ///< which instance (the lane, for the kit)
+    int preset = -1;     ///< its index in factoryPresets(module)
+};
+
 /** @brief A named position. */
 struct Marker {
     double beat = 0.0;   ///< position in beats
@@ -123,6 +145,10 @@ struct Score {
     std::vector<BlockOp> ops;        ///< the form's operations, sorted by beat after sort()
     std::vector<Marker> markers;     ///< markers, sorted by beat after sort()
     std::vector<LevelMark> levels;   ///< every track's loudness mark, in beat order (Leveler.h)
+    std::vector<KnobSet> knobs;      ///< the knobs every track sets at its start, sorted by beat after sort()
+    std::vector<SoundPick> sounds;   ///< the presets the composer chose, sorted by beat after sort()
+    /** @brief The value the latest knob setting of @p param at or before @p beat gives it; NaN if none does. */
+    float knobAt(int param, double beat) const;
     /** @brief The loudness correction at @p beat in dB: the latest mark's (0 before the first). */
     float trimAt(double beat) const;
     /** @brief Sorts every list by beat (stable, so equal beats keep the order they were written in). */

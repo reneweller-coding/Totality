@@ -12,6 +12,7 @@
 #include "umb/Engine.h"
 #include "umb/Export.h"
 #include "umb/Profile.h"
+#include "umb/Presets.h"
 #include "umb/Leveler.h"
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
@@ -258,6 +259,17 @@ int main(int argc, char** argv)
             std::string layers;
             for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
             std::printf("layers in order: %s\n", layers.c_str());
+            // The composer's presets (Presets.h): per synth, and per lane of the kit.
+            std::string sounds;
+            for (const SoundPick& k : score.sounds) {
+                const Module m = static_cast<Module>(k.module);
+                const std::vector<SoundPreset>& presets = factoryPresets(m);
+                if (k.preset < 0 || k.preset >= static_cast<int>(presets.size())) continue;
+                const std::string& key = p.key(p.id(m, k.instance, 0));
+                sounds += (sounds.empty() ? "" : "; ") + key.substr(0, key.find('.')) + " " + presets[static_cast<size_t>(k.preset)].name
+                        + " (" + presets[static_cast<size_t>(k.preset)].group + ")";
+            }
+            if (!sounds.empty()) std::printf("sounds: %s\n", sounds.c_str());
             std::printf("corridor over the body: bar similarity %.3f, micro-change %.2f dB, %.1f onsets a bar\n", info.similarity,
                         info.micro, info.density);
         }

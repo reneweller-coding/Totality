@@ -34,6 +34,7 @@ add_library(UmbraCore STATIC
     src/Engine.cpp
     src/Cue.cpp
     src/Export.cpp
+    src/Presets.cpp
 )
 target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 option(UMB_PROFILE "Time the engine's stages (Profile.h); umb_render prints them" OFF)

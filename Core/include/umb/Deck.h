@@ -89,6 +89,14 @@ public:
     void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR);
     /** @brief Live play (Engine::setLive): the performer's mutes act. */
     void setLive(bool on) { live_ = on; }
+    /** @brief Where the engine keeps what it wrote on the knobs (Engine.h; NaN: never), read by played(). */
+    void setShown(const float* shown) { shown_ = shown; }
+    /** @brief The beat of the knob settings this deck plays from (Score::knobs), -1 before any. */
+    double knobGroup() const { return knobGroup_; }
+    /** @brief Whether a new group of knob settings was taken since the last call (and forgets it). */
+    bool takeNewGroup() { const bool n = newGroup_; newGroup_ = false; return n; }
+    /** @brief The value this deck plays parameter @p id from, NaN where it follows the knob. */
+    float baseOf(int id) const { return id >= 0 && static_cast<size_t>(id) < base_.size() ? base_[static_cast<size_t>(id)] : std::numeric_limits<float>::quiet_NaN(); }
     /** @brief The Quest's quality (Engine::setQuality): the grain cloud rests, the rumble clips at the rate. */
     void setQuest(bool on) { quest_ = on; rumble_.setOversampling(!on); }
     /** @brief The score it plays. */
@@ -138,6 +146,15 @@ private:
     double sampleRate_ = 48000.0;
     bool loaded_ = false;
     bool live_ = false;
+    // The track's absolute knob settings (Score::knobs): the value this deck plays each knob from, NaN where it plays the
+    // knob; a hand's turn of the knob away from what the engine wrote on it (shown_) moves it from there.
+    std::vector<float> base_;
+    size_t knobCursor_ = 0;
+    double knobGroup_ = -1.0;
+    bool newGroup_ = false;
+    const float* shown_ = nullptr;
+    /** @brief Takes the knob settings due up to @p beat (a group's replaces the last group's). */
+    void applyKnobs(double beat);
     bool quest_ = false;
     uint32_t mutes_ = 0;   ///< the performer's muted groups (perform::MuteKick ..), bit k for group k
     bool muted(int param) const { return ((mutes_ >> (param - perform::MuteKick)) & 1u) != 0; }

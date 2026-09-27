@@ -50,7 +50,7 @@ const StyleProfile kProfiles[] = {
         .microTarget = 1.0f,
         // Fitted on the loudest minute of three composed tracks against the references (27.09.2026): tilt 11.8, ping -5,
         // pads -10 (at its bound; -6 taken), room +2, echo and plate -4.
-        .recipe = { { "kick.engine", 2.0f }, { "master.tilt", 12.0f }, { "chord.level", -14.0f }, { "drone.level", -22.0f },
+        .recipe = { { "master.tilt", 12.0f }, { "chord.level", -14.0f }, { "drone.level", -22.0f },
                     { "space.level", 0.0f }, { "ping.level", -15.5f }, { "dub.echo_return", -6.0f }, { "dub.plate_return", 3.0f } },
         .sounds = { { "kick.pitch_decay", 14.0f, 24.0f }, { "kick.amp_decay", 300.0f, 450.0f }, { "kick.drive", 0.25f, 0.5f },
                     { "rumble.decay", 1.5f, 2.8f }, { "rumble.drive", 4.0f, 8.0f }, { "ping.ratio", 1.2f, 2.2f },
@@ -58,6 +58,7 @@ const StyleProfile kProfiles[] = {
                     { "dub.feedback", 0.2f, 0.35f }, { "space.decay", 0.9f, 1.8f }, { "drone.sweep_bars", 32.0f, 64.0f },
                     { "perc1.noise_type", -0.49f, 1.49f } },
         .peakLufs = -10.0f,
+        .styleMix = { 1.0f, 0.0f, 0.0f, 0.0f },
     },
     // Ostgut: the clap on 2 and 4, the ride's eighths, the open hat on the offbeat, one cyclic layer; dub stabs sparingly,
     // a 303 seldom. Tool 0.6, Peak 0.4.
@@ -91,13 +92,14 @@ const StyleProfile kProfiles[] = {
         .simTarget = 0.99f,
         .microTarget = 1.0f,
         // Fitted as Hypnotic's: tilt 12.5, perc -4.7, hats -1.9, room +1.6.
-        .recipe = { { "kick.engine", 2.0f }, { "master.tilt", 12.5f }, { "space.level", 3.5f }, { "mix.perc_level", -10.0f },
+        .recipe = { { "master.tilt", 12.5f }, { "space.level", 3.5f }, { "mix.perc_level", -10.0f },
                     { "mix.hats_level", -5.5f } },
         .sounds = { { "kick.pitch_decay", 14.0f, 22.0f }, { "kick.amp_decay", 250.0f, 400.0f }, { "kick.drive", 0.3f, 0.55f },
                     { "rumble.decay", 1.2f, 2.2f }, { "rumble.drive", 4.0f, 8.0f }, { "chord.detune", 6.0f, 15.0f },
                     { "chord.band", 300.0f, 480.0f }, { "dub.echo_time", 0.5f, 4.49f }, { "dub.feedback", 0.2f, 0.3f },
                     { "space.decay", 0.9f, 1.6f }, { "acid.cutoff", 400.0f, 900.0f }, { "perc1.noise_type", -0.49f, 1.49f } },
         .peakLufs = -9.5f,
+        .styleMix = { 0.0f, 1.0f, 0.0f, 0.0f },
     },
     // Dub: the sub bass owns the low end (0.8), a soft kick, straight time, motion from the echo, the hats reduced; the
     // dub chord with its whole chain, vinyl crackle. Tool 0.7, Endless 0.2, Peak 0.1.
@@ -132,14 +134,16 @@ const StyleProfile kProfiles[] = {
         .microTarget = 1.0f,
         // Fitted as Hypnotic's: tilt 13.3 (the chords' 1 .. 5 kHz), hats -10 (at its bound; -8 taken), perc -8.4, pads -6.2,
         // echo -3.6, room +2.1 -- the hats reduced, the stabs bright.
-        .recipe = { { "kick.engine", 0.0f }, { "kick.click_level", 0.2f }, { "master.tilt", 13.0f }, { "chord.bright", 3500.0f },
-                    { "chord.dip", -3.0f }, { "mix.hats_level", -14.0f }, { "mix.perc_level", -15.0f }, { "chord.level", -11.0f },
-                    { "drone.level", -19.0f }, { "dub.echo_return", -6.5f }, { "space.level", 5.0f }, { "chord.width", 0.9f } },
+        .recipe = { { "master.tilt", 13.0f }, { "mix.hats_level", -14.0f }, { "mix.perc_level", -15.0f }, { "chord.level", -11.0f },
+                    { "drone.level", -19.0f }, { "dub.echo_return", -6.5f }, { "space.level", 5.0f } },
         .sounds = { { "kick.pitch_decay", 16.0f, 26.0f }, { "kick.amp_decay", 350.0f, 550.0f }, { "kick.drive", 0.15f, 0.35f },
                     { "rumble.decay", 1.2f, 2.2f }, { "rumble.drive", 3.0f, 6.0f }, { "chord.detune", 6.0f, 15.0f },
                     { "chord.band", 300.0f, 480.0f }, { "chord.crush", 6.0f, 9.0f }, { "dub.echo_time", 0.5f, 4.49f },
-                    { "dub.feedback", 0.25f, 0.4f }, { "space.decay", 1.0f, 2.0f }, { "texture.hum_hz", 49.0f, 51.0f } },
+                    { "dub.feedback", 0.25f, 0.4f }, { "space.decay", 1.0f, 2.0f }, { "texture.hum_hz", 49.0f, 51.0f },
+                    { "kick.click_level", 0.0f, 0.25f }, { "chord.bright", 2500.0f, 4500.0f }, { "chord.dip", -4.0f, -2.0f },
+                    { "chord.width", 0.8f, 0.95f } },
         .peakLufs = -11.5f,
+        .styleMix = { 0.0f, 0.0f, 1.0f, 0.0f },
     },
     // Raw/Peak: the kick harder, distortion before the low pass, the rumble overdriven; denser, sixteenth hats, toms,
     // longer reductions; noise and metallic pings. Peak 0.6, Tool 0.4.
@@ -173,12 +177,13 @@ const StyleProfile kProfiles[] = {
         .simTarget = 0.96f,
         .microTarget = 1.0f,
         // Fitted as Hypnotic's: tilt 4.4, room +7.4, hats +3.2.
-        .recipe = { { "kick.clip", 1.0f }, { "master.tilt", 4.5f }, { "space.level", 10.0f }, { "mix.hats_level", -0.5f } },
+        .recipe = { { "master.tilt", 4.5f }, { "space.level", 10.0f }, { "mix.hats_level", -0.5f } },
         .sounds = { { "kick.pitch_decay", 12.0f, 20.0f }, { "kick.amp_decay", 250.0f, 380.0f }, { "kick.drive", 0.5f, 0.85f },
                     { "rumble.decay", 1.4f, 2.4f }, { "rumble.drive", 7.0f, 12.0f }, { "ping.ratio", 2.0f, 3.5f },
                     { "ping.decay", 80.0f, 160.0f }, { "acid.cutoff", 400.0f, 900.0f }, { "dub.echo_time", 0.5f, 4.49f },
-                    { "space.decay", 0.8f, 1.4f }, { "perc1.noise_type", -0.49f, 1.49f } },
+                    { "space.decay", 0.8f, 1.4f }, { "perc1.noise_type", -0.49f, 1.49f }, { "kick.clip", 1.0f, 1.0f } },
         .peakLufs = -9.5f,
+        .styleMix = { 0.0f, 0.0f, 0.0f, 1.0f },
     },
 };
 
@@ -199,6 +204,7 @@ StyleProfile morphProfile(const StyleProfile& a, const StyleProfile& b, float t,
     if (t <= 0.0f) return a;
     if (t >= 1.0f) return b;
     StyleProfile m = t < 0.5f ? a : b;
+    for (int k = 0; k < 4; ++k) m.styleMix[k] = lerp(a.styleMix[k], b.styleMix[k], t);
     m.bpmLow = lerp(a.bpmLow, b.bpmLow, t);
     m.bpmHigh = lerp(a.bpmHigh, b.bpmHigh, t);
     m.arcWeight = lerp(a.arcWeight, b.arcWeight, t);

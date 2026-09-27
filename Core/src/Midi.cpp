@@ -109,7 +109,9 @@ std::vector<uint8_t> encodeMidi(const Score& score, const char* title, const Par
         for (const Gesture& g : score.gestures) {
             const auto it = ccOf.find(g.param);
             if (it == ccOf.end() || it->second < 0) continue;
-            const float knob = params->toNormalised(g.param, params->get(g.param));
+            // From the track's own value where it sets the knob (Score::knobs), else from the knob.
+            const float set = score.knobAt(g.param, g.beat);
+            const float knob = params->toNormalised(g.param, set == set ? set : params->get(g.param));
             const double end = g.beat + std::max(0.0, g.length);
             for (double b = g.beat; ; b += 0.125) {
                 const double at = std::min(b, end);

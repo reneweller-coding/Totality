@@ -49,6 +49,8 @@ void appendShifted(Score& dst, const Score& src, double offset)
     for (BlockOp o : src.ops) { o.beat += offset; dst.ops.push_back(o); }
     for (Marker m : src.markers) { m.beat += offset; dst.markers.push_back(m); }
     for (LevelMark l : src.levels) { l.beat += offset; l.peakBeat += offset; dst.levels.push_back(l); }
+    for (KnobSet k : src.knobs) { k.beat += offset; dst.knobs.push_back(k); }
+    for (SoundPick s : src.sounds) { s.beat += offset; dst.sounds.push_back(s); }
 }
 
 Gesture stepOf(const ParamStore& p, int id, double beat, float value)
@@ -208,6 +210,8 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         deck.ops.insert(deck.ops.end(), shifted.ops.begin(), shifted.ops.end());
         deck.markers.insert(deck.markers.end(), shifted.markers.begin(), shifted.markers.end());
         deck.levels.insert(deck.levels.end(), shifted.levels.begin(), shifted.levels.end());
+        deck.knobs.insert(deck.knobs.end(), shifted.knobs.begin(), shifted.knobs.end());
+        deck.sounds.insert(deck.sounds.end(), shifted.sounds.begin(), shifted.sounds.end());
         std::vector<Gesture> g = shifted.gestures;
         const int d = st.deck;
         const int fader = p.id(Module::Deck, d, deck::Fader), low = p.id(Module::Deck, d, deck::Low);
@@ -264,6 +268,8 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         for (double at = lp.start; at < lp.end - 1e-9; at += len)
             for (NoteEvent n : src) { n.beat = n.beat - srcBeat + at; c.notes.push_back(n); }
         // Its sounds: the source track's own, set at the loop's start; the low band always killed.
+        for (KnobSet k : scores[i].knobs) { k.beat = lp.start; c.knobs.push_back(k); }
+        for (SoundPick s : scores[i].sounds) { s.beat = lp.start; c.sounds.push_back(s); }
         std::vector<Gesture> g;
         for (const Gesture& x : scores[i].gestures)
             if (x.beat == 0.0 && x.length == 0.0) { Gesture y = x; y.beat = lp.start; g.push_back(y); }

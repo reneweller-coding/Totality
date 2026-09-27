@@ -88,6 +88,7 @@ enum : int { Bpm, Key, Scale, Style, Minutes,
              Morph,          ///< how far, 0..1
              DubShare,       ///< Dok. 8.0's axis: the profile pulled towards Dub, 0..1
              HypnoticShare,  ///< and towards Hypnotic, 0..1
+             PickSounds,     ///< the composer chooses a factory preset per synth and track (Presets.h), else the knobs sound
              Count };
 }
 /**
@@ -284,6 +285,10 @@ public:
     const ParamDesc& desc(int id) const { return *entries_[static_cast<size_t>(id)].desc; }
     /** @brief Full text key of @p id ("perc3.decay"). */
     const std::string& key(int id) const { return entries_[static_cast<size_t>(id)].key; }
+    /** @brief The module, the instance and the index within the module of parameter @p id. */
+    Module moduleOf(int id) const { return entries_[static_cast<size_t>(id)].module; }
+    int instanceOf(int id) const { return entries_[static_cast<size_t>(id)].instance; }   ///< @copydoc moduleOf
+    int indexOf(int id) const { const Entry& e = entries_[static_cast<size_t>(id)]; return id - base(e.module, e.instance); }   ///< @copydoc moduleOf
     /** @brief Id for a text key, or -1. */
     int find(std::string_view key) const;
 

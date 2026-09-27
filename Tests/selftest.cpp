@@ -13,6 +13,7 @@
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
 #include "umb/Params.h"
+#include "umb/Presets.h"
 #include "umb/Score.h"
 #include "umb/SetFile.h"
 #include "umb/compose/Composer.h"
@@ -1555,6 +1556,129 @@ void testPerform()
           fmt("%zu marks", e->cueMarks().size()));
 }
 
+/** The factory presets (Presets.h): 1024 per engine, every name unique in its engine, every value in its knob's range, the
+ *  mix and the pitch left alone, the same presets every time; the composer's choice follows the style and a lane's role. */
+void testPresets()
+{
+    section("factory presets");
+    const Module engines[] = { Module::Kick, Module::Rumble, Module::Sub, Module::Perc, Module::Ping, Module::Bass, Module::Acid,
+                               Module::Chord, Module::Drone, Module::Texture };
+    auto p = std::make_unique<ParamStore>();
+    int total = 0, badCount = 0, badNames = 0, badRange = 0, badLeave = 0;
+    std::string first;
+    for (Module m : engines) {
+        const std::vector<SoundPreset>& list = factoryPresets(m);
+        total += static_cast<int>(list.size());
+        if (list.size() != 1024) { ++badCount; if (first.empty()) first = fmt("module %d has %zu", static_cast<int>(m), list.size()); }
+        std::set<std::string> names;
+        for (const SoundPreset& s : list) {
+            if (!names.insert(s.name).second) { ++badNames; if (first.empty()) first = "twice: " + s.name + " (" + s.group + ")"; }
+            for (const auto& [k, v] : s.values) {
+                const ParamDesc& d = p->desc(p->id(m, 0, k));
+                if (!(v >= d.minValue && v <= d.maxValue)) { ++badRange; if (first.empty()) first = fmt("%s: %s out of range", s.name.c_str(), d.name); }
+                if (presetLeaves(m, k)) { ++badLeave; if (first.empty()) first = fmt("%s sets %s", s.name.c_str(), d.name); }
+            }
+        }
+    }
+    check(badCount == 0 && badNames == 0 && badRange == 0 && badLeave == 0, "1024 presets per engine, unique names, in range, the mix left alone",
+          badCount + badNames + badRange + badLeave == 0 ? fmt("%d presets", total) : first);
+    const SoundPreset& a = factoryPresets(Module::Kick)[517];
+    bool same = true;
+    for (int i = 0; i < 3; ++i) same = same && factoryPresets(Module::Kick)[517].values == a.values;
+    // The composer's choice: a Dub track's kick from the dub groups mostly, a hat lane's preset made for hats.
+    Rng rng;
+    rng.seed(7);
+    const float dub[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
+    int dubFit = 0, hatFit = 0;
+    for (int i = 0; i < 200; ++i) {
+        const SoundPreset& k = factoryPresets(Module::Kick)[static_cast<size_t>(pickPreset(Module::Kick, dub, -1, rng))];
+        dubFit += k.styles[2] >= 0.5f;
+        const SoundPreset& h = factoryPresets(Module::Perc)[static_cast<size_t>(pickPreset(Module::Perc, dub, static_cast<int>(PercRole::ClosedHat), rng))];
+        hatFit += (h.roles & (1u << static_cast<int>(PercRole::ClosedHat))) != 0;
+    }
+    check(same && dubFit >= 170 && hatFit == 200, "the choice follows the style and a lane's role",
+          fmt("%d of 200 dub kicks from dub groups, %d of 200 hat presets for hats", dubFit, hatFit));
+}
+
+/** The composer's sounds on the knobs (Score::knobs, Engine.h): a track brings a preset per synth; loaded, its values stand
+ *  on the knobs and its deck plays them; a hand's turn moves the sound by as much; in a blend the knobs show the incoming
+ *  track while the outgoing deck keeps its own; a reroll of the sounds changes the presets and nothing else. */
+void testKnobs()
+{
+    section("the composer's sounds on the knobs");
+    auto p = std::make_unique<ParamStore>();
+    TrackInfo info;
+    const Score s = composeTrack(*p, 11, TrackRequest{}, nullptr, std::string(), &info);
+    int synths = 0, lanes = 0;
+    for (const SoundPick& k : s.sounds) (k.module == static_cast<int>(Module::Perc) ? lanes : synths) += k.preset >= 0;
+    check(synths == 9 && lanes == kPercLanes && s.knobs.size() > 300, "a preset per synth and per lane, every managed knob set",
+          fmt("%d synths, %d lanes, %zu knob settings", synths, lanes, s.knobs.size()));
+
+    auto e = std::make_unique<Engine>();
+    e->prepare(48000.0, 256);
+    e->load(s);
+    std::vector<float> L(256), R(256);
+    e->process(L.data(), R.data(), 256);
+    std::set<int> gestured;
+    for (const Gesture& g : s.gestures) gestured.insert(g.param);
+    int shown = 0, played = 0, total = 0;
+    for (const KnobSet& k : s.knobs) {
+        ++total;
+        shown += e->params().get(k.param) == e->params().get(k.param) && std::fabs(e->params().get(k.param) - k.value) <= 1e-4f * (1.0f + std::fabs(k.value));
+        if (gestured.count(k.param) == 0) played += std::fabs(e->played(k.param) - k.value) <= 1e-4f * (1.0f + std::fabs(k.value));
+        else ++played;
+    }
+    check(e->soundsVersion() >= 1 && shown == total && played == total, "loaded, the track's values stand on the knobs and its deck plays them",
+          fmt("%d of %d shown, %d played, %u writes", shown, total, played, e->soundsVersion()));
+    // A hand turns a knob: the sound moves by as much (in the knob's own scale).
+    const int id = e->params().find("kick.pitch_decay");
+    const float before = e->played(id), n0 = e->params().toNormalised(id, e->params().get(id));
+    e->params().setNormalised(id, n0 + 0.1f);
+    const float after = e->played(id);
+    const float moved = e->params().toNormalised(id, after) - e->params().toNormalised(id, before);
+    check(std::fabs(moved - 0.1f) < 1e-3f, "a hand's turn of the knob moves the sound by as much", fmt("%.4f of the knob's range", moved));
+
+    // A set: at the incoming track's start the knobs show it, the outgoing deck keeps its own.
+    auto q = std::make_unique<ParamStore>();
+    SetInfo si;
+    const SetScore set = composeSet(*q, 3, 16.0, nullptr, &si);
+    auto f = std::make_unique<Engine>();
+    f->prepare(48000.0, 256);
+    f->loadSet(set);
+    const SetTrack& t1 = si.tracks[0];
+    const SetTrack& t2 = si.tracks[1];
+    const int probe = f->params().find("ping.band");
+    const float v1 = set.decks[t1.deck].knobAt(probe, t1.start), v2 = set.decks[t2.deck].knobAt(probe, t2.start);
+    f->seek(t2.start - 16.0);
+    const double stop = t2.start + 8.0;
+    int leadBefore = -2;
+    while (f->beat() < stop) {
+        if (leadBefore == -2 && f->beat() > t2.start - 8.0) leadBefore = f->leadDeck();
+        f->process(L.data(), R.data(), 256);
+    }
+    const float knobNow = f->params().get(probe), oldDeck = f->deck(t1.deck).played(probe), newDeck = f->deck(t2.deck).played(probe);
+    // What each deck should play: its track's value moved by its own automation there.
+    const auto expect = [&](int d, float v) {
+        return f->params().fromNormalised(probe, f->params().toNormalised(probe, v) + set.decks[d].gestureOffset(probe, f->beat()));
+    };
+    const float e1 = expect(t1.deck, v1), e2 = expect(t2.deck, v2);
+    check(leadBefore == t1.deck && f->leadDeck() == t2.deck && std::fabs(knobNow - v2) < 1e-3f * v2 && std::fabs(oldDeck - e1) < 0.01f * e1
+              && std::fabs(newDeck - e2) < 0.01f * e2 && std::fabs(v1 - v2) > 1.0f,
+          "in a blend the knobs show the incoming track, the outgoing deck keeps its own",
+          fmt("ping.band %.0f / %.0f Hz; knob %.0f, deck %c %.0f (%.0f), deck %c %.0f (%.0f)", v1, v2, knobNow, 'A' + t1.deck, oldDeck, e1,
+              'A' + t2.deck, newDeck, e2));
+
+    // A reroll of the sounds: other presets, the same notes.
+    Curation c;
+    c.reroll("sounds");
+    const Score r = composeTrack(*p, 11, TrackRequest{}, &c);
+    int differ = 0;
+    for (size_t i = 0; i < r.sounds.size() && i < s.sounds.size(); ++i) differ += r.sounds[i].preset != s.sounds[i].preset;
+    bool sameNotes = r.notes.size() == s.notes.size();
+    for (size_t i = 0; sameNotes && i < r.notes.size(); ++i) sameNotes = r.notes[i].beat == s.notes[i].beat && r.notes[i].pitch == s.notes[i].pitch;
+    check(differ >= 15 && sameNotes, "a reroll of the sounds draws other presets and keeps the notes", fmt("%d of %zu presets changed", differ, s.sounds.size()));
+}
+
 /** The master: the true peak under the ceiling, the low end mono. */
 void testMaster()
 {
@@ -1646,6 +1770,8 @@ const TestSection kSections[] = {
     { "testCues", testCues },
     { "testStems", testStems },
     { "testPerform", testPerform },
+    { "testPresets", testPresets },
+    { "testKnobs", testKnobs },
 };
 
 } // namespace

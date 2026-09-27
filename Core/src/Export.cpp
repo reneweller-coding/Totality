@@ -101,6 +101,7 @@ bool renderLoops(const ParamStore& knobs, const Score& track, const TrackInfo& i
             loop.gestures.push_back(g);
         }
         loop.levels.push_back(LevelMark{ 0.0, 0.0, -10.0f, track.trimAt(src) });
+        for (KnobSet k : track.knobs) if (k.beat <= src + 1e-9) { k.beat = 0.0; loop.knobs.push_back(k); }
         loop.lengthBeats = 3.0 * len;
         loop.sort();
         auto e = std::make_unique<Engine>();

@@ -76,8 +76,9 @@ std::vector<CueMark> cueMarksOf(const Score& score, const ParamStore& params)
     }
     const int keyId = params.id(Module::Compose, 0, compose::Key);
     for (const LevelMark& l : score.levels) {
-        const int key = static_cast<int>(std::lround(params.fromNormalised(keyId, params.toNormalised(keyId, params.get(keyId))
-                                                                           + score.gestureOffset(keyId, l.beat + 1e-6))));
+        const float set = score.knobAt(keyId, l.beat + 1e-6);
+        const float knob = set == set ? set : params.get(keyId);
+        const int key = static_cast<int>(std::lround(params.fromNormalised(keyId, params.toNormalised(keyId, knob) + score.gestureOffset(keyId, l.beat + 1e-6))));
         CueMark c;
         c.beat = l.beat;
         c.kind = CueKind::Key;
