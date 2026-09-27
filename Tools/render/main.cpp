@@ -11,6 +11,7 @@
  */
 #include "umb/Engine.h"
 #include "umb/Export.h"
+#include "umb/Profile.h"
 #include "umb/Leveler.h"
 #include "umb/Loudness.h"
 #include "umb/Midi.h"
@@ -119,6 +120,7 @@ int main(int argc, char** argv)
     double rate = 48000.0;
     int block = 512;
     std::string out, midi, stems, set, saveSetPath, loadSetPath;
+    bool quest = false;
     bool bench = false, list = false, stats = false, patterns = false, study = false, seedGiven = false, planOnly = false;
     float minutes = -1.0f, bpm = -1.0f;
     int low = -1, form = -1;
@@ -152,6 +154,7 @@ int main(int argc, char** argv)
         else if (!std::strcmp(a, "--rate")) rate = std::atof(next());
         else if (!std::strcmp(a, "--block")) block = std::max(1, std::atoi(next()));
         else if (!std::strcmp(a, "--bench")) bench = true;
+        else if (!std::strcmp(a, "--quality") && i + 1 < argc) quest = !std::strcmp(argv[++i], "quest");
         else if (!std::strcmp(a, "--plan")) planOnly = true;
         else if (!std::strcmp(a, "--list")) list = true;
         else if (!std::strcmp(a, "--stats")) stats = true;
@@ -202,6 +205,7 @@ int main(int argc, char** argv)
         // The Leveler: the loudest part to the style's target (PLAN 8.5), before a sample is written.
         const std::vector<LevelReading> levels = bench || planOnly ? std::vector<LevelReading>{} : levelScore(score, p);
         t1 = std::chrono::steady_clock::now();
+        if (quest) engine->setQuality(Engine::Quality::Quest);
         engine->prepare(rate, block);
         engine->load(score);
 
@@ -291,6 +295,7 @@ int main(int argc, char** argv)
         SetScore setScore = composeSet(p, seed, setMinutes, &curation, &si);
         const std::vector<LevelReading> levels = bench || planOnly ? std::vector<LevelReading>{} : levelSet(setScore, p);
         t1 = std::chrono::steady_clock::now();
+        if (quest) engine->setQuality(Engine::Quality::Quest);
         engine->prepare(rate, block);
         engine->loadSet(setScore);
         std::printf("Umbra %s  set of seed %llu, %s, %zu tracks, %zu live loops, %zu breaks, %.1f min\n", UMB_VERSION,
@@ -413,6 +418,16 @@ int main(int argc, char** argv)
     const double audioS = static_cast<double>(total) / rate;
     std::printf("composed and levelled in %.3f s; rendered %.1f s of audio in %.2f s: %.0f x real time, %.2f %% of a core\n", composeS,
                 audioS, renderS, audioS / renderS, 100.0 * renderS / audioS);
+#ifdef UMB_PROFILE
+    // What each stage cost (Profile.h): its share of the render and of a core in real time.
+    {
+        double sum = 0.0;
+        for (double v : prof::ns) sum += v;
+        for (int k = 0; k < prof::Count; ++k)
+            std::printf("  %-18s %5.1f %% of the render  %6.3f %% of a core\n", prof::kNames[k], 100.0 * prof::ns[k] / std::max(1.0, sum),
+                        100.0 * prof::ns[k] * 1.0e-9 / std::max(1e-9, audioS));
+    }
+#endif
     if (!bench) {
         const LoudnessReport r = meter.report();
         std::printf("loudness %.1f LUFS integrated, %.1f LUFS short-term max, true peak %.2f dBTP, LRA %.1f LU, crest %.1f dB,"

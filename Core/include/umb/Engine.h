@@ -91,6 +91,11 @@ public:
      *        default): the score plays as it was composed, and the stems sum to the mix.
      */
     void setLive(bool on);
+    /** @brief How much the engine does: all of it (the desktop, the default), or the Quest's share (PLAN 11: the grain
+     *         cloud rests, the rumble clips at the rate instead of four times it). */
+    enum class Quality { Desktop, Quest };
+    /** @brief Sets the quality (before load; any time is safe, the cloud's tail is cut). */
+    void setQuality(Quality q) { for (Deck& d : decks_) d.setQuest(q == Quality::Quest); }
     /** @brief The cue marks of what is loaded (Cue.h: blocks, operations, keys, a set's tracks), for CueTap::scan(). */
     const std::vector<CueMark>& cueMarks() const { return cueMarks_; }
     /** @brief Deck taps: from now on every process() call also writes each deck after its mixer channel (before the

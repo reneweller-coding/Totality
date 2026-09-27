@@ -89,6 +89,8 @@ public:
     void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR);
     /** @brief Live play (Engine::setLive): the performer's mutes act. */
     void setLive(bool on) { live_ = on; }
+    /** @brief The Quest's quality (Engine::setQuality): the grain cloud rests, the rumble clips at the rate. */
+    void setQuest(bool on) { quest_ = on; rumble_.setOversampling(!on); }
     /** @brief The score it plays. */
     const Score& score() const { return score_; }
     /** @brief Whether it has a score. */
@@ -99,8 +101,9 @@ public:
     void readPlayed(Module m, int instance, float* out) const;
     /** @brief The samples of its score's steps on the DJ mixer's knobs (a kill, a swap): the engine reads them there. */
     const std::vector<int64_t>& mixerSteps() const { return mixerSteps_; }
-    /** @brief The loudness corrections of its tracks (a trim per LevelMark), found after they began; they glide in. */
-    void setLevelTrims(const std::vector<float>& trims) { lateTrims_ = trims; }
+    /** @brief The loudness corrections of its tracks (a trim per LevelMark), found after they began; they glide in. No
+     *         allocation for as many trims as the score has marks (reserved at load): the Quest sets them on its audio thread. */
+    void setLevelTrims(const std::vector<float>& trims) { lateTrims_.assign(trims.begin(), trims.end()); }
     /** @brief The kick (for the tests). */
     const Kick& kick() const { return kick_; }
 
@@ -135,6 +138,7 @@ private:
     double sampleRate_ = 48000.0;
     bool loaded_ = false;
     bool live_ = false;
+    bool quest_ = false;
     uint32_t mutes_ = 0;   ///< the performer's muted groups (perform::MuteKick ..), bit k for group k
     bool muted(int param) const { return ((mutes_ >> (param - perform::MuteKick)) & 1u) != 0; }
     Score score_;

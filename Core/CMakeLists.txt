@@ -36,6 +36,10 @@ add_library(UmbraCore STATIC
     src/Export.cpp
 )
 target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+option(UMB_PROFILE "Time the engine's stages (Profile.h); umb_render prints them" OFF)
+if(UMB_PROFILE)
+    target_compile_definitions(UmbraCore PUBLIC UMB_PROFILE)
+endif()
 if(WIN32)
     target_link_libraries(UmbraCore PUBLIC ws2_32)   # the cue sender's UDP socket (Cue.h)
 endif()

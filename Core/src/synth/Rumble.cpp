@@ -95,7 +95,7 @@ void Rumble::process(const float* kickBody, float* out, int n)
         const size_t k = static_cast<size_t>(i);
         const float x = 0.5f * (hallL_[k] + hallR_[k]) * kHallGain;
         pre_[k] = x;
-        float y = os_.process(x, [g, ig](float s) { return std::tanh(g * s) * ig; });
+        float y = oversample_ ? os_.process(x, [g, ig](float s) { return std::tanh(g * s) * ig; }) : std::tanh(g * x) * ig;
         float lp, bp, hp;
         postHp_.tick(y, lp, bp, hp);
         y = postLp_.lp(hp) * kBandGain;

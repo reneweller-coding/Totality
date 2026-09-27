@@ -5,6 +5,7 @@
  *       (27.09.2026); the signal flow is Umbra's. Until Phase 4 this was the engine itself.
  */
 #include "umb/Deck.h"
+#include "umb/Profile.h"
 #include <algorithm>
 #include <cmath>
 
@@ -73,6 +74,7 @@ void Deck::load(const Score& score)
     loaded_ = true;
     score_ = score;
     score_.sort();
+    lateTrims_.reserve(score_.levels.size());
     // Events on the sample grid: the first sample at or after the ideal time, and how late that is.
     int id = 0;
     for (const NoteEvent& note : score_.notes) {
@@ -425,16 +427,17 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
 {
     const bool stems = stemL != nullptr;
     // The sources.
-    kick_.process(kickBuf_.data(), bodyBuf_.data(), n);
-    rumble_.process(bodyBuf_.data(), rumbleBuf_.data(), n);
-    sub_.process(subBuf_.data(), n);
-    kit_.processLanes(n);
-    ping_.process(pingL_.data(), pingR_.data(), n, sample);
-    bass_.process(bassL_.data(), bassR_.data(), n);
-    acid_.process(acidL_.data(), acidR_.data(), n);
-    chord_.process(chordL_.data(), chordR_.data(), n, sample);
-    drone_.process(droneL_.data(), droneR_.data(), n);
-    texture_.process(texL_.data(), texR_.data(), n);
+    { UMB_PROF(Kick); kick_.process(kickBuf_.data(), bodyBuf_.data(), n); }
+    { UMB_PROF(Rumble); rumble_.process(bodyBuf_.data(), rumbleBuf_.data(), n); }
+    { UMB_PROF(Sub); sub_.process(subBuf_.data(), n); }
+    { UMB_PROF(Kit); kit_.processLanes(n); }
+    { UMB_PROF(Ping); ping_.process(pingL_.data(), pingR_.data(), n, sample); }
+    { UMB_PROF(Bass); bass_.process(bassL_.data(), bassR_.data(), n); }
+    { UMB_PROF(Acid); acid_.process(acidL_.data(), acidR_.data(), n); }
+    { UMB_PROF(Chord); chord_.process(chordL_.data(), chordR_.data(), n, sample); }
+    { UMB_PROF(Drone); drone_.process(droneL_.data(), droneR_.data(), n); }
+    { UMB_PROF(Texture); texture_.process(texL_.data(), texR_.data(), n); }
+    UMB_PROF_BEGIN(Buses);
 
     // The percussion buses, the drum bus, the pads, the sends.
     const float* ll = kit_.laneL();
@@ -483,20 +486,28 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         drumL_[k] = dl;
         drumR_[k] = dr;
     }
+    UMB_PROF_END(Buses);
+    UMB_PROF_BEGIN(Cloud);
     // The cloud hears the ping and the chord; half of it goes into the plate.
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
         cloudInL_[k] = pingL_[k] * cloudPing_ + chordL_[k] * cloudChord_;
         cloudInR_[k] = pingR_[k] * cloudPing_ + chordR_[k] * cloudChord_;
     }
-    cloud_.process(cloudInL_.data(), cloudInR_.data(), cloudL_.data(), cloudR_.data(), n);
+    if (quest_) {   // the Quest's quality (PLAN 11): no grains
+        std::fill(cloudL_.begin(), cloudL_.begin() + n, 0.0f);
+        std::fill(cloudR_.begin(), cloudR_.begin() + n, 0.0f);
+    } else {
+        cloud_.process(cloudInL_.data(), cloudInR_.data(), cloudL_.data(), cloudR_.data(), n);
+    }
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
         plateInL_[k] += cloudL_[k] * cloudPlate_;
         plateInR_[k] += cloudR_[k] * cloudPlate_;
     }
-    room_.process(roomInL_.data(), roomInR_.data(), roomL_.data(), roomR_.data(), n);
-    dub_.process(echoInL_.data(), echoInR_.data(), plateInL_.data(), plateInR_.data(), dubL_.data(), dubR_.data(), n);
+    UMB_PROF_END(Cloud);
+    { UMB_PROF(Room); room_.process(roomInL_.data(), roomInR_.data(), roomL_.data(), roomR_.data(), n); }
+    { UMB_PROF(Dub); dub_.process(echoInL_.data(), echoInR_.data(), plateInL_.data(), plateInR_.data(), dubL_.data(), dubR_.data(), n); }
     if (stems) {
         // The parts of the pads and of the returns, before their ducks.
         for (int i = 0; i < n; ++i) {
@@ -516,8 +527,10 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         roomL_[k] = roomL_[k] * roomReturn_ + dubL_[k] + cloudL_[k];
         roomR_[k] = roomR_[k] * roomReturn_ + dubR_[k] + cloudR_[k];
     }
+    UMB_PROF_BEGIN(Ducks);
     padsDuck_.process(chordL_.data(), chordR_.data(), n, stems ? padsGains_ : nullptr);
     fxDuck_.process(roomL_.data(), roomR_.data(), n, stems ? fxGains_ : nullptr);
+    UMB_PROF_END(Ducks);
     if (stems) {
         MultibandDucker::apply(stemPads_[0], padsGains_, stemL[kStemChord], stemR[kStemChord], n);
         MultibandDucker::apply(stemPads_[1], padsGains_, stemL[kStemDrone], stemR[kStemDrone], n);
@@ -539,6 +552,7 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         }
     }
 
+    UMB_PROF_BEGIN(TrackBus);
     for (int i = 0; i < n; ++i) {
         const size_t k = static_cast<size_t>(i);
         float l = drumL_[k] + subBuf_[k] + pingL_[k] + bassL_[k] + acidL_[k] + chordL_[k] + texL_[k] + roomL_[k];
@@ -556,6 +570,8 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         drumL_[k] = L[i];   // the glue's dry signal (the drum bus is spent)
         drumR_[k] = R[i];
     }
+    UMB_PROF_END(TrackBus);
+    UMB_PROF_BEGIN(Glue);
     glue_.process(L, R, n, stems ? glueGains_ : nullptr);
     // The glue in parallel, then the Leveler's trim: after the glue, which would otherwise halve every correction (a
     // ratio of 2 far over its threshold).
@@ -566,6 +582,7 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         L[i] = (drumL_[k] + kGlueMix * (L[i] - drumL_[k])) * trimGain_;
         R[i] = (drumR_[k] + kGlueMix * (R[i] - drumR_[k])) * trimGain_;
     }
+    UMB_PROF_END(Glue);
     if (!stems) return;
     // The stems through their own group high pass and tilt, then the glue's and the trim's gains.
     for (int s = 0; s < kStems; ++s) {

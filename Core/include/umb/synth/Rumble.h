@@ -71,6 +71,9 @@ public:
      * @param out      receives the rumble, mono (replaced)
      */
     void process(const float* kickBody, float* out, int n);
+    /** @brief The clip at four times the rate (the default) or at the rate (the Quest's quality, PLAN 11: the band is
+     *         low-passed, its harmonics stay far under Nyquist). */
+    void setOversampling(bool on) { oversample_ = on; }
     /** @brief The band's part of the last block alone, for the tests (mono, before the level). */
     const std::vector<float>& lastBand() const { return band_; }
     /** @brief The sub's part of the last block alone, for the tests (before the level). */
@@ -85,6 +88,7 @@ private:
     Svf split1_, split2_;        ///< the LR4 high pass at the split (two Butterworth sections)
     Reverb hall_;                ///< the hall
     Oversampler4 os_;            ///< the clip at four times the rate
+    bool oversample_ = true;     ///< setOversampling()
     Svf postHp_, postLp_;        ///< the band's filters after the clip
     Ducker duck_;                ///< the kick's duck
     std::vector<float> in_, hallL_, hallR_, band_, subOut_, pre_;   ///< per-block buffers
