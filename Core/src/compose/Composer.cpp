@@ -193,6 +193,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // ---------------------------------------------------------------- form
     Rng fr = streamOf(seed, cur, unit, "form");
     const float uForm = fr.uniform(), uIntro = fr.uniform(), uRed = fr.uniform(), uRedLen = fr.uniform(), uRedPos = fr.uniform();
+    const float uRumble = fr.uniform(), uEdges = fr.uniform();
     FormType form = req.form;
     if (form == FormType::Count) {
         const int knob = p.getInt(pid(Module::Compose, 0, compose::Form));
@@ -218,6 +219,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     int redLen = 0;
     if (form == FormType::Peak) redLen = uRedLen < 0.5f ? 8 : uRedLen < 0.85f ? 16 : 32;
     else if (form == FormType::Arc && uRed < prof.toolReductionChance) redLen = uRedLen < 0.5f ? 4 : 8;
+    redLen = std::min(redLen, prof.maxReduction);
     int redReturn = -1, redStart = -1;
     if (redLen > 0 && bodyBars >= 64) {
         const double at = bodyFirst * 32 + (0.5 + 0.15 * uRedPos) * bodyBars;
@@ -366,9 +368,16 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         // Kick, bass and tops from bar 1 (Erg. 8).
         for (LayerId id : { LayerId::ClosedHat, LayerId::RollingHat }) { st.active[L(id)] = true; entryBar[L(id)] = 0; entered.push_back(id); }
         int tops = 0;
+        // With the style's signature: the tonal layer it is likeliest to have (Dub's chord, Hypnotic's ping).
+        LayerId signature = LayerId::Count;
+        float most = 0.0f;
+        for (const LayerChance& c : prof.pool)
+            if ((c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Acid || c.layer == LayerId::Drone) && c.chance > most
+                && std::find(queue.begin(), queue.end(), c.layer) != queue.end()) { most = c.chance; signature = c.layer; }
         for (auto it = queue.begin(); it != queue.end();) {
             const int g = groupOf(*it);
-            const bool take = *it == LayerId::RollingHat || g == 0 || (g == 1 && *it == LayerId::OpenHat) || (g == 2 && tops < 2 && *it != LayerId::GhostKick);
+            const bool take = *it == LayerId::RollingHat || g == 0 || (g == 1 && *it == LayerId::OpenHat) || (g == 2 && tops < 2 && *it != LayerId::GhostKick)
+                           || *it == signature;
             if (!take) { ++it; continue; }
             if (g == 2) ++tops;
             if (*it != LayerId::RollingHat) { st.active[L(*it)] = true; entryBar[L(*it)] = 0; entered.push_back(*it); }
@@ -626,6 +635,15 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         sc.gestures.push_back(knobs.ramp(hatsCut, 8.0 * kBar, introEnd - 8.0 * kBar, 1500.0f, knobs.get(hatsCut), GestureShape::Linear, 0));
         sc.gestures.push_back(knobs.ramp(hatsCut, static_cast<double>(bars - 16) * kBar, 16.0 * kBar, knobs.get(hatsCut), 2500.0f, GestureShape::Linear, 0));
     }
+    // The rumble with the body (p 0.7; PLAN 7.2's intro is "Kick (+Rumble)"): out in the intro and the outro, in on the
+    // body's first bar -- the low end arrives where a set swaps it, and the edges of a track are lighter, as the
+    // references' are (their outros 4 to 19 dB under the body, ours 1 to 4 with the rumble through, 27.09.2026).
+    if (form != FormType::Endless && uRumble < 0.7f) {
+        const int rl = pid(Module::Rumble, 0, rumble::Level);
+        sc.gestures.push_back(knobs.step(rl, 0.0, -60.0f));
+        sc.gestures.push_back(knobs.step(rl, introEnd, knobs.get(rl)));
+        sc.gestures.push_back(knobs.step(rl, outroStart, -60.0f));
+    }
     // Macro: the rumble's hall and the stab's brightness grow by a fifth over the track (Dok. 8.5, "Track-Drift").
     {
         const int rd = pid(Module::Rumble, 0, rumble::Decay), cb = pid(Module::Chord, 0, chord::Bright);
@@ -680,6 +698,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         const float top = 200.0f + 200.0f * er.uniform();
         sc.gestures.push_back(knobs.ramp(lowCut, static_cast<double>(line - 8) * kBar, 8.0 * kBar, 20.0f, top, GestureShape::EaseIn, 1));
         sc.gestures.push_back(knobs.home(lowCut, static_cast<double>(line) * kBar));
+    }
+    // The edges filtered (the profile's chance; Dok. 8.5's group high pass): the intro opens from 250 Hz over its first 16 bars, the
+    // last 16 bars close to 300 Hz. A track's loudness moves at its edges as the references' do (their LRA 3 to 5 LU, ours
+    // 1 to 2 with the kick at full from the first bar to the last, 27.09.2026).
+    if (form != FormType::Endless && uEdges < prof.edgeChance) {
+        sc.gestures.push_back(knobs.ramp(lowCut, 0.0, 16.0 * kBar, 250.0f, 20.0f, GestureShape::EaseIn, 1));
+        sc.gestures.push_back(knobs.ramp(lowCut, static_cast<double>(bars - 16) * kBar, 16.0 * kBar, 20.0f, 300.0f, GestureShape::EaseIn, 1));
     }
     // Meso: two hands on a 16-beat grid over the body, on the filters and sends of what plays; their centre follows the
     // density (the energy of the moment).

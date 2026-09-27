@@ -20,6 +20,90 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**27.09.2026, spät: Phase 4, Komponist und Set.** Der Komponist (`compose/Composer`) schreibt Tracks in den drei Formen von
+7.2 aus vier Stilprofilen (`compose/Style`, designierte Initialisierer wie Ephemeris, Morph und die Achsen Dub/Hypnotic);
+der Set-Komponist (`compose/Set`) mischt sie auf zwei Decks. Die Engine besteht jetzt aus drei Decks (`Deck`: alle
+Stimmen bis zum Track-Bus mit Tilt, Glue und Leveler-Trim, eigene Partitur und Automation) und dem DJ-Mixer (Fader,
+Isolator 200 Hz/2,5 kHz mit Kill, bipolarer Filter, FX-Send in Tempo-Echo und Hall) vor dem Master (Mono unter 120 Hz,
+Level, Cut, Clipper, Limiter).
+
+- **Form:** Dichteprofil je Block (Tool 0,3 → 0,6 → 0,85 → 1,0, das Outro 0,6 → 0,3; der Peak voll nach der Rückkehr),
+  genau eine Operation je Block, Einsatzreihenfolge nach Dok. 8.5 (der Sub-Bass mit dem Body), die letzten zwei Lagen
+  erst in der zweiten Hälfte. Der Vorrat eines Tracks ist so groß, wie Blöcke da sind, ihn einzuführen (Intro-Perc und
+  -Hat, je Body-Block einer); die wahrscheinlichsten Lagen eines Stils (seine Signatur) bleiben. Reduktion als Kick-out
+  mit Rückkehr auf einer 16/32-Linie, Swell, Cut, Wolke, Hochpass-Fahrt. Das Endless beginnt mit Kick, Bass, Tops und
+  der Signatur seines Stils (Dubs Akkord, Hypnotics Ping).
+- **Ereignisse** auf den 8-Takt-Linien: Mute-One-Hit, Ein-Takt-Dropout, Delay-Wurf (Ping, Stab oder Hats ins Echo),
+  ein Ghost mehr; Gruppen-Hochpass vor 32-Linien und Rückkehren.
+- **Automation:** Mikro (Hat-Decays), Meso (zwei Hände aus Ephemeris' `GestureEngine`, neu auf einem 16-Beat-Raster:
+  Filter und Sends dessen, was spielt, ihr Zentrum folgt der Dichte), Makro (Rumble-Hall, Stab-Helligkeit +20 %).
+- **Harmonik** nach Dok. 8.6 und die Prüfung von 8.9 als Filter: höchstens vier Tonhöhenklassen (der Shuttle, der
+  zweite Ping-Ton und das 303-Alphabet weichen in dieser Reihenfolge), der Bass höchstens zwei; Camelot-Label.
+- **Kandidaten:** acht je Block (Varianten der Rack-Würfe), gewählt nach dem Abstand zum Korridor des Profils
+  (`compose/Corridor`: Taktähnlichkeit bei Abstand 1/2/4, Mikroveränderung, Dichte, auf der Partitur wie `analyze_ref.py`
+  auf dem Audio).
+- **Kuration:** jeder Teil auf eigenem Strom (`form`, `harmony`, `rack`, `rack.<layer>`, `layers`, `blocks`, `block<n>`,
+  `events`, `hands`, `sounds`; im Set `track<n>` und `track<n>.<unit>`, `set`); `.umbset` (aus Ephemeris) hält Seed,
+  Längen, Rerolls und geänderte Knöpfe.
+- **Set:** Dramaturgien Warm-up (125 → 130), Peak (128 → 134), Closing (132 → 127), Sunday (126 → 128), Flat (130),
+  höchstens 1 BPM je Track, die Rampe im Blend; die Stile wandern mit der Energie über Dub, Hypnotic, Ostgut, Raw, um den
+  eingestellten Stil zentriert; Tonarten als Camelot-Nachbarn; Blend 16/32 Takte, harter Bass-Swap auf der 32-Linie
+  (beide Decks im selben Sample); Live-Loops auf Deck C; Breaks über die Mixer-Effekte.
+- **Ausgaben:** Cue-Marken in der WAV (`cue `/`LIST adtl`) und als JSON, nahtlose DJ-Loops von 4 und 8 Takten (dreimal
+  gerendert, der letzte Durchgang behalten) mit Kick, Hats und Perc allein, Set-MIDI mit Tempo-Drift und Markern,
+  Stems (je Element über die Decks summiert), Deck-Abgriffe, die Partitur als JSON.
+
+Prüfstein von Abschnitt 14:
+
+| Prüfstein | Ergebnis |
+|---|---|
+| Zwei-Stunden-Set aus einem Seed | 27 Tracks in 121 Minuten (Seed 2026, Peak: 128 → 134 BPM, Hypnotic → Ostgut), 6 Live-Loops, 8 Breaks, Cues, MIDI, `.umbset`; 11-fache Echtzeit, 9,3 % eines Kerns (zwei Decks in den Blends); −10,1 LUFS, True Peak −0,99 dBTP, lautestes Kurzzeitfenster −8,1 LUFS ([Bericht](eval/set-seed2026.md)) |
+| Determinismus | derselbe Seed, dasselbe Set und derselbe Track; ein Block, eine Lage, die Hände einzeln neu, der Rest bitgleich (`testCuration`, `testSet`) |
+| Blend-Test | nur ein Deck besitzt je das Tiefband (1 408 Takte eines 40-Minuten-Sets geprüft), Bass-Swap in einem Sample, zwei Decks bitgleich über Blockgrößen (`testSet`) |
+| Grammatik | 32 Tracks: je Blockgrenze genau eine Operation, alles auf 4-Takt-Linien, Rückkehr auf 16-Takt-Linien, nichts Tonales in den ersten und letzten 32 Takten, Harmonik nach Dok. 8.9 (`testComposer`) |
+| Evaluationsbericht | `Tools/eval_report.py`; Kalibrierung (12 Tracks, 4 Stile × 3 Seeds): 10 von 96 Werten außerhalb des 10.–90.-Perzentils der Referenzen (bei gleicher Verteilung wären es etwa 19); Set: Set, jeder Track vom Swap bis zum nächsten gemessen: Form und Harmonik ohne Verstoß in 27 von 27 Tracks; außerhalb des Bands Schwerpunkt 0, Breite 1, LUFS 0, lautestes 20 s 0, Takt-Ähnlichkeit 5, Mikroveränderung 0, Sub-Anteil 7 von 27 ([Kalibrierung](eval/kalibrierung-phase4.md)) |
+| `ctest` | 25 von 25 |
+
+Kalibrierung gegen die Referenzen, drei komponierte Tracks je Stil (Median der drei; Referenz-Median):
+
+| Größe | Hypnotic | Ostgut | Dub | Raw |
+|---|---|---|---|---|
+| Schwerpunkt, Hz | 288 (252) | 277 (331) | 107 (182) | 235 (170) |
+| Breite S/M, dB | −5,0 (−4,5) | −7,7 (−6,2) | −10,0 (−7,9) | −6,4 (−8,1) |
+| LUFS / lautestes 20 s | −10,9 / −9,9 (−11,5 / −10,0) | −10,6 / −9,1 (−10,8 / −9,5) | −12,2 / −11,0 (−12,2 / −11,5) | −10,1 / −9,4 (−9,9 / −9,4) |
+| LRA, LU | 3,6 (4,7) | 4,0 (3,0) | 3,0 (3,4) | 2,1 (1,2) |
+| Takt-Ähnlichkeit | 0,88 (0,87) | 0,957 (0,955) | 0,917 (0,931) | 0,950 (0,924) |
+
+Befunde, alle von Tests oder Messungen gefunden:
+- **Balance und Breite hängen am Fenster.** `analyze_ref.py` misst sie auf der mittleren Minute; bei einem
+  Peak-Track liegt dort der Kick-out (Schwerpunkt 3,6 kHz, nur Hats). Umbras Tracks werden jetzt auf ihrer lautesten
+  Minute gemessen (der Body voll, wie die mittlere Minute einer Referenz meist), die Referenzen wie bisher.
+- **Die Rezepte der Stile** sind auf der lautesten Minute von je drei komponierten Tracks gefittet (Tilt Hypnotic 12,
+  Ostgut 12,5, Dub 13, Raw 4,5 dB; Raum, Busse, Flächen, Ping und Echo je Stil). Dub braucht helle Stabs (1–5 kHz) und
+  sehr leise Hats, Raw kaum Tilt und viel Raum.
+- **Der Raum explodierte an der Drone**: Die +22 dB des Raums sind an Hits gefittet (Hats, Perc, Ping); eine gehaltene
+  Fläche füllt das FDN weit stärker, bei Send 0,2 lag der Raum 6 dB über der Drone selbst (ein Set kam kurzzeitig auf
+  −4,3 LUFS). Drone- und 303-Send auf ein Zehntel.
+- **Die Lautheit bewegt sich an den Rändern**: Die Referenzen liegen im Intro 4 bis 9, im Outro 5 bis 19 dB unter dem
+  Body, Umbras Tracks lagen 1 bis 4 darunter (LRA 1–2 statt 3–5). Das Rumble kommt jetzt mit dem Body (p 0,7), und die
+  Ränder laufen durch den Gruppen-Hochpass (die Fahrt aus Dok. 8.5s Tabelle; je Stil p 0,1 bis 0,6).
+- **Raw kürzt**: Die Raw-Referenzen haben 0,5 Reduktionen je Titel, Median 3 Takte; ein Kick-out von 32 Takten gab LRA
+  4,7 statt 1,2. Die längste Reduktion ist jetzt eine Größe des Profils (Raw 8 Takte).
+- **Der Korridor lag unerreichbar tief**: Die Taktähnlichkeit der Partitur liegt 0,04 bis 0,07 über der des Audios; mit
+  Zielen unter dem Erreichbaren wählten die Kandidaten blind. Ziele jetzt Referenz-Audio + 0,05.
+- **Kuration und Kandidaten**: Variierten die Kandidaten auch die Operation, änderte ein neu gewürfelter Block alles
+  danach. Operationen und Ereignisse kommen jetzt aus eigenen Strömen, die Kandidaten variieren nur die Würfe.
+
+Abweichungen vom Plan, bewusst:
+- **Kandidaten variieren nur die Würfe** (7.9 nannte Op, Ereignisse und Motion-Seeds): sonst hielte die Kuration nicht.
+- **Dur (0,04) entfällt** (Umbras Skalen sind Moll-Modi); der Tonartwechsel in einem Track (p 0,04) ist nicht gebaut.
+- **Klänge als Rezept plus gezogene Bereiche je Track**, noch keine Preset-Bänke als Programmwechsel (Phase 5/7).
+- **Das Glue sitzt im Track-Bus jedes Decks**, nicht im Master: So kommt der Leveler-Trim weiter hinter dem Glue.
+- **Endless nicht im Hauptdeck eines Sets**; Deck C trägt die Loops.
+
+Offen: der Hörvergleich je Profil und des Sets durch den Nutzer; die Prüfung, ob Rekordbox und Traktor die Cue-Marken
+der WAV lesen (15.8); die OSC-Cues für Kaleidoscope (Phase 5); Stems, deren Summe die Mischung exakt ergibt.
+
 **27.09.2026, nachts: Phase 3, Klang und Mix.** Neu sind der Bass-Synth und die 303-Linie (eine Stimme: PolyBLEP bei
 2×, Sub-Rechteck, die Schaltungsfilter aus Ephemeris, Akzent, Slide, Glide), der Dub-Chord (acht Stimmen, je zwei
 Sägezähne, Bus mit Bandpass-Fahrt, Bitreduktion, vierstufigem Phaser, Senke bei 600 Hz), Drone und Textur (Knistern,

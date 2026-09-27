@@ -198,7 +198,7 @@ def markov_rates(states, n_states):
 
 # ------------------------------------------------------------------------------------------------ the measurement
 
-def measure(path, bpm_hint=None):
+def measure(path, bpm_hint=None, balance_start=None):
     x = decode(path, SR)
     dur = len(x) / SR
     low = bandpass(x, 40.0, 200.0, SR)
@@ -324,7 +324,7 @@ def measure(path, bpm_hint=None):
         kick_hz = float(ff[i] + d * (ff[1] - ff[0]))
 
     # Balance and width, the middle minute at full rate.
-    start = max(0.0, dur / 2 - 30.0)
+    start = max(0.0, dur / 2 - 30.0) if balance_start is None else max(0.0, min(balance_start, dur - 60.0))
     xs = decode(path, SR_FULL, mono=False, start=start, dur=60.0)
     mid, side = 0.5 * (xs[0] + xs[1]), 0.5 * (xs[0] - xs[1])
     fw, pm = signal.welch(mid, fs=SR_FULL, nperseg=1 << 15)

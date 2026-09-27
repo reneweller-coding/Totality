@@ -63,6 +63,8 @@ struct StyleProfile {
     float swingHigh;
     float fillChance;                    ///< a fill at the end of an eight-bar phrase
     float toolReductionChance;           ///< an Arc has a short kick-out at all (Dok. 8.5: 0.5)
+    float edgeChance;                    ///< the intro and outro filtered by the group high pass (their loudness moving)
+    int maxReduction;                    ///< the longest kick-out in bars (Dok. 8.5's Peak: 8, 16 or 32)
     float eventRate;                     ///< chance of an event on each 8-bar line of the body
     float throwShare;                    ///< share of the events that are delay throws
     int densityCap;                      ///< at most this many layers at once beside kick and rumble

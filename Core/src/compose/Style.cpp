@@ -41,12 +41,17 @@ const StyleProfile kProfiles[] = {
         .swingHigh = 56.0f,
         .fillChance = 0.15f,
         .toolReductionChance = 0.5f,
+        .edgeChance = 0.5f,
+        .maxReduction = 32,
         .eventRate = 0.35f,
         .throwShare = 0.5f,
         .densityCap = 9,
-        .simTarget = 0.80f,
+        .simTarget = 0.90f,   // the references' audio bar similarity + 0.05: the score's runs 0.04 .. 0.07 over the audio's (27.09.2026)
         .microTarget = 1.0f,
-        .recipe = { { "kick.engine", 2.0f }, { "chord.level", -8.0f }, { "drone.level", -16.0f }, { "space.level", -2.0f } },
+        // Fitted on the loudest minute of three composed tracks against the references (27.09.2026): tilt 11.8, ping -5,
+        // pads -10 (at its bound; -6 taken), room +2, echo and plate -4.
+        .recipe = { { "kick.engine", 2.0f }, { "master.tilt", 12.0f }, { "chord.level", -14.0f }, { "drone.level", -22.0f },
+                    { "space.level", 0.0f }, { "ping.level", -15.5f }, { "dub.echo_return", -6.0f }, { "dub.plate_return", 3.0f } },
         .sounds = { { "kick.pitch_decay", 14.0f, 24.0f }, { "kick.amp_decay", 300.0f, 450.0f }, { "kick.drive", 0.25f, 0.5f },
                     { "rumble.decay", 1.5f, 2.8f }, { "rumble.drive", 4.0f, 8.0f }, { "ping.ratio", 1.2f, 2.2f },
                     { "ping.decay", 90.0f, 220.0f }, { "ping.band", 600.0f, 1500.0f }, { "dub.echo_time", 0.5f, 4.49f },
@@ -72,18 +77,22 @@ const StyleProfile kProfiles[] = {
                   { L::Drone, 0.2f }, { L::Texture, 0.2f } },
         .mutation = 0.25f,
         .motionScale = 1.0f,
-        .reroll = 0.15f,
+        .reroll = 0.08f,   // 0.15 measured 0.909 .. 0.965 against 0.955 (27.09.2026)
         .polymeterChance = 0.5f,
         .swingLow = 50.0f,
         .swingHigh = 55.0f,
         .fillChance = 0.25f,
         .toolReductionChance = 0.5f,
+        .edgeChance = 0.5f,
+        .maxReduction = 32,
         .eventRate = 0.3f,
         .throwShare = 0.4f,
         .densityCap = 9,
-        .simTarget = 0.88f,
+        .simTarget = 0.99f,
         .microTarget = 1.0f,
-        .recipe = { { "kick.engine", 2.0f }, { "space.level", 2.0f }, { "mix.perc_level", -5.0f } },
+        // Fitted as Hypnotic's: tilt 12.5, perc -4.7, hats -1.9, room +1.6.
+        .recipe = { { "kick.engine", 2.0f }, { "master.tilt", 12.5f }, { "space.level", 3.5f }, { "mix.perc_level", -10.0f },
+                    { "mix.hats_level", -5.5f } },
         .sounds = { { "kick.pitch_decay", 14.0f, 22.0f }, { "kick.amp_decay", 250.0f, 400.0f }, { "kick.drive", 0.3f, 0.55f },
                     { "rumble.decay", 1.2f, 2.2f }, { "rumble.drive", 4.0f, 8.0f }, { "chord.detune", 6.0f, 15.0f },
                     { "chord.band", 300.0f, 480.0f }, { "dub.echo_time", 0.5f, 4.49f }, { "dub.feedback", 0.2f, 0.3f },
@@ -108,19 +117,24 @@ const StyleProfile kProfiles[] = {
                   { L::Drone, 0.3f }, { L::Texture, 0.7f } },
         .mutation = 0.125f,
         .motionScale = 0.8f,
-        .reroll = 0.25f,
+        .reroll = 0.12f,   // 0.25 measured 0.88 .. 0.91 against 0.93 (27.09.2026)
         .polymeterChance = 0.3f,
         .swingLow = 50.0f,
         .swingHigh = 51.0f,
         .fillChance = 0.1f,
         .toolReductionChance = 0.4f,
+        .edgeChance = 0.6f,
+        .maxReduction = 32,
         .eventRate = 0.45f,
         .throwShare = 0.8f,
         .densityCap = 8,
-        .simTarget = 0.86f,
+        .simTarget = 0.97f,
         .microTarget = 1.0f,
-        .recipe = { { "kick.engine", 0.0f }, { "kick.click_level", 0.2f }, { "master.tilt", 5.0f }, { "chord.bright", 3500.0f },
-                    { "chord.dip", -3.0f }, { "mix.hats_level", -6.0f } },
+        // Fitted as Hypnotic's: tilt 13.3 (the chords' 1 .. 5 kHz), hats -10 (at its bound; -8 taken), perc -8.4, pads -6.2,
+        // echo -3.6, room +2.1 -- the hats reduced, the stabs bright.
+        .recipe = { { "kick.engine", 0.0f }, { "kick.click_level", 0.2f }, { "master.tilt", 13.0f }, { "chord.bright", 3500.0f },
+                    { "chord.dip", -3.0f }, { "mix.hats_level", -14.0f }, { "mix.perc_level", -15.0f }, { "chord.level", -11.0f },
+                    { "drone.level", -19.0f }, { "dub.echo_return", -6.5f }, { "space.level", 5.0f }, { "chord.width", 0.9f } },
         .sounds = { { "kick.pitch_decay", 16.0f, 26.0f }, { "kick.amp_decay", 350.0f, 550.0f }, { "kick.drive", 0.15f, 0.35f },
                     { "rumble.decay", 1.2f, 2.2f }, { "rumble.drive", 3.0f, 6.0f }, { "chord.detune", 6.0f, 15.0f },
                     { "chord.band", 300.0f, 480.0f }, { "chord.crush", 6.0f, 9.0f }, { "dub.echo_time", 0.5f, 4.49f },
@@ -151,12 +165,15 @@ const StyleProfile kProfiles[] = {
         .swingHigh = 53.0f,
         .fillChance = 0.3f,
         .toolReductionChance = 0.6f,
+        .edgeChance = 0.1f,   // Raw records are flat (LRA 1.25): filtered edges put it at 2.4 .. 4.8
+        .maxReduction = 8,   // the Raw references cut short: 0.5 reductions a track, median 3 bars (PLAN 13.4)
         .eventRate = 0.3f,
         .throwShare = 0.3f,
         .densityCap = 10,
-        .simTarget = 0.85f,
+        .simTarget = 0.96f,
         .microTarget = 1.0f,
-        .recipe = { { "kick.clip", 1.0f }, { "master.tilt", 8.0f }, { "space.level", 3.0f } },
+        // Fitted as Hypnotic's: tilt 4.4, room +7.4, hats +3.2.
+        .recipe = { { "kick.clip", 1.0f }, { "master.tilt", 4.5f }, { "space.level", 10.0f }, { "mix.hats_level", -0.5f } },
         .sounds = { { "kick.pitch_decay", 12.0f, 20.0f }, { "kick.amp_decay", 250.0f, 380.0f }, { "kick.drive", 0.5f, 0.85f },
                     { "rumble.decay", 1.4f, 2.4f }, { "rumble.drive", 7.0f, 12.0f }, { "ping.ratio", 2.0f, 3.5f },
                     { "ping.decay", 80.0f, 160.0f }, { "acid.cutoff", 400.0f, 900.0f }, { "dub.echo_time", 0.5f, 4.49f },
@@ -199,6 +216,8 @@ StyleProfile morphProfile(const StyleProfile& a, const StyleProfile& b, float t,
     m.swingHigh = lerp(a.swingHigh, b.swingHigh, t);
     m.fillChance = lerp(a.fillChance, b.fillChance, t);
     m.toolReductionChance = lerp(a.toolReductionChance, b.toolReductionChance, t);
+    m.edgeChance = lerp(a.edgeChance, b.edgeChance, t);
+    m.maxReduction = t < 0.5f ? a.maxReduction : b.maxReduction;
     m.eventRate = lerp(a.eventRate, b.eventRate, t);
     m.throwShare = lerp(a.throwShare, b.throwShare, t);
     m.densityCap = lerpi(a.densityCap, b.densityCap, t);

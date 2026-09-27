@@ -6,7 +6,8 @@
  * one of 4 or 8 bars), the **Peak** (a kick-out of 8, 16 or 32 bars at 50 to 65 % of the body, a swell, a cut, the
  * densest block after the return) and the **Endless** (full from bar 1, no intro, no outro, no mute, no reduction: all
  * dynamics in the automation and the cycles). Intro and outro are 32 or 64 bars of beat -- kick, hats, one perc, no bass,
- * no stab -- the outro the intro's mirror, subtractive. Every block has exactly one operation (Add, Remove, Swap, Hold),
+ * no stab, and with p 0.7 no rumble either (it comes with the body, where a set swaps the low end) -- the outro the
+ * intro's mirror, subtractive. Every block has exactly one operation (Add, Remove, Swap, Hold),
  * chosen by a density profile over the track (Tool 0.3 -> 0.6 -> 0.85 -> 1.0 -> 0.6 -> 0.3; the Peak cut in its
  * reduction and full after it); the layers enter in Dok. 8.5's order (hats and ride, clap and perc, bass, stab, pad and
  * texture), at least two of them only in the second half; a sub bass enters with the body. Big changes (bass,

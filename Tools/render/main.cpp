@@ -38,8 +38,183 @@ void usage()
     std::printf("umb_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
                 "           [--set \"key=value; ...\"] [--reroll unit] [--save-set f.umbset] [--load-set f.umbset] [--study]\n"
                 "           [--set-minutes M]  (a DJ set of M minutes on two decks)\n"
+                "           [--loops dir] [--score-json f.json] [--decks dir] [--plan]\n"
                 "           [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512]\n"
                 "           [--bench] [--list] [--stats] [--patterns]\n");
+}
+
+
+/** @brief A cue: seconds and a label. */
+struct CueAt {
+    double seconds;
+    std::string label;
+};
+
+std::string jsonEscape(const std::string& s)
+{
+    std::string o;
+    for (char c : s) {
+        if (c == '"' || c == '\\') { o += '\\'; o += c; }
+        else if (static_cast<unsigned char>(c) < 0x20) o += ' ';
+        else o += c;
+    }
+    return o;
+}
+
+/** @brief The cues of a track (PLAN 9): the bass's entry, the kick-outs and returns, the outro, at set beat @p at. */
+void trackCues(const TrackInfo& t, double at, const TempoMap& tempo, const std::string& prefix, std::vector<CueAt>& out)
+{
+    const auto sec = [&](int bar) { return tempo.secondsAt(at + 4.0 * bar); };
+    if (t.bassBar > 0) out.push_back({ sec(t.bassBar), prefix + "Bass in" });
+    for (size_t r = 0; r < t.reductions.size(); ++r) {
+        out.push_back({ sec(t.reductions[r]), prefix + "Kick out" });
+        out.push_back({ sec(t.returns[r]), prefix + "Return" });
+    }
+    if (t.outroBar < t.bars) out.push_back({ sec(t.outroBar), prefix + "Outro" });
+}
+
+/** @brief A track's info as JSON. */
+std::string infoJson(const TrackInfo& t)
+{
+    std::string s = "{\"style\":\"" + jsonEscape(t.style) + "\",\"form\":\"" + kFormNames[static_cast<int>(t.form)] + "\"";
+    char buf[512];
+    std::snprintf(buf, sizeof(buf), ",\"bpm\":%.2f,\"key\":%d,\"scale\":%d,\"camelot\":\"%s\",\"monotonic\":%s,\"sub\":%s,\"bars\":%d,"
+                  "\"intro\":%d,\"bass\":%d,\"outro\":%d,\"peak\":%d,\"similarity\":%.4f,\"micro\":%.3f,\"density\":%.2f",
+                  t.bpm, t.key, t.scale, t.camelot.c_str(), t.monotonic ? "true" : "false", t.subOwns ? "true" : "false", t.bars,
+                  t.introBars, t.bassBar, t.outroBar, t.peakBar, t.similarity, t.micro, t.density);
+    s += buf;
+    s += ",\"reductions\":[";
+    for (size_t i = 0; i < t.reductions.size(); ++i) s += (i ? "," : "") + std::to_string(t.reductions[i]);
+    s += "],\"returns\":[";
+    for (size_t i = 0; i < t.returns.size(); ++i) s += (i ? "," : "") + std::to_string(t.returns[i]);
+    s += "],\"layers\":[";
+    for (size_t i = 0; i < t.layers.size(); ++i) s += (i ? ",\"" : "\"") + jsonEscape(kLayerNames[t.layers[i]]) + "\"";
+    return s + "]}";
+}
+
+/**
+ * @brief The score for the evaluation (Tools/eval_report.py): the tracks (with their set beat and deck), every note
+ *        (beat, part, pitch, velocity), the operations, the tempo points.
+ */
+bool writeScoreJson(const std::string& path, const Score& notes, const std::vector<std::pair<double, int>>& where,
+                    const std::vector<TrackInfo>& tracks, const std::vector<std::pair<BlockOp, int>>& ops,
+                    const std::vector<int>& noteDecks)
+{
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (f == nullptr) return false;
+    std::fprintf(f, "{\n\"tracks\":[\n");
+    for (size_t i = 0; i < tracks.size(); ++i) {
+        const double b0 = where[i].first;
+        std::fprintf(f, "{\"start\":%.4f,\"deck\":%d,\"start_s\":%.4f,\"bass_s\":%.4f,\"end_s\":%.4f,\"info\":%s}%s\n", b0,
+                     where[i].second, notes.tempo.secondsAt(b0), notes.tempo.secondsAt(b0 + 4.0 * tracks[i].bassBar),
+                     notes.tempo.secondsAt(b0 + 4.0 * tracks[i].bars), infoJson(tracks[i]).c_str(), i + 1 < tracks.size() ? "," : "");
+    }
+    std::fprintf(f, "],\n\"parts\":[");
+    for (int i = 0; i < kNumParts; ++i) std::fprintf(f, "%s\"%s\"", i ? "," : "", kPartNames[i]);
+    std::fprintf(f, "],\n\"notes\":[\n");
+    for (size_t i = 0; i < notes.notes.size(); ++i) {
+        const NoteEvent& n = notes.notes[i];
+        std::fprintf(f, "[%.5f,%d,%d,%.3f,%d]%s\n", n.beat, static_cast<int>(n.part), n.pitch, static_cast<double>(n.velocity),
+                     i < noteDecks.size() ? noteDecks[i] : 0, i + 1 < notes.notes.size() ? "," : "");
+    }
+    std::fprintf(f, "],\n\"ops\":[\n");
+    for (size_t i = 0; i < ops.size(); ++i)
+        std::fprintf(f, "[%.4f,\"%s\",%d,%d]%s\n", ops[i].first.beat, kOpNames[static_cast<int>(ops[i].first.kind)], ops[i].first.layer,
+                     ops[i].second, i + 1 < ops.size() ? "," : "");
+    std::fprintf(f, "],\n\"tempo\":[");
+    const auto& pts = notes.tempo.points();
+    for (size_t i = 0; i < pts.size(); ++i) std::fprintf(f, "%s[%.4f,%.3f]", i ? "," : "", pts[i].beat, pts[i].bpm);
+    std::fprintf(f, "],\n\"length\":%.4f\n}\n", notes.lengthBeats);
+    return std::fclose(f) == 0;
+}
+
+bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, double rate)
+{
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (f == nullptr) return false;
+    std::fprintf(f, "[\n");
+    for (size_t i = 0; i < cues.size(); ++i)
+        std::fprintf(f, "{\"seconds\":%.4f,\"sample\":%lld,\"label\":\"%s\"}%s\n", cues[i].seconds,
+                     static_cast<long long>(std::llround(cues[i].seconds * rate)), jsonEscape(cues[i].label).c_str(),
+                     i + 1 < cues.size() ? "," : "");
+    std::fprintf(f, "]\n");
+    return std::fclose(f) == 0;
+}
+
+/**
+ * @brief DJ loops (PLAN 9): 4 and 8 bars of a track's loudest block, seamless -- the bars rendered three times over, the
+ *        last pass kept, so its start carries the tails of the pass before it as a loop played round does -- as the mix
+ *        and as kick, hats and perc alone (the stems, before the master).
+ */
+bool renderLoops(const ParamStore& knobs, const Score& track, const TrackInfo& info, const std::string& dir, double rate)
+{
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    for (int bars : { 4, 8 }) {
+        const double src = 4.0 * info.peakBar, len = 4.0 * bars;
+        Score loop;
+        loop.clear(track.tempo.bpmAt(src));
+        loop.seed = track.seed;
+        loop.keyRoot = track.keyRoot;
+        loop.scale = track.scale;
+        for (int pass = 0; pass < 3; ++pass)
+            for (NoteEvent n : track.notes)
+                if (n.beat >= src - 0.05 && n.beat < src + len - 0.05) { n.beat = n.beat - src + pass * len; loop.notes.push_back(n); }
+        // Every knob where the track has it at the loop's start.
+        std::vector<int> ids;
+        for (const Gesture& g : track.gestures) ids.push_back(g.param);
+        std::sort(ids.begin(), ids.end());
+        ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        for (int id : ids) {
+            Gesture g;
+            g.param = id;
+            g.beat = 0.0;
+            g.length = 0.0;
+            g.from = g.to = track.gestureOffset(id, src + 0.01);
+            g.shape = GestureShape::Step;
+            loop.gestures.push_back(g);
+        }
+        loop.levels.push_back(LevelMark{ 0.0, 0.0, -10.0f, track.trimAt(src) });
+        loop.lengthBeats = 3.0 * len;
+        loop.sort();
+        auto e = std::make_unique<Engine>();
+        e->params().copyValuesFrom(knobs);
+        e->prepare(rate, 512);
+        e->load(loop);
+        const int64_t from = std::llround(loop.tempo.secondsAt(2.0 * len) * rate);
+        const int64_t count = std::llround(loop.tempo.secondsAt(len) * rate);
+        std::vector<std::vector<float>> sl(Engine::kStems, std::vector<float>(512)), sr = sl;
+        std::vector<float*> pl, pr;
+        for (int s = 0; s < Engine::kStems; ++s) { pl.push_back(sl[static_cast<size_t>(s)].data()); pr.push_back(sr[static_cast<size_t>(s)].data()); }
+        e->setStems(pl.data(), pr.data());
+        const std::string base = dir + "/loop" + std::to_string(bars);
+        WavWriter mixW, kickW, hatsW, percW;
+        if (!mixW.open((base + ".wav").c_str(), static_cast<int>(rate), 2, WavFormat::Pcm24)
+            || !kickW.open((base + "_kick.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)
+            || !hatsW.open((base + "_hats.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)
+            || !percW.open((base + "_perc.wav").c_str(), static_cast<int>(rate), 2, WavFormat::Float32)) return false;
+        std::vector<float> L(512), R(512);
+        for (int64_t at = 0; at < from + count;) {
+            const int m = static_cast<int>(std::min<int64_t>(512, from + count - at));
+            e->process(L.data(), R.data(), m);
+            // Only the last pass is written.
+            const int skip = static_cast<int>(std::clamp<int64_t>(from - at, 0, m));
+            if (skip < m) {
+                mixW.write(L.data() + skip, R.data() + skip, m - skip);
+                kickW.write(pl[Engine::kStemKick] + skip, pr[Engine::kStemKick] + skip, m - skip);
+                hatsW.write(pl[Engine::kStemHats] + skip, pr[Engine::kStemHats] + skip, m - skip);
+                percW.write(pl[Engine::kStemPerc] + skip, pr[Engine::kStemPerc] + skip, m - skip);
+            }
+            at += m;
+        }
+        mixW.close();
+        kickW.close();
+        hatsW.close();
+        percW.close();
+        std::printf("loop: %s.wav (+ _kick, _hats, _perc), %d bars from bar %d, %lld samples\n", base.c_str(), bars, info.peakBar + 1,
+                    static_cast<long long>(count));
+    }
+    return true;
 }
 
 } // namespace
@@ -54,7 +229,7 @@ int main(int argc, char** argv)
     float minutes = -1.0f, bpm = -1.0f;
     int low = -1, form = -1;
     double setMinutes = 0.0;
-    std::string decksDir;
+    std::string decksDir, loopsDir, scoreJson;
     Curation curation;
     for (int i = 1; i < argc; ++i) {
         const char* a = argv[i];
@@ -71,6 +246,8 @@ int main(int argc, char** argv)
         else if (!std::strcmp(a, "--study")) study = true;
         else if (!std::strcmp(a, "--set-minutes")) setMinutes = std::atof(next());
         else if (!std::strcmp(a, "--decks")) decksDir = next();
+        else if (!std::strcmp(a, "--loops")) loopsDir = next();
+        else if (!std::strcmp(a, "--score-json")) scoreJson = next();
         else if (!std::strcmp(a, "--minutes")) minutes = static_cast<float>(std::atof(next()));
         else if (!std::strcmp(a, "--bpm")) bpm = static_cast<float>(std::atof(next()));
         else if (!std::strcmp(a, "--low")) low = std::strcmp(next(), "sub") == 0 ? 1 : 0;
@@ -119,6 +296,8 @@ int main(int argc, char** argv)
 
     const auto t0 = std::chrono::steady_clock::now();
     auto t1 = t0;
+    std::vector<CueAt> cues;
+    std::string infoTitle;
     if (setMinutes <= 0.0) {
         TrackRequest req;
         if (bpm > 0.0f) req.bpm = bpm;           // what the command line names, the composer does not draw
@@ -197,7 +376,18 @@ int main(int argc, char** argv)
             if (!writeMidiFile(score, midi.c_str(), "Umbra", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
             std::printf("MIDI: %s\n", midi.c_str());
         }
-
+        if (!study) {
+            trackCues(info, 0.0, score.tempo, std::string(), cues);
+            infoTitle = "Umbra " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " "
+                      + info.camelot + " seed " + std::to_string(seed);
+            if (!scoreJson.empty()) {
+                std::vector<std::pair<BlockOp, int>> ops;
+                for (const BlockOp& o : score.ops) ops.push_back({ o, 0 });
+                if (!writeScoreJson(scoreJson, score, { { 0.0, 0 } }, { info }, ops, {})) { std::fprintf(stderr, "cannot write %s\n", scoreJson.c_str()); return 1; }
+                std::printf("score: %s\n", scoreJson.c_str());
+            }
+            if (!loopsDir.empty() && !planOnly && !renderLoops(p, score, info, loopsDir, rate)) { std::fprintf(stderr, "cannot write the loops\n"); return 1; }
+        }
     } else {
         // A set (PLAN 7.7): its tracks on the decks, levelled one by one, mixed.
         SetInfo si;
@@ -227,12 +417,50 @@ int main(int argc, char** argv)
             if (!writeMidiFile(flattenSet(setScore), midi.c_str(), "Umbra", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
             std::printf("MIDI: %s\n", midi.c_str());
         }
+        // The set's cues: every track, every swap, every loop.
+        std::vector<std::pair<double, int>> where;
+        std::vector<TrackInfo> infos;
+        for (size_t i = 0; i < si.tracks.size(); ++i) {
+            const SetTrack& t = si.tracks[i];
+            const std::string name = "T" + std::to_string(i + 1);
+            cues.push_back({ tm.secondsAt(t.start), name + " " + t.info.style + " " + kFormNames[static_cast<int>(t.info.form)] + " " + t.info.camelot });
+            if (i > 0) cues.push_back({ tm.secondsAt(t.swapIn), "Swap to " + name });
+            for (size_t r = 0; r < t.info.reductions.size(); ++r) cues.push_back({ tm.secondsAt(t.start + 4.0 * t.info.reductions[r]), name + " kick out" });
+            where.push_back({ t.start, t.deck });
+            infos.push_back(t.info);
+        }
+        for (const SetLoop& l : si.loops) cues.push_back({ tm.secondsAt(l.start), "Loop of T" + std::to_string(l.from + 1) });
+        std::sort(cues.begin(), cues.end(), [](const CueAt& a, const CueAt& b) { return a.seconds < b.seconds; });
+        infoTitle = std::string("Umbra set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
+        if (!scoreJson.empty()) {
+            std::vector<std::pair<BlockOp, int>> ops;   // every deck's operations, with the deck
+            for (int d = 0; d < kDecks; ++d) for (const BlockOp& o : setScore.decks[d].ops) ops.push_back({ o, d });
+            std::stable_sort(ops.begin(), ops.end(), [](const auto& a, const auto& b) { return a.first.beat < b.first.beat; });
+            // Every deck's notes, with the deck (the loops on deck C are another track's).
+            Score all = flattenSet(setScore);
+            all.notes.clear();
+            std::vector<std::pair<NoteEvent, int>> tagged;
+            for (int d = 0; d < kDecks; ++d) for (const NoteEvent& n : setScore.decks[d].notes) tagged.push_back({ n, d });
+            std::stable_sort(tagged.begin(), tagged.end(), [](const auto& a, const auto& b) { return a.first.beat < b.first.beat; });
+            std::vector<int> decksOf;
+            for (const auto& t : tagged) { all.notes.push_back(t.first); decksOf.push_back(t.second); }
+            if (!writeScoreJson(scoreJson, all, where, infos, ops, decksOf)) { std::fprintf(stderr, "cannot write %s\n", scoreJson.c_str()); return 1; }
+            std::printf("score: %s\n", scoreJson.c_str());
+        }
     }
     if (planOnly) return 0;   // --plan: what was composed, nothing rendered
     WavWriter wav;
     if (!out.empty() && !wav.open(out.c_str(), static_cast<int>(rate), 2, WavFormat::Pcm24)) {
         std::fprintf(stderr, "cannot write %s\n", out.c_str());
         return 1;
+    }
+    if (!out.empty()) {
+        // The cues (PLAN 9): in the WAV (a cue chunk with labels) and as JSON beside it; the tags.
+        for (const CueAt& c : cues) wav.addCue(static_cast<uint64_t>(std::llround(c.seconds * rate)), c.label);
+        if (!infoTitle.empty()) wav.setInfo("INAM", infoTitle);
+        wav.setInfo("ISFT", std::string("Umbra ") + UMB_VERSION);
+        wav.setInfo("IGNR", "Techno");
+        if (!cues.empty() && !writeCuesJson(out + ".cues.json", cues, rate)) { std::fprintf(stderr, "cannot write the cues\n"); return 1; }
     }
     std::vector<std::unique_ptr<WavWriter>> stemFiles;
     std::vector<std::vector<float>> stemBufL, stemBufR;
