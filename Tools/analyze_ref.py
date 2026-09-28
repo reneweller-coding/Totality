@@ -26,6 +26,8 @@ For every recording of Tools/ref_sets.txt (fetched by Tools/fetch_refs.py) and f
               correlation of the bars' continuous onset profiles (3 bands x 16 steps) at the best of those lags (the
               binary states flip where a quiet sixteenth sits near the threshold, 27.09.2026); and the micro-change rate, the
               median change of the band energies from one bar to the next, in dB
+  density     per band the onset profile's mean off the quarters: low where the kick carries the band alone, the
+              mids filled by the percussion (offq_*, 28.09.2026)
   meso        the ups and downs of the phrase level (28.09.2026): low, mid and high band energies smoothed over eight
               bars, their range over the body (10th to 90th percentile) and the brightness's, and the moves -- where some
               band's eight-bar level differs by 2 dB from the eight bars before -- per 64 bars (meso_movement)
@@ -292,6 +294,12 @@ def measure(path, bpm_hint=None, balance_start=None):
             best.append(float(np.median(c)) if c else float("nan"))
         sim = max(best)
 
+    # Density (28.09.2026, Phase 12): the onset profile's mean off the quarters, per band -- 1 where every sixteenth is as
+    # busy as the busiest, low where the quarters (the kick) carry the band alone. A track of kick and hats reads low in
+    # the mids; claps, rims, toms, shakers and stabs fill them. Level-free, so a render and a record compare. (A share of
+    # sixteenths over a threshold saturated at 0.8 to 1.0 in both: rumble, halls and noise keep the flux up.)
+    busy = {"offq_" + name: round(float(np.mean([prof[name][i] for i in range(16) if i % 4 != 0])), 3) for name, _, _ in BANDS3}
+
     # Hypnosis: eight onset states per sixteenth over the body.
     s0, s1 = (bars // 5) * 16, (bars - bars // 5) * 16
     onoff = [binarize(series[name])[s0:s1] for name, _, _ in BANDS3]
@@ -364,6 +372,7 @@ def measure(path, bpm_hint=None, balance_start=None):
         "bar_similarity": round(sim, 3),
         "micro_change_db": round(micro, 2),
         **meso,
+        **busy,
     }
 
 
@@ -407,7 +416,7 @@ PRINT = [("bpm", "BPM", "{:6.2f}"), ("kick_hz", "kick", "{:5.1f}"), ("sub_share"
          ("loop_entropy", "hloop", "{:5.2f}"), ("bars_repeated", "rep", "{:4.2f}"), ("loop_repeated", "lrep", "{:4.2f}"),
          ("bar_similarity", "sim", "{:4.2f}"),
          ("micro_change_db", "micro", "{:4.2f}"), ("meso_mid_db", "mMid", "{:4.1f}"), ("meso_bright_db", "mBri", "{:4.1f}"),
-         ("meso_moves_64", "moves", "{:4.1f}")]
+         ("meso_moves_64", "moves", "{:4.1f}"), ("offq_mid", "oMid", "{:4.2f}"), ("offq_high", "oHi", "{:4.2f}")]
 
 
 def row_text(name, r):
@@ -423,7 +432,7 @@ def row_text(name, r):
 
 
 def header():
-    widths = [6, 5, 5, 6, 5, 5, 5, 4, 4, 4, 5, 4, 4, 4, 4, 4, 4, 5]
+    widths = [6, 5, 5, 6, 5, 5, 5, 4, 4, 4, 5, 4, 4, 4, 4, 4, 4, 5, 4, 4]
     return f"{'':44s} " + " ".join(f"{h:>{w}s}" for (_, h, _), w in zip(PRINT, widths))
 
 
@@ -465,7 +474,8 @@ def main():
     keys = ["bpm", "kick_hz", "sub_share", "low_share", "high_share", "centroid", "width_db", "low_side_db", "correlation",
             "lufs", "loud20", "lra", "true_peak", "entropy_rate", "pir", "loop_entropy", "bars_repeated", "loop_repeated", "bar_similarity",
             "micro_change_db",
-            "boundary_spacing_on_8", "meso_low_db", "meso_mid_db", "meso_high_db", "meso_bright_db", "meso_moves_64"]
+            "boundary_spacing_on_8", "meso_low_db", "meso_mid_db", "meso_high_db", "meso_bright_db", "meso_moves_64",
+            "offq_low", "offq_mid", "offq_high"]
     profiles = {}
     for prof in sorted({r["profile"] for r in rows}) + ["all"]:
         sub = [r for r in rows if prof == "all" or r["profile"] == prof]

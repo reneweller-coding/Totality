@@ -506,7 +506,7 @@ void ArrangePage::timerCallback()
     if (t >= 0 && t < static_cast<int>(p.tracks.size())) {
         const TrackInfo& i = p.tracks[static_cast<size_t>(t)].info;
         text << (p.isSet ? "Track " + juce::String(t + 1) + " of " + juce::String(static_cast<int>(p.tracks.size())) + ": " : juce::String("The track: "))
-             << juce::String(i.style) << ", " << kFormNames[static_cast<int>(i.form)] << ", " << juce::String(i.bpm, 1) << " BPM, "
+             << juce::String(i.style) << " " << kArchetypeNames[i.archetype] << ", " << kFormNames[static_cast<int>(i.form)] << ", " << juce::String(i.bpm, 1) << " BPM, "
              << kKeyNames[i.key] << " " << kScaleNames[i.scale] << " (" << juce::String(i.camelot) << "), " << i.bars << " bars, "
              << (i.subOwns ? "the sub owns the low end" : "the rumble owns the low end") << ", bar similarity " << juce::String(i.similarity, 2);
         // Phase 8: the figure and where the waves land.
@@ -713,6 +713,13 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
     full_.onClick = [this] { toggleFullScreen(); };
     body_.addChildComponent(full_);
     setWantsKeyboardFocus(true);
+    // Phase 17: rate the track under the playhead; with Favor Ratings (the Set page) the ratings weigh what comes.
+    like_.setTooltip("I like this track: its kind and its sounds come more often (with Favor Ratings)");
+    dislike_.setTooltip("Not this one: its kind and its sounds come less often (with Favor Ratings)");
+    like_.onClick = [this] { rated_ = proc_.rate(1); ratedTicks_ = 60; };
+    dislike_.onClick = [this] { rated_ = proc_.rate(-1); ratedTicks_ = 60; };
+    body_.addAndMakeVisible(like_);
+    body_.addAndMakeVisible(dislike_);
     rerolls_.setColour(juce::Label::textColourId, kDim);
     status_.setColour(juce::Label::textColourId, kInk);
     body_.addAndMakeVisible(rerolls_);
@@ -827,6 +834,9 @@ void TotalityEditor::layoutBody()
     if (full_.isVisible()) full_.setBounds(third.removeFromRight(100));
     checkUpdates_.setBounds(third.removeFromRight(120));
     update_.setBounds(third.removeFromRight(190));
+    like_.setBounds(third.removeFromLeft(26).reduced(1));
+    dislike_.setBounds(third.removeFromLeft(26).reduced(1));
+    third.removeFromLeft(6);
     status_.setBounds(third.removeFromLeft(third.getWidth() * 3 / 5));
     rerolls_.setBounds(third);
     area.removeFromTop(4);
@@ -837,7 +847,8 @@ void TotalityEditor::layoutBody()
 
 void TotalityEditor::timerCallback()
 {
-    status_.setText(proc_.status(), juce::dontSendNotification);
+    if (ratedTicks_ > 0) --ratedTicks_;
+    status_.setText(ratedTicks_ > 0 && rated_.isNotEmpty() ? rated_ : proc_.status(), juce::dontSendNotification);
     rerolls_.setText(proc_.curationText(), juce::dontSendNotification);
     {
         const juce::String v = checkUpdates_.getToggleState() ? updates_->newer() : juce::String();

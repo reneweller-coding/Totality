@@ -50,7 +50,8 @@ VOICES = {"kick": ["kick"], "hats": ["perc1", "perc2", "perc3", "perc4", "perc10
           "perc8", "perc9", "perc11"], "bass": ["bass", "sub", "acid"], "ping/chord": ["ping", "chord"]}
 AUDIO_KEYS = [("centroid", "Schwerpunkt Hz", "{:.0f}"), ("width_db", "Breite S/M dB", "{:.1f}"), ("lufs", "LUFS", "{:.1f}"),
               ("loud20", "lautestes 20 s", "{:.1f}"), ("lra", "LRA", "{:.1f}"), ("bar_similarity", "Takt-Ähnl.", "{:.3f}"),
-              ("micro_change_db", "Mikro dB", "{:.2f}"), ("sub_share", "Sub-Anteil", "{:.2f}")]
+              ("micro_change_db", "Mikro dB", "{:.2f}"), ("sub_share", "Sub-Anteil", "{:.2f}"),
+              ("offq_mid", "Mitten neben den Vierteln", "{:.2f}")]
 
 
 # ------------------------------------------------------------------------------------------------ symbolic measures

@@ -118,6 +118,8 @@ TotalityProcessor::TotalityProcessor()
     for (auto& c : ccMap_) c = -1;
     ccMap_[1] = s.id(Module::Perform, 0, perform::Filter);
     ccMap_[11] = s.id(Module::Perform, 0, perform::Throw);
+    // Phase 17: the player's ratings, if any.
+    ratings_ = loadRatings(ratingsFile().getFullPathName().toStdString());
     startTimerHz(10);
     compose();
 }
@@ -140,15 +142,24 @@ Playing TotalityProcessor::composeNow(ParamStore& snapshot)
         cur = curation_;
         seed = seed_;
     }
+    // Phase 17: the ratings' weights while compose.use_ratings is on.
+    Preferences prefs;
+    const bool useRatings = snapshot.getBool(snapshot.id(Module::Compose, 0, compose::UseRatings));
+    if (useRatings) {
+        std::lock_guard<std::mutex> g(lock_);
+        prefs = preferencesFrom(ratings_);
+    }
     Playing out;
     const double setMinutes = snapshot.get(snapshot.id(Module::Set, 0, set::Minutes));
     if (setMinutes > 0.0) {
         out.isSet = true;
-        out.set = composeSet(snapshot, seed, setMinutes, &cur, &out.setInfo);
+        out.set = composeSet(snapshot, seed, setMinutes, &cur, &out.setInfo, useRatings ? &prefs : nullptr);
         for (const SetTrack& t : out.setInfo.tracks) out.tracks.push_back({ t.start, t.swapIn, t.end, t.deck, t.info });
     } else {
         TrackInfo info;
-        out.set.decks[0] = composeTrack(snapshot, seed, TrackRequest{}, &cur, std::string(), &info);
+        TrackRequest req;
+        req.prefs = useRatings ? &prefs : nullptr;
+        out.set.decks[0] = composeTrack(snapshot, seed, req, &cur, std::string(), &info);
         out.set.lengthBeats = out.set.decks[0].lengthBeats;
         out.tracks.push_back({ 0.0, 0.0, out.set.lengthBeats, 0, info });
     }
@@ -597,6 +608,13 @@ void TotalityProcessor::exportTo(const juce::File& wav, int extras)
         w.setInfo("ISFT", std::string("Totality ") + TOT_VERSION);
         w.setInfo("IGNR", "Techno");
         ok = ok && writeCuesJson(wav.getFullPathName().toStdString() + ".cues.json", cues, kRate);
+        // Phase 16: the WAV as a rekordbox collection (its grid and its cues) beside it.
+        {
+            const int key = p.isSet ? (p.setInfo.tracks.empty() ? -1 : p.setInfo.tracks[0].info.key) : (p.tracks.empty() ? -1 : p.tracks[0].info.key);
+            const std::string wavPath = wav.getFullPathName().toStdString();
+            ok = ok && writeRekordboxXml(wavPath + ".rekordbox.xml", wavPath, title, key >= 0 ? std::string(kKeyNames[key]) + "m" : std::string(),
+                                         cues, tm, p.set.lengthBeats, kRate);
+        }
         // The stems: a WAV per element, their sum the mix before the master (Engine.h).
         const bool stems = (extras & kStems) != 0;
         std::vector<std::vector<float>> stemBuf(stems ? 2 * Engine::kStems : 0, std::vector<float>(512));
@@ -651,6 +669,34 @@ void TotalityProcessor::writeRecording()
     w.write(L.data(), R.data(), static_cast<int>(L.size()));
     w.close();
     recordTarget_ = 0;
+}
+
+juce::File TotalityProcessor::ratingsFile()
+{
+    return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Totality").getChildFile("ratings.tsv");
+}
+
+juce::String TotalityProcessor::rate(int value)
+{
+    const int t = trackAt(positionBeats());
+    Rating r;
+    juce::String what;
+    {
+        std::lock_guard<std::mutex> g(lock_);
+        if (t < 0 || t >= static_cast<int>(current_.tracks.size())) return {};
+        const TrackInfo& info = current_.tracks[static_cast<size_t>(t)].info;
+        r.value = value > 0 ? 1 : -1;
+        r.archetype = info.archetype;
+        r.style = info.style;
+        r.seed = current_.isSet ? current_.setInfo.tracks[static_cast<size_t>(t)].seed : seed_;
+        r.groups = info.groups;
+        ratings_.push_back(r);
+        what << (r.value > 0 ? "liked: " : "not liked: ") << (current_.isSet ? "T" + juce::String(t + 1) + " " : juce::String())
+             << juce::String(info.style) << " " << kArchetypeNames[info.archetype] << " (" << static_cast<int>(ratings_.size()) << " ratings)";
+    }
+    ratingsFile().getParentDirectory().createDirectory();
+    appendRating(ratingsFile().getFullPathName().toStdString(), r);
+    return what;
 }
 
 juce::String TotalityProcessor::status() const

@@ -43,6 +43,7 @@
 #include "tot/Params.h"
 #include "tot/Score.h"
 #include "tot/SetFile.h"
+#include "tot/Preferences.h"
 #include "tot/compose/Style.h"
 #include <cstdint>
 #include <string>
@@ -54,6 +55,25 @@ namespace tot {
 /** @brief The three forms (PLAN 7.2). */
 enum class FormType : int { Arc = 0, Peak, Endless, Count };
 extern const char* const kFormNames[];   ///< "Arc", "Peak", "Endless"
+
+/**
+ * @brief Phase 13: what kind of track it is, beside its style -- a set changes between them as the records of a night do.
+ *
+ * - **Tool**: the DJ's functional track -- the groove and its automation, no melodic figure (a bass riff where the sub
+ *   owns the low end, half the time), no stab or 303; Arc rather than Peak.
+ * - **Roller**: the hypnotic percussive roller -- toms, shaker, rim and ghosts in polymeters, no ping, stab or 303; the
+ *   percussion 3 dB up; Endless and Arc.
+ * - **Stab**: the chord's stabs as the figure, the echo throws more often.
+ * - **Acid**: the 303 line as the figure, its filter waves deeper; Peak more often.
+ * - **Bleep**: the ping as the figure, 2 dB up, its waves deeper.
+ * - **Dub Chord**: the dub chord with its chain as the figure -- more echo, texture and drone, the throws most often.
+ * - **Tribal**: toms, claps, rims and shaker, fills, the percussion 4 dB up; Peak, no melodic figure.
+ *
+ * Each style draws them with its own weights (Hypnotic: Roller and Bleep; Ostgut: Stab and Tool; Dub: Dub Chord; Raw:
+ * Acid and Tribal); compose.archetype fixes one, a set draws each track's so that none follows its own kind.
+ */
+enum class Archetype : int { Tool = 0, Roller, Stab, Acid, Bleep, DubChord, Tribal, Count };
+extern const char* const kArchetypeNames[];   ///< "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal"
 
 /** @brief What a set asks of a track; every field left at its default is the composer's (or the knobs') to decide. */
 struct TrackRequest {
@@ -69,6 +89,8 @@ struct TrackRequest {
     /** Phase 11: a set's first track -- nothing under its intro -- brings its hats, its rolling hat and its perc at bars
      *  3, 5 and 9 instead of 9, 17 and 25, and opens the hats' bus over eight bars: the set is under way in 16 bars. */
     bool quickStart = false;
+    int archetype = -1;                      ///< Phase 13: -1 drawn (compose.archetype, else by the style), else an Archetype
+    const Preferences* prefs = nullptr;      ///< Phase 17: the ratings' weights (the player's, when compose.use_ratings), or null
 };
 
 /** @brief What a track tells the set, the cues and the displays. */
@@ -91,6 +113,8 @@ struct TrackInfo {
     float similarity = 0.0f;     ///< the corridor over the body: bar similarity
     float micro = 0.0f;          ///< micro-change, dB
     float density = 0.0f;        ///< onsets per bar
+    int archetype = 0;           ///< Phase 13: its Archetype
+    std::vector<std::string> groups;   ///< Phase 17: the groups of the presets it plays (what a rating remembers)
     int figure = -1;             ///< Phase 8: the signature voice (LayerId), -1: none
     int figureBar = -1;          ///< where it enters
     int figureBars = 1;          ///< its motif's length in bars
@@ -113,6 +137,12 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req =
 
 /** @brief The names of a track's units, in stream order. */
 extern const char* const kUnitNames[9];
+
+/**
+ * @brief Phase 13: an archetype for a track of profile @p prof, drawn with @p u (0..1) by the style's weights; never
+ *        @p exclude (a set's last track's kind, -1: none).
+ */
+Archetype pickArchetype(const StyleProfile& prof, float u, int exclude = -1, const Preferences* prefs = nullptr);
 
 /** @brief The Camelot label of a minor key on pitch class @p key ("8A" for A). */
 std::string camelotOf(int key);

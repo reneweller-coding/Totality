@@ -16,6 +16,7 @@
 namespace tot {
 
 const char* const kFormNames[] = { "Arc", "Peak", "Endless" };
+const char* const kArchetypeNames[] = { "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal" };
 const char* const kUnitNames[9] = { "form", "harmony", "rack", "layers", "blocks", "events", "hands", "sounds", "figure" };
 
 std::string camelotOf(int key)
@@ -75,6 +76,82 @@ int groupOf(LayerId id)
     }
 }
 
+/** @brief Phase 13: the knobs an archetype's mix moves (archetypeMix); every track sets them. */
+const char* const kArchetypeKeys[] = { "mix.perc_level", "chord.level", "chord.dub_send", "dub.feedback", "acid.level", "ping.level" };
+
+/** @brief Phase 13: the archetypes' weights per style (Hypnotic, Ostgut, Dub, Raw): Tool, Roller, Stab, Acid, Bleep, Dub
+ *         Chord, Tribal. */
+const float kArchetypeW[4][static_cast<int>(Archetype::Count)] = {
+    { 0.15f, 0.35f, 0.05f, 0.05f, 0.25f, 0.10f, 0.05f },
+    { 0.25f, 0.15f, 0.25f, 0.15f, 0.05f, 0.05f, 0.10f },
+    { 0.15f, 0.10f, 0.05f, 0.00f, 0.05f, 0.65f, 0.00f },
+    { 0.15f, 0.10f, 0.05f, 0.30f, 0.10f, 0.00f, 0.30f },
+};
+
+void setChance(StyleProfile& prof, LayerId id, float chance)
+{
+    for (LayerChance& c : prof.pool) if (c.layer == id) { c.chance = chance; return; }
+    prof.pool.push_back(LayerChance{ id, chance });
+}
+
+/** @brief Phase 13: the profile as the archetype plays it -- its pool, cycles, events and forms (Composer.h). */
+void applyArchetype(StyleProfile& prof, Archetype a)
+{
+    switch (a) {
+    case Archetype::Tool:
+        for (LayerId id : { LayerId::Chord, LayerId::Acid, LayerId::Ping }) setChance(prof, id, 0.0f);
+        prof.arcWeight *= 2.0f;
+        prof.peakWeight *= 0.5f;
+        break;
+    case Archetype::Roller:
+        for (LayerId id : { LayerId::TomConga, LayerId::Shaker }) setChance(prof, id, 1.0f);
+        setChance(prof, LayerId::Rim, 0.9f);
+        setChance(prof, LayerId::GhostKick, 0.9f);
+        for (LayerId id : { LayerId::Chord, LayerId::Acid, LayerId::Ping }) setChance(prof, id, 0.0f);
+        prof.polymeterChance = 1.0f;
+        prof.endlessWeight = std::max(prof.endlessWeight, 0.3f) * 1.5f;
+        prof.peakWeight *= 0.5f;
+        break;
+    case Archetype::Stab:
+        setChance(prof, LayerId::Chord, 1.0f);
+        setChance(prof, LayerId::Acid, 0.0f);
+        setChance(prof, LayerId::Ping, 0.2f);
+        prof.throwShare = std::min(0.9f, prof.throwShare + 0.2f);
+        break;
+    case Archetype::Acid:
+        setChance(prof, LayerId::Acid, 1.0f);
+        setChance(prof, LayerId::Chord, 0.1f);
+        setChance(prof, LayerId::Ping, 0.2f);
+        prof.peakWeight *= 1.3f;
+        break;
+    case Archetype::Bleep:
+        setChance(prof, LayerId::Ping, 1.0f);
+        setChance(prof, LayerId::Chord, 0.1f);
+        setChance(prof, LayerId::Acid, 0.0f);
+        break;
+    case Archetype::DubChord:
+        setChance(prof, LayerId::Chord, 1.0f);
+        setChance(prof, LayerId::Texture, 0.8f);
+        setChance(prof, LayerId::Drone, 0.5f);
+        setChance(prof, LayerId::Acid, 0.0f);
+        prof.throwShare = std::min(0.95f, prof.throwShare + 0.3f);
+        prof.eventRate = std::min(0.6f, prof.eventRate + 0.1f);
+        break;
+    case Archetype::Tribal:
+        for (LayerId id : { LayerId::TomConga, LayerId::ClapA, LayerId::Rim }) setChance(prof, id, 1.0f);
+        setChance(prof, LayerId::Shaker, 0.8f);
+        setChance(prof, LayerId::Chord, 0.0f);
+        setChance(prof, LayerId::Ping, 0.2f);
+        setChance(prof, LayerId::Acid, 0.1f);
+        prof.fillChance = std::min(0.6f, prof.fillChance + 0.2f);
+        prof.peakWeight *= 2.0f;
+        prof.densityCap += 1;
+        break;
+    default:
+        break;
+    }
+}
+
 /** @brief The knobs the composer sets on every track (its KnobSets): every synth's sound, every knob a style names. */
 const std::vector<int>& managedKnobs(const ParamStore& p)
 {
@@ -89,6 +166,8 @@ const std::vector<int>& managedKnobs(const ParamStore& p)
             for (const SoundValue& v : prof.recipe) if (const int id = p.find(v.key); id >= 0) s.insert(id);
             for (const SoundRange& r : prof.sounds) if (const int id = p.find(r.key); id >= 0) s.insert(id);
         }
+        // Phase 13: what the archetypes lift (archetypeMix).
+        for (const char* key : kArchetypeKeys) if (const int id = p.find(key); id >= 0) s.insert(id);
         return std::vector<int>(s.begin(), s.end());
     }();
     return ids;
@@ -222,10 +301,31 @@ void limitHarmony(RackPlan& plan, const std::vector<LayerId>& pool, bool subOwns
 
 } // namespace
 
+Archetype pickArchetype(const StyleProfile& prof, float u, int exclude, const Preferences* prefs)
+{
+    constexpr int n = static_cast<int>(Archetype::Count);
+    float w[n] = {};
+    for (int s = 0; s < 4; ++s) for (int k = 0; k < n; ++k) w[k] += prof.styleMix[s] * kArchetypeW[s][k];
+    if (prefs != nullptr) for (int k = 0; k < n; ++k) w[k] *= prefs->archetype[k];   // (Phase 17: the ratings)
+    if (exclude >= 0 && exclude < n) w[exclude] = 0.0f;
+    float sum = 0.0f;
+    for (float x : w) sum += x;
+    if (sum <= 0.0f) return exclude == 0 ? Archetype::Roller : Archetype::Tool;
+    float x = u * sum;
+    int last = 0;
+    for (int k = 0; k < n; ++k) {
+        if (w[k] <= 0.0f) continue;
+        last = k;
+        if (x < w[k]) return static_cast<Archetype>(k);
+        x -= w[k];
+    }
+    return static_cast<Archetype>(last);
+}
+
 Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, const Curation* cur, const std::string& unit,
                    TrackInfo* info)
 {
-    const StyleProfile prof = req.profile != nullptr ? *req.profile : profileOf(p);
+    StyleProfile prof = req.profile != nullptr ? *req.profile : profileOf(p);   // (the archetype changes it, below)
     // Phase 11: every stream of a track is the seed's in its style -- one seed in two styles gave two tracks with the same
     // form, the same landings and the same breaks at the same bars (28.09.2026).
     const uint64_t tseed = mixSeed(seed, hashName(prof.name));
@@ -257,7 +357,12 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // ---------------------------------------------------------------- form
     Rng fr = streamOf(tseed, cur, unit, "form");
     const float uForm = fr.uniform(), uIntro = fr.uniform(), uRed = fr.uniform(), uRedLen = fr.uniform(), uRedPos = fr.uniform();
-    const float uRumble = fr.uniform(), uEdges = fr.uniform();
+    const float uRumble = fr.uniform(), uEdges = fr.uniform(), uArch = fr.uniform();
+    // Phase 13: the archetype -- the set's, the knob's, else drawn by the style -- and the profile as it plays it.
+    const int archKnob = p.getInt(pid(Module::Compose, 0, compose::Archetype));
+    const Archetype arch = req.archetype >= 0 ? static_cast<Archetype>(req.archetype)
+                         : archKnob > 0 ? static_cast<Archetype>(archKnob - 1) : pickArchetype(prof, uArch, -1, req.prefs);
+    applyArchetype(prof, arch);
     FormType form = req.form;
     if (form == FormType::Count) {
         const int knob = p.getInt(pid(Module::Compose, 0, compose::Form));
@@ -326,29 +431,22 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         keep.push_back(c.chance + 0.25f * v);
     }
     if (subOwns) { pool.push_back(LayerId::Bass); keep.push_back(10.0f); }
-    // Phase 8: the figure, the voice the track is remembered by, by the style's mix -- the ping for Hypnotic, the stab and
-    // the bass for Ostgut, the chord for Dub, the 303 for Raw (the bass only where the sub owns the low end; a
-    // monotonic track has no melodic figure). It is in the pool whatever the pool drew, and stays when it must shrink.
-    // The voice is the layers' choice; its motif is the stream "figure"'s (makeFigure), so a reroll of the figure draws
-    // another motif for the same voice.
+    // Phase 8: the figure, the voice the track is remembered by -- since Phase 13 the archetype's: the chord's stabs (Stab,
+    // Dub Chord), the 303 (Acid), the ping (Bleep), a bass riff for half the Tools where the sub owns the low end, none for
+    // the Roller and the Tribal track, whose identity is their percussion (a monotonic track has no melodic figure). It is
+    // in the pool whatever the pool drew, and stays when it must shrink. The voice is the layers' choice; its motif is the
+    // stream "figure"'s (makeFigure), so a reroll of the figure draws another motif for the same voice.
     LayerId figure = LayerId::Count;
     {
-        static const float kFigure[4][4] = { { 0.55f, 0.20f, 0.10f, 0.15f },    // Hypnotic: ping, chord, 303, bass
-                                             { 0.15f, 0.45f, 0.20f, 0.20f },    // Ostgut
-                                             { 0.10f, 0.85f, 0.00f, 0.05f },    // Dub
-                                             { 0.25f, 0.10f, 0.45f, 0.20f } };  // Raw
-        static const LayerId kVoices[4] = { LayerId::Ping, LayerId::Chord, LayerId::Acid, LayerId::Bass };
-        float w[4] = {};
-        for (int s = 0; s < 4; ++s) for (int v = 0; v < 4; ++v) w[v] += prof.styleMix[s] * kFigure[s][v];
-        if (!subOwns) w[3] = 0.0f;
-        if (monotonic) w[0] = w[1] = w[2] = 0.0f;
-        float u = lr.uniform() * (w[0] + w[1] + w[2] + w[3]);
-        for (int v = 0; v < 4; ++v) {
-            if (w[v] <= 0.0f) continue;
-            figure = kVoices[v];
-            if (u < w[v]) break;
-            u -= w[v];
+        const float u = lr.uniform();
+        switch (arch) {
+        case Archetype::Tool: figure = subOwns && u < 0.5f ? LayerId::Bass : LayerId::Count; break;
+        case Archetype::Stab: case Archetype::DubChord: figure = LayerId::Chord; break;
+        case Archetype::Acid: figure = LayerId::Acid; break;
+        case Archetype::Bleep: figure = LayerId::Ping; break;
+        default: figure = LayerId::Count; break;
         }
+        if (monotonic && figure != LayerId::Bass) figure = LayerId::Count;
         if (figure != LayerId::Count) {
             const auto it = std::find(pool.begin(), pool.end(), figure);
             if (it == pool.end()) { pool.push_back(figure); keep.push_back(10.0f); }
@@ -451,7 +549,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             const int instances = m == Module::Perc ? kPercLanes : 1;
             for (int inst = 0; inst < instances; ++inst) {
                 const int role = m == Module::Perc ? p.getInt(pid(Module::Perc, inst, perc::Role)) : -1;
-                const int index = pickPreset(m, prof.styleMix, role, sr);
+                const int index = pickPreset(m, prof.styleMix, role, sr, req.prefs);
                 if (index < 0) continue;
                 for (const auto& [k, v] : presetKnobs(m, inst, factoryPresets(m)[static_cast<size_t>(index)])) knobs.value[pid(m, inst, k)] = v;
                 picks.push_back(SoundPick{ 0.0, static_cast<int>(m), inst, index });
@@ -475,6 +573,23 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // Every knob any style sets, set by every track -- its own value or the knob as it stands -- so no track on a deck
     // plays on with the last one's, and the knobs always show the whole of what plays.
     for (const int id : managedKnobs(p)) knobs.value.emplace(id, p.get(id));
+    // Phase 13: the archetype's mix -- the Roller's and the Tribal track's percussion up, the figure's voice up.
+    {
+        const auto lift = [&](const char* key, float by) {
+            const int id = p.find(key);
+            if (id >= 0) knobs.value[id] = std::clamp(knobs.get(id) + by, p.desc(id).minValue, p.desc(id).maxValue);
+        };
+        switch (arch) {
+        case Archetype::Tool: lift("mix.perc_level", 1.0f); break;
+        case Archetype::Roller: lift("mix.perc_level", 3.0f); break;
+        case Archetype::Tribal: lift("mix.perc_level", 4.0f); break;
+        case Archetype::Stab: lift("chord.level", 2.0f); break;
+        case Archetype::DubChord: lift("chord.level", 1.0f); lift("chord.dub_send", 0.2f); lift("dub.feedback", 0.05f); break;
+        case Archetype::Acid: lift("acid.level", 2.0f); break;
+        case Archetype::Bleep: lift("ping.level", 2.0f); break;
+        default: break;
+        }
+    }
     // Phase 8: the chord as the figure sounds for longer than the old stabs (1.3 an eighth long a bar, 0.65 beats): its
     // level comes down by 70 % of the difference, so the widest voice of the mix does not widen and fill it (28.09.2026:
     // the Dub tracks measured -2 to -3 dB S/M against the references' -8).
@@ -554,18 +669,20 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // and Dub in all three. Per style (Hypnotic, Ostgut, Dub, Raw): a wave of 64 bars rather than 32, a breath in a
     // wave, the depth of the figure's waves and of the hats', the down before a landing (the centre, the kick and the
     // claps, the figure, the kick for a bar, none) and what breathes (the figure, the low end, the percussion, the tops).
-    static const float kLong[4] = { 0.4f, 0.5f, 0.7f, 0.3f }, kBreath[4] = { 0.7f, 0.5f, 0.6f, 0.5f };
-    static const float kFigDepth[4] = { 0.6f, 1.0f, 1.0f, 0.5f }, kHatDepth[4] = { 1.4f, 1.0f, 1.0f, 1.7f };
+    static const float kLong[4] = { 0.4f, 0.35f, 0.5f, 0.3f }, kBreath[4] = { 0.7f, 0.5f, 0.6f, 0.5f };   // (Phase 13: Ostgut and Dub land more often)
+    static const float kFigDepth[4] = { 0.6f, 1.0f, 1.0f, 0.5f }, kHatDepth[4] = { 1.15f, 1.0f, 1.0f, 1.7f };
     static const float kDown[4][5] = { { 0.30f, 0.15f, 0.25f, 0.15f, 0.15f }, { 0.30f, 0.20f, 0.20f, 0.15f, 0.15f },
-                                       { 0.35f, 0.10f, 0.30f, 0.10f, 0.15f }, { 0.10f, 0.35f, 0.15f, 0.25f, 0.15f } };
+                                       { 0.35f, 0.10f, 0.30f, 0.10f, 0.15f }, { 0.10f, 0.25f, 0.15f, 0.15f, 0.35f } };   // (Raw: its loudness flat)
     static const float kBreathOf[4][4] = { { 0.20f, 0.40f, 0.10f, 0.30f }, { 0.30f, 0.30f, 0.25f, 0.15f },
-                                           { 0.35f, 0.35f, 0.20f, 0.10f }, { 0.15f, 0.15f, 0.20f, 0.50f } };
+                                           { 0.35f, 0.35f, 0.20f, 0.10f }, { 0.15f, 0.05f, 0.20f, 0.60f } };
     const auto mixOf = [&](const float* table) {
         float v = 0.0f;
         for (int s = 0; s < 4; ++s) v += prof.styleMix[s] * table[s];
         return v;
     };
-    const float figDepth = mixOf(kFigDepth), hatDepth = mixOf(kHatDepth);
+    // (Phase 13: the Acid, Bleep and Stab tracks ride their figure harder.)
+    const float figDepth = mixOf(kFigDepth) * (arch == Archetype::Acid ? 1.4f : arch == Archetype::Bleep || arch == Archetype::Stab ? 1.2f : 1.0f);
+    const float hatDepth = mixOf(kHatDepth);
     {
         const float p64 = mixOf(kLong), pBreath = mixOf(kBreath);
         float downW[5] = {}, breathW[4] = {};
@@ -1231,6 +1348,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         t.similarity = cs.similarity;
         t.micro = cs.micro;
         t.density = cs.density;
+        t.archetype = static_cast<int>(arch);
+        for (const SoundPick& k : picks) {
+            const std::vector<SoundPreset>& list = factoryPresets(static_cast<Module>(k.module));
+            if (k.preset >= 0 && k.preset < static_cast<int>(list.size())) t.groups.push_back(list[static_cast<size_t>(k.preset)].group);
+        }
         if (figure != LayerId::Count && has(figure)) {
             t.figure = L(figure);
             t.figureBar = entryBar[L(figure)];

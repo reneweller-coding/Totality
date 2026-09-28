@@ -6,6 +6,7 @@
 #include "tot/Engine.h"
 #include "tot/WavWriter.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -68,6 +69,78 @@ bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, doub
                      static_cast<long long>(std::llround(cues[i].seconds * rate)), jsonEscape(cues[i].label).c_str(),
                      i + 1 < cues.size() ? "," : "");
     std::fprintf(f, "]\n");
+    return std::fclose(f) == 0;
+}
+
+namespace {
+
+std::string xmlEscape(const std::string& s)
+{
+    std::string o;
+    for (char c : s) {
+        switch (c) {
+        case '&': o += "&amp;"; break;
+        case '<': o += "&lt;"; break;
+        case '>': o += "&gt;"; break;
+        case '"': o += "&quot;"; break;
+        default: o += c; break;
+        }
+    }
+    return o;
+}
+
+/** @brief A file URI as rekordbox writes them: file://localhost/G:/dir/name.wav, reserved characters percent-encoded. */
+std::string fileUri(const std::string& path)
+{
+    std::error_code ec;
+    std::string p = std::filesystem::absolute(std::filesystem::path(path), ec).generic_string();
+    if (ec) p = path;
+    std::string o = "file://localhost/";
+    for (unsigned char c : p) {
+        if (std::isalnum(c) || c == '/' || c == ':' || c == '-' || c == '_' || c == '.' || c == '~') o += static_cast<char>(c);
+        else {
+            char buf[4];
+            std::snprintf(buf, sizeof(buf), "%%%02X", c);
+            o += buf;
+        }
+    }
+    return o;
+}
+
+} // namespace
+
+bool writeRekordboxXml(const std::string& path, const std::string& wavPath, const std::string& title, const std::string& tonality,
+                       const std::vector<CueAt>& cues, const TempoMap& tempo, double lengthBeats, double rate)
+{
+    FILE* f = std::fopen(path.c_str(), "wb");
+    if (f == nullptr) return false;
+    const double seconds = tempo.secondsAt(lengthBeats);
+    std::fprintf(f, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DJ_PLAYLISTS Version=\"1.0.0\">\n");
+    std::fprintf(f, "  <PRODUCT Name=\"Totality\" Version=\"%s\" Company=\"Rene Weller\"/>\n", TOT_VERSION);
+    std::fprintf(f, "  <COLLECTION Entries=\"1\">\n");
+    std::fprintf(f, "    <TRACK TrackID=\"1\" Name=\"%s\" Artist=\"Totality\" Genre=\"Techno\" Kind=\"WAV File\" TotalTime=\"%d\" "
+                    "AverageBpm=\"%.2f\" SampleRate=\"%d\" BitRate=\"%d\" Tonality=\"%s\" Location=\"%s\">\n",
+                 xmlEscape(title).c_str(), static_cast<int>(std::lround(seconds)), tempo.bpmAt(0.0), static_cast<int>(rate),
+                 static_cast<int>(rate * 2 * 24 / 1000), xmlEscape(tonality).c_str(), xmlEscape(fileUri(wavPath)).c_str());
+    // The beat grid: a TEMPO from every bar whose tempo differs from the last one written (a set's ramps bar by bar).
+    double last = -1.0;
+    for (double beat = 0.0; beat < lengthBeats - 1e-9; beat += 4.0) {
+        const double a = tempo.secondsAt(beat), b = tempo.secondsAt(std::min(lengthBeats, beat + 4.0));
+        const double beats = std::min(4.0, lengthBeats - beat);
+        const double bpm = b > a ? beats * 60.0 / (b - a) : tempo.bpmAt(beat);
+        if (std::fabs(bpm - last) < 0.005) continue;
+        std::fprintf(f, "      <TEMPO Inizio=\"%.3f\" Bpm=\"%.2f\" Metro=\"4/4\" Battito=\"1\"/>\n", a, bpm);
+        last = bpm;
+    }
+    // Every cue a memory cue; the first eight also hot cues A to H.
+    for (const CueAt& c : cues)
+        std::fprintf(f, "      <POSITION_MARK Name=\"%s\" Type=\"0\" Start=\"%.3f\" Num=\"-1\"/>\n", xmlEscape(c.label).c_str(), c.seconds);
+    for (size_t i = 0; i < cues.size() && i < 8; ++i)
+        std::fprintf(f, "      <POSITION_MARK Name=\"%s\" Type=\"0\" Start=\"%.3f\" Num=\"%zu\" Red=\"40\" Green=\"226\" Blue=\"20\"/>\n",
+                     xmlEscape(cues[i].label).c_str(), cues[i].seconds, i);
+    std::fprintf(f, "    </TRACK>\n  </COLLECTION>\n  <PLAYLISTS>\n    <NODE Type=\"0\" Name=\"ROOT\" Count=\"1\">\n"
+                    "      <NODE Name=\"Totality\" Type=\"1\" KeyType=\"0\" Entries=\"1\">\n        <TRACK Key=\"1\"/>\n"
+                    "      </NODE>\n    </NODE>\n  </PLAYLISTS>\n</DJ_PLAYLISTS>\n");
     return std::fclose(f) == 0;
 }
 

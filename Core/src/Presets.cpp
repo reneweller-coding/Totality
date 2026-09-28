@@ -919,7 +919,7 @@ void applyPreset(ParamStore& params, Module module, int instance, const SoundPre
     for (const auto& e : presetKnobs(module, instance, preset)) params.set(params.id(module, instance, e.first), e.second);
 }
 
-int pickPreset(Module module, const float* styleMix, int role, Rng& rng)
+int pickPreset(Module module, const float* styleMix, int role, Rng& rng, const Preferences* prefs)
 {
     const std::vector<SoundPreset>& list = factoryPresets(module);
     if (list.empty()) return -1;
@@ -931,7 +931,7 @@ int pickPreset(Module module, const float* styleMix, int role, Rng& rng)
         if (role >= 0 && p.roles != 0 && (p.roles & (1u << role)) == 0) continue;
         float fit = 0.0f;
         for (int s = 0; s < 4; ++s) fit += p.styles[s] * styleMix[s];
-        const float w = fit * fit * fit;
+        const float w = fit * fit * fit * (prefs != nullptr ? prefs->group(p.group) : 1.0f);   // (Phase 17: the ratings)
         if (w <= 0.0f) continue;
         groups.push_back({ i, w });
         total += w;

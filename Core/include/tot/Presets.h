@@ -21,6 +21,7 @@
 #pragma once
 #include "tot/Dsp.h"
 #include "tot/Params.h"
+#include "tot/Preferences.h"
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -55,6 +56,6 @@ void applyPreset(ParamStore& params, Module module, int instance, const SoundPre
  *        Raw; weights summing to 1), drawn from @p rng; for a kit lane only among presets made for @p role (-1: any).
  * @return its index in factoryPresets(module), -1 if the engine has none
  */
-int pickPreset(Module module, const float* styleMix, int role, Rng& rng);
+int pickPreset(Module module, const float* styleMix, int role, Rng& rng, const Preferences* prefs = nullptr);
 
 } // namespace tot

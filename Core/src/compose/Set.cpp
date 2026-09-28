@@ -140,7 +140,7 @@ float setTempo(Dramaturgy d, float t)
     }
 }
 
-SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* cur, SetInfo* info)
+SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* cur, SetInfo* info, const Preferences* prefs)
 {
     const Dramaturgy dram = static_cast<Dramaturgy>(p.getInt(p.id(Module::Set, 0, set::Dramaturgy)));
     const bool wander = p.getInt(p.id(Module::Set, 0, set::Journey)) != 0;
@@ -188,6 +188,11 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         req.energy = e;
         req.mixable = true;
         req.quickStart = i == 0;   // (Phase 11: nothing lies under the first one's intro)
+        // Phase 13: the track's archetype by its style, never its predecessor's (compose.archetype fixes one for all).
+        const float ua = sr.uniform();
+        if (p.getInt(p.id(Module::Compose, 0, compose::Archetype)) == 0)
+            req.archetype = static_cast<int>(pickArchetype(prof, ua, i > 0 ? si.tracks.back().info.archetype : -1, prefs));
+        req.prefs = prefs;
         SetTrack st;
         st.energy = e;
         st.seed = trackSeed;

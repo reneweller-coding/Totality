@@ -35,6 +35,7 @@ add_library(TotalityCore STATIC
     src/Cue.cpp
     src/Export.cpp
     src/Presets.cpp
+    src/Preferences.cpp
 )
 target_include_directories(TotalityCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 option(TOT_PROFILE "Time the engine's stages (Profile.h); tot_render prints them" OFF)

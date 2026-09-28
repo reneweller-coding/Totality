@@ -61,9 +61,13 @@ hypnotic records do. Every block has exactly one operation (add, remove, swap) o
 come in on the block's 8- or 16-bar line instead --, every change falls on a 4-bar line and a return on a 16-bar line;
 nothing tonal plays in the first and last 32 bars, so two tracks can be mixed without a clash.
 
-Every track has a figure: the voice it is remembered by -- a ping motif for Hypnotic, a chord stab or a bass riff for
-Ostgut, the dub chord for Dub, a 303 line for Raw. It plays the same one or two bars from its entry (the body's second
-block; a bass riff with the body) to the end and changes only through its filters. Between the operations the body
+Every track is of a kind as well as of a style, its archetype: a Tool (the groove and its automation), a Roller (toms,
+shaker and rim in polymeters, the percussion up front), a Stab, an Acid or a Bleep track (the chord's stabs, a 303
+line or the ping as its figure), a Dub Chord track (the chord with its echo chain) or a Tribal track (toms, claps and
+rims, fills, a kick-out). Each style draws them with its own weights -- Hypnotic mostly Rollers and Bleeps, Ostgut
+Stabs and Tools, Dub its Dub Chords, Raw Acid and Tribal tracks --; Archetype fixes one, and a set never plays two of a
+kind in a row. The archetypes with a melodic figure play it the same one or two bars from its entry (the body's
+second block; a bass riff with the body) to the end, and it changes only through its filters. Between the operations the body
 runs in waves of 32 or 64 bars: the figure's filters and the hats' bus open towards a wave's end and fall back after
 it; two to four bars before that landing something drops away -- the centre of the mix, the kick and the claps, the
 figure -- so that the landing lands; in the middle of a wave one element (the figure, the bass or the rumble, the
@@ -85,8 +89,9 @@ the DJ's hand works the channel on the 16-bar lines -- a low kill before the lin
 taken out and faded back in, a dip of the mids, the high-pass filter drawn up into the line, an echo throw on the last
 beat -- never where the track itself already drops something.
 
-The set knobs: its length, the dramaturgy (Warm-up, Peak, Closing, Sunday, Flat -- the arc of tempo and energy over
-its length), whether the styles wander with the energy or stay, how often the third deck borrows (Live Loops), how
+The set knobs: its length (up to twelve hours), the dramaturgy (Warm-up, Peak, Closing, Sunday, Flat, Cruise -- hard
+from the start, a long cruise, building again at the end -- and Marathon -- a warm-up, two peaks, a long closing: the arc
+of tempo and energy over its length), whether the styles wander with the energy or stay, how often the third deck borrows (Live Loops), how
 often a break comes from the mixer's effects, the blend's length, a track's own time (Track Time) and how busy the
 DJ's hand is (DJ Hand). The mixer's effects are one send per deck into a tape echo and a long hall, which the set's
 breaks throw into and the Perform page's throw uses.
@@ -122,6 +127,11 @@ there.
 The row of rerolls acts on the track under the playhead; each part of it is drawn from a stream of its own, so a
 reroll of the blocks keeps the harmony and the sounds, a reroll of the hands (the automation) keeps every note, and a
 reroll of the figure draws another motif for the same voice.
+
+The + and - beside the status line rate the track under the playhead. The ratings are kept in
+Documents/Totality/ratings.tsv with the track's archetype and the groups of its presets; with Favor Ratings (the Set
+page) the composer draws the archetypes and preset groups you liked more often and the ones you did not seldom --
+none is ever ruled out. A saved set does not carry the ratings: it plays back the same only with Favor Ratings off.
 
 == Patterns and the Eclipse | | 2 ==
 
@@ -192,7 +202,9 @@ The perform controls are live only: an export or tot_render plays the track as i
 
 The export renders what plays at 48 kHz: a 24-bit WAV with cue markers (the bass's entry, the kick-outs and returns,
 the outro; in a set every track, swap and loop) and the same cues as JSON beside it, for DJ software that does not
-read the WAV's markers; the MIDI file with the tempo map and a channel per part; on request the stems -- a WAV per
+read the WAV's markers, and a rekordbox collection beside it (<name>.wav.rekordbox.xml: the beat grid, following a
+set's tempo ramps bar by bar, every cue a memory cue and the first eight hot cues; import it in rekordbox under
+Preferences > Advanced > rekordbox xml); the MIDI file with the tempo map and a channel per part; on request the stems -- a WAV per
 element, whose sum is exactly the mix before the master -- and the DJ loops of a track: 4 and 8 bars of its loudest
 block, seamless, as the mix and as kick, hats and percussion alone. An .totset file holds the seed, the lengths, the
 rerolls and every changed knob.

@@ -29,6 +29,16 @@ std::vector<CueAt> setCues(const SetInfo& si, const TempoMap& tempo);
 bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, double rate);
 
 /**
+ * @brief Phase 16: the WAV as a rekordbox collection (rekordbox's "rekordbox xml" import, Preferences > Advanced): one
+ *        TRACK with its beat grid -- a TEMPO from every bar whose tempo changed, so a set's ramps are followed bar by
+ *        bar -- every cue as a memory cue and the first eight also as hot cues, in a playlist "Totality". Written to the
+ *        published format (DJ_PLAYLISTS 1.0.0); not tried in rekordbox itself.
+ * @param tonality the key as rekordbox shows it ("Am", "F#m"), or empty
+ */
+bool writeRekordboxXml(const std::string& path, const std::string& wavPath, const std::string& title, const std::string& tonality,
+                       const std::vector<CueAt>& cues, const TempoMap& tempo, double lengthBeats, double rate);
+
+/**
  * @brief DJ loops (PLAN 9): 4 and 8 bars of a track's loudest block, seamless -- the bars rendered three times over, the
  *        last pass kept, so its start carries the tails of the pass before it as a loop played round does -- as the mix
  *        and as kick, hats and perc alone (the stems), into @p dir as loop4.wav, loop4_kick.wav, ... loop8_perc.wav.

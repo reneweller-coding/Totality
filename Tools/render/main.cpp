@@ -227,6 +227,9 @@ int main(int argc, char** argv)
     auto t1 = t0;
     std::vector<CueAt> cues;
     std::string infoTitle;
+    std::string tonality;          // Phase 16: the key for rekordbox ("Am"), a set's first track's
+    TempoMap cueTempo;
+    double cueLength = 0.0;
     if (setMinutes <= 0.0) {
         TrackRequest req;
         if (bpm > 0.0f) req.bpm = bpm;           // what the command line names, the composer does not draw
@@ -258,7 +261,7 @@ int main(int argc, char** argv)
                 std::printf("kick-out bars %d .. %d, return bar %d\n", info.reductions[r] + 1, info.returns[r], info.returns[r] + 1);
             std::string layers;
             for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
-            std::printf("layers in order: %s\n", layers.c_str());
+            std::printf("archetype: %s; layers in order: %s\n", kArchetypeNames[info.archetype], layers.c_str());
             // Phase 8: the figure, the waves' landings and what moves between the operations.
             if (info.figure >= 0)
                 std::printf("figure: the %s, a motif of %d bar%s, from bar %d\n", kLayerNames[info.figure], info.figureBars,
@@ -329,6 +332,9 @@ int main(int argc, char** argv)
         }
         if (!study) {
             trackCues(info, 0.0, score.tempo, std::string(), cues);
+            tonality = std::string(kKeyNames[info.key]) + "m";
+            cueTempo = score.tempo;
+            cueLength = score.lengthBeats;
             infoTitle = "Totality " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " "
                       + info.camelot + " seed " + std::to_string(seed);
             if (!scoreJson.empty()) {
@@ -357,8 +363,8 @@ int main(int argc, char** argv)
         const TempoMap& tm = setScore.decks[0].tempo;
         for (size_t i = 0; i < si.tracks.size(); ++i) {
             const SetTrack& t = si.tracks[i];
-            std::printf("  T%-2zu deck %c  %6.2f min  %5.1f BPM  %-10s %-7s %-2s %-16s %-4s  %d bars, swap in %6.2f, energy %.2f\n",
-                        i + 1, 'A' + t.deck, tm.secondsAt(t.start) / 60.0, t.info.bpm, t.info.style.c_str(),
+            std::printf("  T%-2zu deck %c  %6.2f min  %5.1f BPM  %-10s %-9s %-7s %-2s %-16s %-4s  %d bars, swap in %6.2f, energy %.2f\n",
+                        i + 1, 'A' + t.deck, tm.secondsAt(t.start) / 60.0, t.info.bpm, t.info.style.c_str(), kArchetypeNames[t.info.archetype],
                         kFormNames[static_cast<int>(t.info.form)], kKeyNames[t.info.key], kScaleNames[t.info.scale],
                         t.info.camelot.c_str(), t.info.bars, tm.secondsAt(t.swapIn) / 60.0, t.energy);
         }
@@ -407,6 +413,9 @@ int main(int argc, char** argv)
         std::vector<TrackInfo> infos;
         for (const SetTrack& t : si.tracks) { where.push_back({ t.start, t.deck }); infos.push_back(t.info); }
         cues = setCues(si, tm);
+        tonality = si.tracks.empty() ? std::string() : std::string(kKeyNames[si.tracks[0].info.key]) + "m";
+        cueTempo = tm;
+        cueLength = setScore.lengthBeats;
         infoTitle = std::string("Totality set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
         if (!scoreJson.empty()) {
             std::vector<std::pair<BlockOp, int>> ops;   // every deck's operations, with the deck
@@ -437,6 +446,11 @@ int main(int argc, char** argv)
         wav.setInfo("ISFT", std::string("Totality ") + TOT_VERSION);
         wav.setInfo("IGNR", "Techno");
         if (!cues.empty() && !writeCuesJson(out + ".cues.json", cues, rate)) { std::fprintf(stderr, "cannot write the cues\n"); return 1; }
+        // Phase 16: the WAV as a rekordbox collection, its grid and its cues.
+        if (cueLength > 0.0 && !writeRekordboxXml(out + ".rekordbox.xml", out, infoTitle, tonality, cues, cueTempo, cueLength, rate)) {
+            std::fprintf(stderr, "cannot write the rekordbox xml\n");
+            return 1;
+        }
     }
     std::vector<std::unique_ptr<WavWriter>> stemFiles;
     std::vector<std::vector<float>> stemBufL, stemBufR;

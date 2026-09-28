@@ -9,6 +9,7 @@
 #include "tot/Clock.h"
 #include "tot/Cue.h"
 #include "tot/Engine.h"
+#include "tot/Export.h"
 #include "tot/Leveler.h"
 #include "tot/Loudness.h"
 #include "tot/Midi.h"
@@ -788,7 +789,8 @@ void testGroove()
 void testFigure()
 {
     section("the figure and the waves (Phase 8)");
-    int tracks = 0, figures = 0, steady = 0, motifs = 0, bodies = 0, wavy = 0, moving = 0;
+    int tracks = 0, figures = 0, wanting = 0, steady = 0, motifs = 0, bodies = 0, wavy = 0, moving = 0;
+    std::set<int> kinds;
     std::string first;
     const auto partOf = [](int layer) {
         switch (static_cast<LayerId>(layer)) {
@@ -823,11 +825,18 @@ void testFigure()
                 if (info.landings.size() >= 2) ++wavy;
                 else if (first.empty()) first = who + fmt(": %zu landings", info.landings.size());
             }
+            // Phase 13: the archetypes with a melodic figure have one (the Roller, the Tribal track and most Tools
+            // are their percussion).
+            const Archetype arch = static_cast<Archetype>(info.archetype);
+            kinds.insert(info.archetype);
+            const bool wants = !info.monotonic && (arch == Archetype::Stab || arch == Archetype::DubChord || arch == Archetype::Acid
+                                                   || arch == Archetype::Bleep);
+            wanting += wants ? 1 : 0;
             if (info.figure < 0) {
-                if (!info.monotonic && first.empty()) first = who + ": no figure";
+                if (wants && first.empty()) first = who + fmt(": no figure in a %s track", kArchetypeNames[info.archetype]);
                 continue;
             }
-            ++figures;
+            figures += wants ? 1 : 0;
             if (static_cast<LayerId>(info.figure) == LayerId::Ping) continue;   // a cycle against the bar
             // The motif: a bar's onsets equal those of the bar a motif before, in most bars where both play.
             ++motifs;
@@ -843,13 +852,15 @@ void testFigure()
             else if (first.empty()) first = who + fmt(": the %s's motif repeats in %d of %d bars", kLayerNames[info.figure], same, compared);
         }
     }
-    check(figures >= tracks * 9 / 10, "a signature voice in (almost) every track", fmt("%d of %d", figures, tracks));
+    check(figures == wanting && kinds.size() >= 5, "a signature voice in every track whose archetype has one; five archetypes or more",
+          fmt("%d of %d, %zu archetypes in %d tracks", figures, wanting, kinds.size(), tracks));
     check(steady == motifs, "the figure plays its motif, the same in its bars", steady == motifs ? fmt("%d motifs", motifs) : first);
     check(wavy == bodies && moving == tracks, "the body runs in waves, something moves between the operations",
           wavy == bodies && moving == tracks ? fmt("%d bodies", bodies) : first);
-    // The figure drawn again: another motif for the same voice; the kick stays.
+    // The figure drawn again: another motif for the same voice; the kick stays. (A Stab track: it has one.)
     auto p = std::make_unique<ParamStore>();
     p->set(p->find("compose.style"), 1.0f);
+    p->parseText("compose.archetype=Stab");
     TrackInfo ia, ib;
     const Score a = composeTrack(*p, 42, TrackRequest{}, nullptr, std::string(), &ia);
     Curation fig;
@@ -1594,11 +1605,89 @@ void testMix()
     const float cruiseMid = cruise[cruise.size() / 2], marathonTop3 = *std::max_element(marathon.begin(), marathon.end());
     const bool cruiseOk = cruise.front() > cruiseMid && cruise.back() > cruiseMid && cruiseTop <= 136.0f;
     const bool marathonOk = marathon.front() < marathonTop3 && marathon.back() < marathonTop3 && marathonTop <= 136.0f;
+    // Phase 13: no track of a set follows its own kind.
+    bool alternate = true;
+    for (size_t i = 1; i < a.tracks.size(); ++i) alternate = alternate && a.tracks[i].info.archetype != a.tracks[i - 1].info.archetype;
+    check(alternate, "no track of a set follows its own archetype", fmt("%zu tracks", a.tracks.size()));
     bool quick = false;
     for (const BlockOp& o : s.decks[0].ops) quick = quick || (o.kind == OpKind::Add && o.beat == 48.0);   // the first perc at bar 13
     check(cruiseOk && marathonOk && quick, "Cruise and Marathon keep their arcs under 136 BPM; the first track under way in 16 bars",
           fmt("cruise %.2f / %.2f / %.2f, marathon %.2f .. %.2f .. %.2f, %zu tracks", cruise.front(), cruiseMid, cruise.back(),
               marathon.front(), marathonTop3, marathon.back(), c.tracks.size()));
+}
+
+/** Phase 17: ratings make the liked kinds and sounds come more often, the disliked seldom, never all or nothing. */
+void testRatings()
+{
+    section("ratings (Phase 17)");
+    std::vector<Rating> ratings;
+    for (int i = 0; i < 8; ++i) { Rating r; r.value = 1; r.archetype = static_cast<int>(Archetype::Tribal); r.groups = { "Berlin 909" }; ratings.push_back(r); }
+    for (int i = 0; i < 2; ++i) { Rating r; r.value = -1; r.archetype = static_cast<int>(Archetype::Acid); ratings.push_back(r); }
+    const Preferences prefs = preferencesFrom(ratings);
+    const bool factors = std::fabs(prefs.archetype[static_cast<int>(Archetype::Tribal)] - 3.0f) < 1e-6f
+                      && std::fabs(prefs.archetype[static_cast<int>(Archetype::Acid)] - 0.5f) < 1e-6f
+                      && std::fabs(prefs.group("Berlin 909") - 3.0f) < 1e-6f && prefs.group("Dub Sine") == 1.0f;
+    // The Raw profile's archetypes drawn over the unit interval, with and without the ratings.
+    const StyleProfile& raw = styleProfile(Style::RawPeak);
+    int tribal = 0, tribalRated = 0, acid = 0, acidRated = 0;
+    for (int i = 0; i < 1000; ++i) {
+        const float u = (static_cast<float>(i) + 0.5f) / 1000.0f;
+        tribal += pickArchetype(raw, u) == Archetype::Tribal ? 1 : 0;
+        tribalRated += pickArchetype(raw, u, -1, &prefs) == Archetype::Tribal ? 1 : 0;
+        acid += pickArchetype(raw, u) == Archetype::Acid ? 1 : 0;
+        acidRated += pickArchetype(raw, u, -1, &prefs) == Archetype::Acid ? 1 : 0;
+    }
+    // The kick's presets: the liked group comes more often.
+    Rng a, b;
+    a.seed(5);
+    b.seed(5);
+    int group = 0, groupRated = 0;
+    const std::vector<SoundPreset>& kicks = factoryPresets(Module::Kick);
+    for (int i = 0; i < 400; ++i) {
+        group += std::string(kicks[static_cast<size_t>(pickPreset(Module::Kick, raw.styleMix, -1, a))].group) == "Berlin 909" ? 1 : 0;
+        groupRated += std::string(kicks[static_cast<size_t>(pickPreset(Module::Kick, raw.styleMix, -1, b, &prefs))].group) == "Berlin 909" ? 1 : 0;
+    }
+    // The file: appended and read back.
+    const std::string path = "tot_selftest_ratings.tsv";
+    std::remove(path.c_str());
+    for (const Rating& r : ratings) appendRating(path, r);
+    const std::vector<Rating> back = loadRatings(path);
+    std::remove(path.c_str());
+    const bool file = back.size() == ratings.size() && back[0].groups.size() == 1 && back[0].groups[0] == "Berlin 909" && back.back().value == -1;
+    check(factors && tribalRated > tribal && acidRated < acid && acidRated > 0 && groupRated > group && file,
+          "the ratings weigh the archetypes and preset groups, none ruled out; they are kept in a file",
+          fmt("Tribal %d -> %d, Acid %d -> %d of 1000; group %d -> %d of 400", tribal, tribalRated, acid, acidRated, group, groupRated));
+}
+
+/** Phase 16: a set as a rekordbox collection -- its grid following the ramps, every cue a memory cue, eight hot cues. */
+void testRekordbox()
+{
+    section("rekordbox xml (Phase 16)");
+    auto p = std::make_unique<ParamStore>();
+    SetInfo si;
+    const SetScore s = composeSet(*p, 7, 12.0, nullptr, &si);
+    const TempoMap& tm = s.decks[0].tempo;
+    const std::vector<CueAt> cues = setCues(si, tm);
+    const std::string path = "tot_selftest.rekordbox.xml";
+    const bool written = writeRekordboxXml(path, "C:/Music/Totality set & more.wav", "Totality \"set\"", "Am", cues, tm, s.lengthBeats, 48000.0);
+    std::string xml;
+    if (FILE* f = std::fopen(path.c_str(), "rb")) {
+        char buf[4096];
+        for (size_t n; (n = std::fread(buf, 1, sizeof(buf), f)) > 0;) xml.append(buf, n);
+        std::fclose(f);
+    }
+    std::remove(path.c_str());
+    const auto count = [&](const char* what) {
+        size_t n = 0;
+        for (size_t at = xml.find(what); at != std::string::npos; at = xml.find(what, at + 1)) ++n;
+        return n;
+    };
+    const size_t marks = count("<POSITION_MARK"), tempos = count("<TEMPO ");
+    const bool escaped = xml.find("Totality &quot;set&quot;") != std::string::npos && xml.find("set%20%26%20more.wav") != std::string::npos;
+    check(written && marks == cues.size() + std::min<size_t>(8, cues.size()) && tempos > 2 && escaped
+              && xml.find("</DJ_PLAYLISTS>") != std::string::npos,
+          "a set as a rekordbox collection: its ramps bar by bar, every cue a memory cue, eight hot cues, names escaped",
+          fmt("%zu cues, %zu marks, %zu tempos", cues.size(), marks, tempos));
 }
 
 /** Blocks of 1, 37 and 512 samples give the same bits (the raster and the event splits, Engine.h). */
@@ -1981,6 +2070,8 @@ const TestSection kSections[] = {
     { "testCuration", testCuration },
     { "testSet", testSet },
     { "testMix", testMix },
+    { "testRekordbox", testRekordbox },
+    { "testRatings", testRatings },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },

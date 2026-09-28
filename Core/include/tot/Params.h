@@ -89,6 +89,10 @@ enum : int { Bpm, Key, Scale, Style, Minutes,
              DubShare,       ///< Dok. 8.0's axis: the profile pulled towards Dub, 0..1
              HypnoticShare,  ///< and towards Hypnotic, 0..1
              PickSounds,     ///< the composer chooses a factory preset per synth and track (Presets.h), else the knobs sound
+             /** Phase 13: Auto (drawn by the style) or one of the track archetypes (Composer.h: Tool, Roller, Stab,
+              *  Acid, Bleep, Dub Chord, Tribal). */
+             Archetype,
+             UseRatings,     ///< Phase 17: the player's ratings weigh the archetypes and preset groups (Preferences.h)
              Count };
 }
 /**

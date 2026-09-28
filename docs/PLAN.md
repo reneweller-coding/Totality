@@ -22,6 +22,49 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Abend: Phasen 12 bis 17**, derselbe Auftrag ("alles, was ohne mein Feedback geht").
+
+- **Phase 12, Dichte gegen die Referenzen** (`analyze_ref.py`, `offq_*`): das Onset-Profil eines Bandes im Mittel neben
+  den Vierteln -- niedrig, wo die Kick das Band allein trägt. Es trennt, was das Hören am Set von Phase 9 fand: die
+  ersten acht Minuten 0,78 (vorher) gegen 0,86 (Phase 10); die Referenzen: Hypnotic 0,91, Ostgut 0,75, Dub 0,92,
+  Raw 0,81 (Median). Im Kalibrierbericht als Spalte "Mitten neben den Vierteln". Ein erster Versuch (Anteil der
+  Sechzehntel über einer Schwelle) sättigte bei 0,8 bis 1,0 in Aufnahme wie Render und flog wieder heraus. Befund: bei
+  24 Tracks liegen die Hälfte unter dem Band -- unsere Mitten sind trockener, die Kick trägt sie mehr als in den
+  Platten. Mehr Percussion-Pegel bewegt das Maß kaum (Raw +8 dB: 0,57 → 0,59); es misst eher, wie gefüllt die Mitten
+  sind (Hall, Echo, Flächen). Nicht blind eingestellt: das ist "Material" und braucht Hören (offen).
+- **Phase 13, Archetypen** (`Composer.h`, `compose.archetype`): Tool, Roller, Stab, Acid, Bleep, Dub Chord, Tribal --
+  eine Art des Tracks neben seinem Stil. Jede ändert Pool, Zyklen, Ereignisse und Formgewichte des Profils, bestimmt
+  die Figur (Stab und Dub Chord den Akkord, Acid die 303, Bleep den Ping, der Tool zur Hälfte einen Bass-Riff, Roller und
+  Tribal keine: ihre Percussion ist ihr Gesicht) und hebt ihre Stimme im Mix (Roller +3 dB Percussion, Tribal +4, Stab
+  und Acid +2 auf die Figur ...). Gewichte je Stil (Hypnotic: Roller 0,35, Bleep 0,25; Ostgut: Stab und Tool je 0,25;
+  Dub: Dub Chord 0,65; Raw: Acid und Tribal je 0,3). Ein Set zieht jedem Track seinen, nie den des Vorgängers
+  (`testMix`); der Test der Figur fordert sie nur, wo der Archetyp eine hat.
+- **Phase 14, Kalibrierung an Mixen:** Discogs verweigert den Abruf, einzelne Indexzeiten gab es nicht; Trackzahl und
+  Länge schon -- Berghain 04 (Ben Klock) 19 Tracks in 70:18, Berghain 06 (Norman Nodge) 19 in 75:06, Fabric 66 (Mix-Dok.)
+  24 in 73 Minuten: 3,0 bis 4,0 Minuten je Track, im Mittel 3,6. `set.track_minutes` steht jetzt auf 3,5 (vorher 3):
+  etwa 17 Tracks die Stunde. Tempo-Drift und Überlagerung sind aus Tracklists nicht zu lesen.
+- **Phase 15, Groove aus den Referenzen: verworfen.** Gemessen: je Schlag von seiner Kick aus die Lage der Hat- und
+  Perc-Onsets auf den drei Sechzehnteln danach, parabolisch interpoliert. Der Swing streute innerhalb eines Stils von
+  −16 bis +29 ms (Hypnotic), −14 bis +13 ms (Raw); ohne Quellentrennung ist das Mikrotiming aus der Mischung nicht zu
+  lesen. Keine Vorlage, das Maß wieder entfernt.
+- **Phase 16, Rekordbox-Export** (`writeRekordboxXml`): neben jeder WAV `<name>.wav.rekordbox.xml` -- eine TRACK mit
+  Beatgrid (ein TEMPO je Takt, dessen Tempo sich änderte: die Rampen eines Sets), jeder Cue ein Memory Cue, die ersten
+  acht Hot Cues, eine Playlist "Totality". Nach dem veröffentlichten Format geschrieben, in Rekordbox nicht probiert
+  (`testRekordbox`).
+- **Phase 17, Bewertungen** (`Preferences.h`): "+" und "−" neben der Statuszeile bewerten den Track unter dem Playhead
+  (`Dokumente/Totality/ratings.tsv`: Wert, Archetyp, Stil, Seed, Preset-Gruppen). Mit "Favor Ratings" (`compose.
+  use_ratings`) multiplizieren die Bewertungen die Gewichte der Archetypen und der Preset-Gruppen (1 ± 0,25 je
+  Bewertung, 0,25 bis 3): acht Likes für Tribal heben seinen Anteil bei Raw von 30 auf 62 %, zwei Dislikes für Acid
+  senken ihn von 30 auf 10 % (`testRatings`). Ein gespeichertes Set trägt die Bewertungen nicht: gleich nur ohne Favor.
+- **Kalibrierung mit 24 Tracks** (sechs je Stil, `docs/eval/kalibrierung-phase13.md`): 34 von 192 der bisherigen Werte
+  außerhalb des 10.-90. Perzentils der Referenzen (bei gleicher Verteilung wären 38 zu erwarten); Wechsel je 64 Takte
+  Hypnotic 4,75 (Referenz 4,5), Ostgut 3,25 (4,6, knapp darunter), Dub 3,0 (3,7), Raw 3,3 (3,3). Nachgestellt: Hypnotics
+  Hat-Welle etwas flacher (die Höhen bewegten sich 12 dB gegen 4,6), Ostgut und Dub öfter Wellen von 32 Takten, Raw
+  weniger Lautheitsabsenkungen vor den Landungen. Offen: Raws Lautheitsspanne (2,7 LU gegen 1,3 -- die Raw-Platten sind
+  sehr flach) und die trockenen Mitten (oben).
+- Nicht gebaut, weil es Hören oder Werkzeuge braucht, die ich nicht habe: der Ableton-Export (.als ohne Ableton nicht
+  zu prüfen), Bandsättigung auf der Percussion (bräche die exakten Stems), der Test auf dem Headset.
+
 **28.09.2026, Abend: Phase 11, Kleinigkeiten mit Wirkung.** Auf "Bitte baue alles ein, was du direkt ohne mein Feedback
 machen kannst" (nach meiner Liste von Ideen):
 

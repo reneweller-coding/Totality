@@ -115,7 +115,7 @@ const std::vector<GroupSpec>& layoutOf(tot::Module m)
         { "Motion", F::Motion, { "*amount", "hats_cut", "hats_level", "hat_decay", "perc_cut", "rumble_drive" } },
     };
     static const std::vector<GroupSpec> compose = {
-        { "Track", F::Source, { "~style", "~key", "~scale", "*bpm", "minutes", "~form", "auto" } },
+        { "Track", F::Source, { "~style", "~archetype", "~key", "~scale", "*bpm", "minutes", "~form", "auto" } },
         { "Style Morph", F::Motion, { "~morph_to", "morph", "dub_share", "hypnotic_share" } },
         { "Feel", F::Envelope, { "swing", "humanize", "~low_owner" } },
     };

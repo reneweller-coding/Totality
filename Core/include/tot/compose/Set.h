@@ -116,7 +116,8 @@ struct SetInfo {
  * @param curation rerolls, or null
  * @param info     receives where everything lies, or null
  */
-SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* curation = nullptr, SetInfo* info = nullptr);
+SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* curation = nullptr, SetInfo* info = nullptr,
+                    const Preferences* prefs = nullptr);
 
 /** @brief The energy of dramaturgy @p d at @p t (0..1 of the set). */
 float setEnergy(Dramaturgy d, float t);

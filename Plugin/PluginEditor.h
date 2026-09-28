@@ -210,6 +210,9 @@ private:
     juce::Slider minutes_, setMinutes_;
     juce::Label minutesLabel_, setLabel_;
     juce::TextButton compose_{ "Compose" }, seed_{ "New seed" }, play_{ "Play" }, mute_{ "Mute" };
+    juce::TextButton like_{ "+" }, dislike_{ "-" };   ///< Phase 17: the ratings
+    juce::String rated_;                             ///< what was rated last, shown a while
+    int ratedTicks_ = 0;
     std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> combos_;
     std::vector<std::unique_ptr<juce::SliderParameterAttachment>> sliders_;
     ArrangeView arrange_;

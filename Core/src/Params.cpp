@@ -48,6 +48,8 @@ const ScaleDef kScales[static_cast<int>(Scale::Count)] = {
     { 5, { 0, 3, 5, 7, 10, 0, 0 } },   // minor pentatonic
 };
 
+/** Phase 13: the archetypes (Composer.h), Auto first. */
+const char* const kArchetypeChoiceNames[] = { "Auto", "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal" };
 const ParamDesc kComposeParams[compose::Count] = {
     { "bpm",       "Tempo",     "BPM", 100.0f, 160.0f, 130.0f, Curve::Linear },
     { "key",       "Key",       "",      0.0f,  11.0f,   9.0f, Curve::Choice, kKeyNames },
@@ -64,6 +66,8 @@ const ParamDesc kComposeParams[compose::Count] = {
     { "dub_share", "Dub Share", "",      0.0f,   1.0f,   0.0f, Curve::Linear },
     { "hypnotic_share", "Hypnotic Share", "", 0.0f, 1.0f, 0.0f, Curve::Linear },
     { "pick_sounds", "Composer's Sounds", "", 0.0f, 1.0f, 1.0f, Curve::Toggle },
+    { "archetype", "Archetype", "", 0.0f, 7.0f, 0.0f, Curve::Choice, kArchetypeChoiceNames },
+    { "use_ratings", "Favor Ratings", "", 0.0f, 1.0f, 0.0f, Curve::Toggle },
 };
 
 /**
@@ -372,7 +376,7 @@ const ParamDesc kSetParams[set::Count] = {
     { "fx_breaks",  "FX Breaks",  "", 0.0f, 1.0f, 0.3f, Curve::Linear },
     { "blend",      "Blend",      "", 0.0f, 1.0f, 1.0f, Curve::Choice, kBlendNames },
     { "minutes",    "Set Length", "min", 0.0f, 720.0f, 0.0f, Curve::Linear },
-    { "track_minutes", "Track Time", "min", 2.0f, 6.0f, 3.0f, Curve::Linear },
+    { "track_minutes", "Track Time", "min", 2.0f, 6.0f, 3.5f, Curve::Linear },   // Berghain 04, 06, Fabric 66: 3.0 .. 4.0 min a track
     { "dj_hand",    "DJ Hand",    "", 0.0f, 1.0f, 0.5f, Curve::Linear },
 };
 

@@ -101,6 +101,12 @@ public:
     juce::String curationText() const;               ///< the rerolls, for the panel
     /** @brief The track under @p beat (its index in what plays), -1 if none. In a set, the one that owns the low end. */
     int trackAt(double beat) const;
+    /**
+     * @brief Phase 17: rates the track under the playhead (+1 liked, -1 not) into Documents/Totality/ratings.tsv; the
+     *        ratings weigh the archetypes and preset groups while compose.use_ratings is on (Preferences.h).
+     * @return what was rated, for the panel (empty when nothing plays)
+     */
+    juce::String rate(int value);
 
     // Transport (the standalone's; a host drives its own).
     void setPlaying(bool on) { playing_ = on; }      ///< play or stop (the standalone's transport)
@@ -134,6 +140,7 @@ public:
      */
     void exportTo(const juce::File& wav, int extras);
     juce::String status() const;                     ///< one line for the panel
+    static juce::File ratingsFile();                 ///< Phase 17: Documents/Totality/ratings.tsv
     /**
      * @brief The test mode (TOT_SEED, TOT_PLAY = seconds, TOT_RECORD = a WAV file; TOT_SET = minutes, a set): a fixed
      *        seed, play at once, record what the audio thread renders; recordingDone() when the seconds are full.
@@ -207,6 +214,7 @@ private:
     uint64_t seed_ = 1;
     tot::Curation curation_;
     mutable std::mutex lock_;
+    std::vector<tot::Rating> ratings_;   ///< Phase 17: the player's ratings (lock_)
     std::unique_ptr<Playing> pending_;               ///< composed, waiting to be loaded
     Playing current_;                                ///< what the engine plays
     std::atomic<bool> composing_{ false }, playing_{ false }, exporting_{ false };

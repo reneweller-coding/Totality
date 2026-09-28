@@ -14,14 +14,16 @@ reference tracks. Every track has a figure, the voice it is remembered by -- a p
 303 line --, and its body runs in waves: the figure's filters and the hats open towards a landing, something drops away
 just before it (the centre, the kick and the claps, the figure), and an element breathes out between two landings and
 comes back with a throw. Every part on its own seed stream: form, harmony, rack, layers, blocks, events, hands, sounds,
-figure can be rerolled alone.
+figure can be rerolled alone. Every track is also of an archetype -- Tool, Roller, Stab, Acid, Bleep, Dub Chord, Tribal
+--, drawn by its style or fixed on the Set page; a set never plays two of a kind in a row. The + and - buttons rate the
+track that plays; with Favor Ratings the liked kinds and sounds come more often.
 
 **Sets.** Up to four hours, mixed as one long recomposition on two decks and a third that borrows: five dramaturgies
 of tempo and energy, tracks in neighbouring Camelot keys, about twenty an hour with three minutes of their own each
 (Track Time); blends of 16 or 32 bars led by the EQs -- the highs first, the mids over the last 16 bars -- with the bass
 swapped on a 32-bar line through the isolator; the outgoing track's hats carried on, the next track's figure teased in,
 a percussion loop of the one before layered under; the DJ's hand on the channels between the blends (low kills, high
-swells, mid dips, filter builds, echo throws; DJ Hand); breaks from the mixer's tape echo and hall.
+swells, mid dips, filter builds, echo throws; DJ Hand); breaks from the mixer's tape echo and hall; seven dramaturgies (with Cruise and Marathon), up to twelve hours.
 
 **Sound.** A kick of three engines and a 909 top layer; the rumble, which continues the kick's phase under its hall;
 a sub locked to the kick; twelve kit lanes with the 909's metal oscillators; the ping; a bass synth and a 303 through ten
@@ -40,7 +42,7 @@ tails ring out), a master filter, an echo throw, isolator kills and faders per d
 MIDI controller; the keys C3 to F#3 toggle the mutes. The Patterns page shows the Eclipse: the kick a dark disc, every
 part a ring of beads around it, polymeters precessing, conjunctions lighting the corona.
 
-**Export.** A 24-bit WAV with cue markers and the cues as JSON, MIDI with the tempo map, stems whose sum is exactly the
+**Export.** A 24-bit WAV with cue markers, the cues as JSON and a rekordbox collection (beat grid and cues), MIDI with the tempo map, stems whose sum is exactly the
 mix before the master, seamless 4- and 8-bar DJ loops, `.totset` files; OSC cues for a visualiser while it plays
 (`/tot/beat`, `/tot/bar`, `/tot/block`, `/tot/op`, `/tot/key`).
 
