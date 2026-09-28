@@ -3,13 +3,13 @@
  * @brief The engine: the decks, the DJ mixer, the master.
  * @note The raster and the event splitting follow Ephemeris `Core/src/Engine.cpp` at d047d79 (27.09.2026).
  */
-#include "umb/Engine.h"
-#include "umb/Profile.h"
+#include "tot/Engine.h"
+#include "tot/Profile.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr float kClipCeiling = 0.97f;   ///< where the soft clipper's curve flattens (-0.26 dBFS)
@@ -266,7 +266,7 @@ void Engine::updateCell()
 
 void Engine::mix(float* L, float* R, int n)
 {
-    UMB_PROF_BEGIN(Mixer);
+    TOT_PROF_BEGIN(Mixer);
     for (int i = 0; i < n; ++i) { L[i] = 0.0f; R[i] = 0.0f; sendL_[static_cast<size_t>(i)] = 0.0f; sendR_[static_cast<size_t>(i)] = 0.0f; }
     for (int d = 0; d < kDecks; ++d) {
         if (!playing_[d]) continue;
@@ -364,8 +364,8 @@ void Engine::mix(float* L, float* R, int n)
     }
     if (preL_ != nullptr)
         for (int i = 0; i < n; ++i) { preL_[tapOffset_ + i] = L[i]; preR_[tapOffset_ + i] = R[i]; }
-    UMB_PROF_END(Mixer);
-    UMB_PROF_BEGIN(MasterTone);
+    TOT_PROF_END(Mixer);
+    TOT_PROF_BEGIN(MasterTone);
     // The master: the side under Mono Below goes (PLAN 8.2), the level, the vinyl cut, the clipper, the limiter.
     for (int i = 0; i < n; ++i) {
         const float mid = 0.5f * (L[i] + R[i]);
@@ -394,16 +394,16 @@ void Engine::mix(float* L, float* R, int n)
             for (int c = 0; c < 2; ++c) *chn[c] = cutLp_[c].process(*chn[c] - (1.0f - gr) * h[c]);
         }
     }
-    UMB_PROF_END(MasterTone);
-    UMB_PROF_BEGIN(Clipper);
+    TOT_PROF_END(MasterTone);
+    TOT_PROF_BEGIN(Clipper);
     const float gd = clipDrive_, t = kClipCeiling;
     auto curve = [gd, t](float x) { return t * std::tanh(gd * x / t); };
     for (int i = 0; i < n; ++i) {
         L[i] = clipOs_[0].process(L[i], curve);
         R[i] = clipOs_[1].process(R[i], curve);
     }
-    UMB_PROF_END(Clipper);
-    { UMB_PROF(Limiter); limiter_.process(L, R, n); }
+    TOT_PROF_END(Clipper);
+    { TOT_PROF(Limiter); limiter_.process(L, R, n); }
 }
 
 bool Engine::process(float* L, float* R, int n)
@@ -459,4 +459,4 @@ bool Engine::process(float* L, float* R, int n)
     return sample_ < endSample_;
 }
 
-} // namespace umb
+} // namespace tot

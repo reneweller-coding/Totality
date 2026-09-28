@@ -1,10 +1,10 @@
-# Umbra
+# Totality
 
 A generator for hypnotic Berlin techno: tracks of 32-bar plateaus and whole DJ sets, composed from a seed and
 synthesised in real time -- as a VST3 plugin, a standalone application, a command-line renderer and an app for Meta
 Quest. The sibling of [Noctuary](../AmbientSynth) (ambient), Phosphene (psytrance) and Ephemeris (Berlin School).
 
-![Umbra, the Patterns page](docs/screenshot.png)
+![Totality, the Patterns page](docs/screenshot.png)
 
 **Version 1.0.0 (28.09.2026).** A composer writes tracks in three forms (Arc, Peak, Endless) from four style profiles
 (Hypnotic, Ostgut, Dub, Raw Peak) that morph into each other: one operation per 32-bar block, events on the 8-bar
@@ -12,7 +12,7 @@ lines, automation by two "hands", harmony by the research document's rules, eigh
 hypnosis corridor. A set composer mixes them on two decks as a Berlin DJ would -- five dramaturgies, the tempo drifting
 by at most 1 BPM a track, blends of 16 or 32 bars with a hard bass swap on a 32-bar line through the isolator, live
 loops of the last track on a third deck, breaks from the mixer's effects. Every part is drawn on its own seed stream and
-can be rerolled alone (`.umbset`).
+can be rerolled alone (`.totset`).
 
 The sound: the kick (three engines, a 909 top layer), the rumble that continues the kick's phase under its hall, the
 sub bass locked to the kick, a twelve-lane kit with the 909's metal oscillators, the ping (FM through a low-pass gate),
@@ -27,7 +27,7 @@ What comes out: the WAV with cue markers (and the same cues as JSON), MIDI with 
 the mix, seamless DJ loops, and OSC cues for a visualiser such as Kaleidoscope while it plays. Live, the Perform page is
 a mixer: mutes, a master filter, an echo throw, isolator kills, every control learnable from MIDI.
 
-The manual: [docs/manual/Umbra-Manual.pdf](docs/manual/Umbra-Manual.pdf). The plan, in German, with the state of every
+The manual: [docs/manual/Totality-Manual.pdf](docs/manual/Totality-Manual.pdf). The plan, in German, with the state of every
 phase: [docs/PLAN.md](docs/PLAN.md). The research it rests on: [docs/research](docs/research).
 
 ## Build
@@ -39,21 +39,21 @@ cd build && ctest -C Release
 ```
 
 JUCE comes from `ThirdParty/JUCE`, else from the sibling Phosphene's checkout, else it is fetched (tag 9.0.1).
-`UMB_BUILD_PLUGIN=OFF` builds the core, the renderer and the tests alone. The release (tests, pluginval, manual,
+`TOT_BUILD_PLUGIN=OFF` builds the core, the renderer and the tests alone. The release (tests, pluginval, manual,
 installer): `powershell -ExecutionPolicy Bypass -File Deploy\build_release.ps1`. The Quest app: see
 [Quest/README.md](Quest/README.md).
 
 ## Render
 
 ```
-build/Tools/render/Release/umb_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
-build/Tools/render/Release/umb_render --seed 7 --set "compose.style=Dub" --form peak --out dub.wav
-build/Tools/render/Release/umb_render --seed 2026 --set-minutes 120 --set "set.dramaturgy=Peak" --out set.wav
-build/Tools/render/Release/umb_render --seed 7 --reroll block4 --reroll rack.ch --save-set track.umbset --plan
+build/Tools/render/Release/tot_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
+build/Tools/render/Release/tot_render --seed 7 --set "compose.style=Dub" --form peak --out dub.wav
+build/Tools/render/Release/tot_render --seed 2026 --set-minutes 120 --set "set.dramaturgy=Peak" --out set.wav
+build/Tools/render/Release/tot_render --seed 7 --reroll block4 --reroll rack.ch --save-set track.totset --plan
 ```
 
 A track's tempo, key, scale and low end are drawn from its style (`compose.auto`); `--bpm`, `--low` and `--form` fix
-them. Before it renders, `umb_render` measures the loudest part of every track and sets its level to the style's target;
+them. Before it renders, `tot_render` measures the loudest part of every track and sets its level to the style's target;
 `--bench` skips that and the loudness meter (`--quality quest`: the headset's level), `--plan` renders nothing. The WAV
 carries cue markers (bass in, kick-outs, returns, outro; in a set every track, swap and loop), also written beside it as
 JSON. `--loops dir` writes seamless 4- and 8-bar loops of the loudest block with kick, hats and perc alone; `--stems dir`

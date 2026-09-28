@@ -1,27 +1,27 @@
 /**
  * @file main.cpp
- * @brief umb_render: composes a track from a seed and renders it offline -- the determinism oracle, the MIDI export,
+ * @brief tot_render: composes a track from a seed and renders it offline -- the determinism oracle, the MIDI export,
  *        the stems, the loudness report.
  *
  * @code
- *   umb_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--set "key=value; ..."]
+ *   tot_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--set "key=value; ..."]
  *              [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512] [--bench] [--list]
  * @endcode
  * Without --out nothing is written and the render only measures (the loudness report, the time it took).
  */
-#include "umb/Engine.h"
-#include "umb/Export.h"
-#include "umb/Profile.h"
-#include "umb/Presets.h"
-#include "umb/Leveler.h"
-#include "umb/Loudness.h"
-#include "umb/Midi.h"
-#include "umb/WavWriter.h"
-#include "umb/SetFile.h"
-#include "umb/compose/Composer.h"
-#include "umb/compose/Set.h"
-#include "umb/compose/Study.h"
-#include "umb/pattern/Rack.h"
+#include "tot/Engine.h"
+#include "tot/Export.h"
+#include "tot/Profile.h"
+#include "tot/Presets.h"
+#include "tot/Leveler.h"
+#include "tot/Loudness.h"
+#include "tot/Midi.h"
+#include "tot/WavWriter.h"
+#include "tot/SetFile.h"
+#include "tot/compose/Composer.h"
+#include "tot/compose/Set.h"
+#include "tot/compose/Study.h"
+#include "tot/pattern/Rack.h"
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -32,14 +32,14 @@
 #include <string>
 #include <vector>
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
 void usage()
 {
-    std::printf("umb_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
-                "           [--set \"key=value; ...\"] [--reroll unit] [--save-set f.umbset] [--load-set f.umbset] [--study]\n"
+    std::printf("tot_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
+                "           [--set \"key=value; ...\"] [--reroll unit] [--save-set f.totset] [--load-set f.totset] [--study]\n"
                 "           [--set-minutes M]  (a DJ set of M minutes on two decks)\n"
                 "           [--loops dir] [--score-json f.json] [--decks dir] [--plan]\n"
                 "           [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512]\n"
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
         else if (!std::strcmp(a, "--list")) list = true;
         else if (!std::strcmp(a, "--stats")) stats = true;
         else if (!std::strcmp(a, "--dump-params")) dump = next();
-        else if (!std::strcmp(a, "--version")) { std::printf("Umbra %s\n", UMB_VERSION); return 0; }
+        else if (!std::strcmp(a, "--version")) { std::printf("Totality %s\n", TOT_VERSION); return 0; }
         else if (!std::strcmp(a, "--patterns")) patterns = true;
         else { usage(); return 2; }
     }
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
         engine->prepare(rate, block);
         engine->load(score);
 
-        std::printf("Umbra %s  seed %llu  %.1f BPM  key %s  %s  %.0f bars  %.1f s\n", UMB_VERSION,
+        std::printf("Totality %s  seed %llu  %.1f BPM  key %s  %s  %.0f bars  %.1f s\n", TOT_VERSION,
                     static_cast<unsigned long long>(seed), score.tempo.bpmAt(0.0),
                     kKeyNames[score.keyRoot], (study ? p.getInt(p.id(Module::Compose, 0, compose::LowOwner)) == 1 : info.subOwns) ? "sub owns the low end" : "rumble owns the low end",
                     score.lengthBeats / 4.0, engine->lengthSeconds());
@@ -314,12 +314,12 @@ int main(int argc, char** argv)
             }
         }
         if (!midi.empty()) {
-            if (!writeMidiFile(score, midi.c_str(), "Umbra", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
+            if (!writeMidiFile(score, midi.c_str(), "Totality", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
             std::printf("MIDI: %s\n", midi.c_str());
         }
         if (!study) {
             trackCues(info, 0.0, score.tempo, std::string(), cues);
-            infoTitle = "Umbra " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " "
+            infoTitle = "Totality " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " "
                       + info.camelot + " seed " + std::to_string(seed);
             if (!scoreJson.empty()) {
                 std::vector<std::pair<BlockOp, int>> ops;
@@ -341,7 +341,7 @@ int main(int argc, char** argv)
         if (quest) engine->setQuality(Engine::Quality::Quest);
         engine->prepare(rate, block);
         engine->loadSet(setScore);
-        std::printf("Umbra %s  set of seed %llu, %s, %zu tracks, %zu live loops, %zu breaks, %.1f min\n", UMB_VERSION,
+        std::printf("Totality %s  set of seed %llu, %s, %zu tracks, %zu live loops, %zu breaks, %.1f min\n", TOT_VERSION,
                     static_cast<unsigned long long>(seed), kDramaturgyNames[static_cast<int>(si.dramaturgy)], si.tracks.size(),
                     si.loops.size(), si.breaks.size(), engine->lengthSeconds() / 60.0);
         const TempoMap& tm = setScore.decks[0].tempo;
@@ -359,7 +359,7 @@ int main(int argc, char** argv)
         for (const LevelReading& r : levels)
             std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB\n", ++k, r.measured, r.target, r.trim);
         if (!midi.empty()) {
-            if (!writeMidiFile(flattenSet(setScore), midi.c_str(), "Umbra", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
+            if (!writeMidiFile(flattenSet(setScore), midi.c_str(), "Totality", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
             std::printf("MIDI: %s\n", midi.c_str());
         }
         // The set's cues: every track, every swap, every loop.
@@ -367,7 +367,7 @@ int main(int argc, char** argv)
         std::vector<TrackInfo> infos;
         for (const SetTrack& t : si.tracks) { where.push_back({ t.start, t.deck }); infos.push_back(t.info); }
         cues = setCues(si, tm);
-        infoTitle = std::string("Umbra set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
+        infoTitle = std::string("Totality set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
         if (!scoreJson.empty()) {
             std::vector<std::pair<BlockOp, int>> ops;   // every deck's operations, with the deck
             for (int d = 0; d < kDecks; ++d) for (const BlockOp& o : setScore.decks[d].ops) ops.push_back({ o, d });
@@ -394,7 +394,7 @@ int main(int argc, char** argv)
         // The cues (PLAN 9): in the WAV (a cue chunk with labels) and as JSON beside it; the tags.
         for (const CueAt& c : cues) wav.addCue(static_cast<uint64_t>(std::llround(c.seconds * rate)), c.label);
         if (!infoTitle.empty()) wav.setInfo("INAM", infoTitle);
-        wav.setInfo("ISFT", std::string("Umbra ") + UMB_VERSION);
+        wav.setInfo("ISFT", std::string("Totality ") + TOT_VERSION);
         wav.setInfo("IGNR", "Techno");
         if (!cues.empty() && !writeCuesJson(out + ".cues.json", cues, rate)) { std::fprintf(stderr, "cannot write the cues\n"); return 1; }
     }
@@ -461,7 +461,7 @@ int main(int argc, char** argv)
     const double audioS = static_cast<double>(total) / rate;
     std::printf("composed and levelled in %.3f s; rendered %.1f s of audio in %.2f s: %.0f x real time, %.2f %% of a core\n", composeS,
                 audioS, renderS, audioS / renderS, 100.0 * renderS / audioS);
-#ifdef UMB_PROFILE
+#ifdef TOT_PROFILE
     // What each stage cost (Profile.h): its share of the render and of a core in real time.
     {
         double sum = 0.0;

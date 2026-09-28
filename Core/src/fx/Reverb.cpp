@@ -2,14 +2,14 @@
  * @file Reverb.cpp
  * @brief FDN reverb implementation.
  * @note Copied from Phosphene `Core/src/Reverb.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Core/src/fx/Reverb.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/fx/Reverb.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/fx/Reverb.h"
-#include "umb/Clock.h"
+#include "tot/fx/Reverb.h"
+#include "tot/Clock.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 int pow2At(int n) { int p = 1; while (p < n) p <<= 1; return p; }
@@ -209,4 +209,4 @@ float Reverb::barGate(double beat, double closeBeats, double holdBeats, double o
     return 1.0f;
 }
 
-} // namespace umb
+} // namespace tot

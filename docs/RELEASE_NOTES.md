@@ -1,4 +1,4 @@
-# Umbra release notes
+# Totality release notes
 
 ## 1.0.0 (28.09.2026)
 
@@ -29,21 +29,21 @@ well its group suits the track's style (a lane among those made for its role); e
 that plays, and its values stand on the knobs, so a turn goes on from what you hear. In a set each deck keeps its own
 track's sounds through the blend.
 
-**Playing.** In a DAW Umbra follows the host's transport and tempo. The Perform page is a mixer: seven mutes (their
+**Playing.** In a DAW Totality follows the host's transport and tempo. The Perform page is a mixer: seven mutes (their
 tails ring out), a master filter, an echo throw, isolator kills and faders per deck, every control learnable from a
 MIDI controller; the keys C3 to F#3 toggle the mutes. The Patterns page shows the Eclipse: the kick a dark disc, every
 part a ring of beads around it, polymeters precessing, conjunctions lighting the corona.
 
 **Export.** A 24-bit WAV with cue markers and the cues as JSON, MIDI with the tempo map, stems whose sum is exactly the
-mix before the master, seamless 4- and 8-bar DJ loops, `.umbset` files; OSC cues for a visualiser while it plays
-(`/umb/beat`, `/umb/bar`, `/umb/block`, `/umb/op`, `/umb/key`).
+mix before the master, seamless 4- and 8-bar DJ loops, `.totset` files; OSC cues for a visualiser while it plays
+(`/tot/beat`, `/tot/bar`, `/tot/block`, `/tot/op`, `/tot/key`).
 
 **Meta Quest.** The whole generator on the headset, played with the hands (pinches for play, kick out and next track,
 the hands' height for the filter and the throw), the Eclipse turning above the player. Built, not yet run on a device.
 
 **Tested.** 29 self tests and vector tests, the VST3 loaded as a host loads it (30 checks), pluginval at strictness 10.
 
-**Known.** The name "Umbra" is used by other audio products (PLAN, risk 7). Whether Rekordbox and Traktor read the WAV's
+**Known.** Whether Rekordbox and Traktor read the WAV's
 cue markers is untested (the JSON cues are the fallback). The Quest's CPU load is estimated, not measured. Endless forms
 keep their loudness flat (a loudness range under 1 LU); the Dub profile sits at the lower edge of the references'
 spectral centroid.

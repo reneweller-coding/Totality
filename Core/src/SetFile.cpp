@@ -1,22 +1,22 @@
 /**
  * @file SetFile.cpp
- * @brief The `.umbset` text form.
+ * @brief The `.totset` text form.
  * @note Copied from Ephemeris `Core/src/SetFile.cpp` (namespace eph) at d047d79 (27.09.2026).
  */
-#include "umb/SetFile.h"
-#include "umb/Params.h"
+#include "tot/SetFile.h"
+#include "tot/Params.h"
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
 
-namespace umb {
+namespace tot {
 
 bool saveSet(const char* path, const SetFile& set, const ParamStore& params)
 {
     std::ofstream f(path, std::ios::binary);
     if (!f) return false;
-    f << "# Umbra set\n";
+    f << "# Totality set\n";
     f << "seed=" << set.seed << "\n";
     char buf[64];
     std::snprintf(buf, sizeof(buf), "%.9g", set.minutes);
@@ -58,4 +58,4 @@ bool loadSet(const char* path, SetFile& set, ParamStore& params, std::string* er
     return params.parseText(paramText, error);
 }
 
-} // namespace umb
+} // namespace tot

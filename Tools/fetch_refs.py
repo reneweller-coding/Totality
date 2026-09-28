@@ -1,6 +1,6 @@
 """Fetches the reference recordings of Tools/ref_sets.txt (PLAN 13.4): the audio track only, with yt-dlp.
 
-The files go to a folder outside the repository (default %TEMP%/umbra_refs, or --dir), named after the video id, and
+The files go to a folder outside the repository (default %TEMP%/totality_refs, or --dir), named after the video id, and
 stay there (the user's decision of 27.09.2026), so later calibration rounds do not fetch again: a file already present
 is skipped. Nothing of the audio enters the repository; the measurements (Tools/analyze_ref.py) keep statistics only.
 
@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 
 
 def default_dir() -> Path:
-    return Path(os.environ.get("TEMP", tempfile.gettempdir())) / "umbra_refs"
+    return Path(os.environ.get("TEMP", tempfile.gettempdir())) / "totality_refs"
 
 
 def read_sets(path: Path) -> list[dict]:

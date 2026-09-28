@@ -5,7 +5,7 @@
 #include "EditorPerform.h"
 #include <cmath>
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
@@ -18,7 +18,7 @@ float toDb(float g) { return g > 1e-6f ? 20.0f * std::log10(g) : -120.0f; }
 
 // ---------------------------------------------------------------------------------------------------
 
-LearnButton::LearnButton(UmbraProcessor& p, int id) : juce::TextButton("learn"), proc_(p), id_(id)
+LearnButton::LearnButton(TotalityProcessor& p, int id) : juce::TextButton("learn"), proc_(p), id_(id)
 {
     setTooltip("MIDI learn: click, then move a controller (right click: forget it)");
     onClick = [this] { proc_.learn(proc_.learning() == id_ ? -1 : id_); refresh(); };
@@ -40,13 +40,13 @@ void LearnButton::mouseUp(const juce::MouseEvent& e)
 
 // ---------------------------------------------------------------------------------------------------
 
-PerformPage::PerformPage(UmbraProcessor& p) : proc_(p)
+PerformPage::PerformPage(TotalityProcessor& p) : proc_(p)
 {
     ParamStore& s = proc_.store();
     for (int k = 0; k < perform::kMutes; ++k) {
         auto* b = mutes_.add(new juce::TextButton(kMuteNames[k]));
         b->setClickingTogglesState(true);
-        b->setColour(juce::TextButton::buttonOnColourId, umbui::colour::onset.withAlpha(0.6f));
+        b->setColour(juce::TextButton::buttonOnColourId, totui::colour::onset.withAlpha(0.6f));
         b->setTooltip(juce::String("Mute ") + kMuteNames[k] + ": its notes stop, its tails ring out (MIDI key " + kKeyOf[k] + ")");
         const int id = s.id(Module::Perform, 0, perform::MuteKick + k);
         muteAttach_.push_back(std::make_unique<juce::ButtonParameterAttachment>(*proc_.parameter(id), *b));
@@ -63,9 +63,9 @@ PerformPage::PerformPage(UmbraProcessor& p) : proc_(p)
         addAndMakeVisible(sl);
         addAndMakeVisible(learn_.add(new LearnButton(proc_, id)));
     };
-    bigSlider(filter_, s.id(Module::Perform, 0, perform::Filter), umbui::familyColour(umbui::Family::Filter));
+    bigSlider(filter_, s.id(Module::Perform, 0, perform::Filter), totui::familyColour(totui::Family::Filter));
     filter_.setTooltip("The master filter: left a low pass, right a high pass, the middle open (the mod wheel; double click: open)");
-    bigSlider(throw_, s.id(Module::Perform, 0, perform::Throw), umbui::familyColour(umbui::Family::Motion));
+    bigSlider(throw_, s.id(Module::Perform, 0, perform::Throw), totui::familyColour(totui::Family::Motion));
     throw_.setTooltip("The echo throw: the whole mix into the mixer's tape echo (the expression pedal)");
     for (int d = 0; d < kDecks; ++d) {
         Strip& st = strips_[d];
@@ -73,7 +73,7 @@ PerformPage::PerformPage(UmbraProcessor& p) : proc_(p)
         for (int b = 0; b < 3; ++b) {
             juce::TextButton& k = st.kill[b];
             k.setButtonText(juce::String("Kill ") + kBand[b]);
-            k.setColour(juce::TextButton::buttonOnColourId, umbui::deckColour(d).withAlpha(0.5f));
+            k.setColour(juce::TextButton::buttonOnColourId, totui::deckColour(d).withAlpha(0.5f));
             const int id = s.id(Module::Deck, d, deck::Low + b);
             k.onClick = [this, id] { proc_.setFromUi(id, proc_.store().get(id) <= -59.9f ? 0.0f : -60.0f); };
             addAndMakeVisible(k);
@@ -81,8 +81,8 @@ PerformPage::PerformPage(UmbraProcessor& p) : proc_(p)
         }
         st.fader.setSliderStyle(juce::Slider::LinearVertical);
         st.fader.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 18);
-        st.fader.setColour(juce::Slider::trackColourId, umbui::deckColour(d));
-        st.fader.setColour(juce::Slider::thumbColourId, umbui::deckColour(d));
+        st.fader.setColour(juce::Slider::trackColourId, totui::deckColour(d));
+        st.fader.setColour(juce::Slider::thumbColourId, totui::deckColour(d));
         st.fader.setDoubleClickReturnValue(true, 0.0);
         const int fid = s.id(Module::Deck, d, deck::Fader);
         sliderAttach_.push_back(std::make_unique<juce::SliderParameterAttachment>(*proc_.parameter(fid), st.fader));
@@ -143,8 +143,8 @@ void PerformPage::resized()
 
 void PerformPage::paint(juce::Graphics& g)
 {
-    g.fillAll(umbui::colour::panel);
-    g.setColour(umbui::colour::dim);
+    g.fillAll(totui::colour::panel);
+    g.setColour(totui::colour::dim);
     g.setFont(juce::FontOptions(13.0f));
     auto r = getLocalBounds().reduced(16);
     g.drawText("MUTE -- the keys C3 to F#3 toggle them; a muted group's notes stop, its tails ring out", r.getX(), r.getY() + 112, r.getWidth(), 20,
@@ -153,7 +153,7 @@ void PerformPage::paint(juce::Graphics& g)
     g.drawText("Echo Throw", r.getX(), throw_.getY(), 120, throw_.getHeight(), juce::Justification::centredLeft);
     for (int d = 0; d < kDecks; ++d) {
         const auto b = strips_[d].kill[2].getBounds();
-        g.setColour(umbui::deckColour(d));
+        g.setColour(totui::deckColour(d));
         g.setFont(juce::FontOptions(13.0f, juce::Font::bold));
         g.drawText(juce::String("DECK ") + juce::String::charToString(static_cast<juce::juce_wchar>('A' + d)) + (d == 2 ? " (loops)" : ""),
                    b.getX(), b.getY() - 22, 200, 18, juce::Justification::left);
@@ -162,7 +162,7 @@ void PerformPage::paint(juce::Graphics& g)
 
 // ---------------------------------------------------------------------------------------------------
 
-MixerPage::MixerPage(UmbraProcessor& p)
+MixerPage::MixerPage(TotalityProcessor& p)
     : proc_(p),
       knobs_(std::make_unique<ParamPage>(p, std::vector<std::pair<Module, int>>{ { Module::Mix, 0 }, { Module::Master, 0 }, { Module::Motion, 0 },
                                                                                   { Module::Deck, 0 }, { Module::Deck, 1 }, { Module::Deck, 2 } }))
@@ -193,7 +193,7 @@ void MixerPage::resized()
 
 void MixerPage::paint(juce::Graphics& g)
 {
-    using namespace umbui::colour;
+    using namespace totui::colour;
     g.fillAll(panel);
     auto r = getLocalBounds().withWidth(220).reduced(12);
     g.setColour(ink);
@@ -215,7 +215,7 @@ void MixerPage::paint(juce::Graphics& g)
         g.setColour(group);
         g.fillRect(m);
         const float pdb = toDb(i < kDecks ? peak_[i] : out_), rdb = i < kDecks ? toDb(rms_[i]) : pdb;
-        const juce::Colour c = i < kDecks ? umbui::deckColour(i) : amber;
+        const juce::Colour c = i < kDecks ? totui::deckColour(i) : amber;
         g.setColour(c.withAlpha(0.35f));
         g.fillRect(juce::Rectangle<float>(static_cast<float>(m.getX()), yOf(pdb, m), static_cast<float>(m.getWidth()), static_cast<float>(m.getBottom()) - yOf(pdb, m)));
         if (i < kDecks) {

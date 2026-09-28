@@ -2,7 +2,7 @@
  * @file TestSupport.h
  * @brief A minimal check framework and measurement helpers for the self tests.
  * @note Copied from Phosphene `Tests/TestSupport.h` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Tests/TestSupport.h` at d047d79 (27.09.2026); namespace umbtest.
+ * @note Copied from Ephemeris `Tests/TestSupport.h` at d047d79 (27.09.2026); namespace tottest.
  */
 #pragma once
 #include <chrono>
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace umbtest {
+namespace tottest {
 
 /** @brief Running totals of passed and failed checks. */
 struct Tally {
@@ -122,4 +122,4 @@ inline std::vector<double> powerSpectrum(const float* x, size_t n)
 /** @brief Decibels of a power ratio. */
 inline double powDb(double ratio) { return 10.0 * std::log10(ratio > 1e-300 ? ratio : 1e-300); }
 
-} // namespace umbtest
+} // namespace tottest

@@ -3,9 +3,9 @@
  * @brief The Style tab (EditorStyle.h).
  */
 #include "EditorStyle.h"
-#include "umb/compose/Style.h"
+#include "tot/compose/Style.h"
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
@@ -24,7 +24,7 @@ juce::String pct(float v) { return juce::String(juce::roundToInt(100.0f * v)) + 
 
 } // namespace
 
-StylePage::StylePage(UmbraProcessor& p)
+StylePage::StylePage(TotalityProcessor& p)
     : proc_(p), custom_(std::make_unique<ParamPage>(p, std::vector<std::pair<Module, int>>{ { Module::Custom, 0 } }))
 {
     addAndMakeVisible(custom_);
@@ -81,7 +81,7 @@ void StylePage::resized()
 
 void StylePage::paint(juce::Graphics& g)
 {
-    using namespace umbui::colour;
+    using namespace totui::colour;
     g.fillAll(panel);
     const StyleProfile pr = profileOf(proc_.store());
     const bool own = proc_.store().getBool(proc_.store().id(Module::Custom, 0, custom::Use));

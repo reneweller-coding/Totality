@@ -14,14 +14,14 @@
  * lands in a group "More" at the end, so nothing added to a table is ever lost from the editor.
  *
  * @note After Ephemeris' Plugin/EditorTheme.h at d047d79 (27.09.2026); the look and feel is its, the palette and the
- *       groups are Umbra's.
+ *       groups are Totality's.
  */
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "umb/Params.h"
+#include "tot/Params.h"
 #include <vector>
 
-namespace umbui {
+namespace totui {
 
 /** @brief The palette. */
 namespace colour {
@@ -56,7 +56,7 @@ struct GroupSpec {
     std::vector<const char*> keys;
 };
 /** @brief The panel of a module: its groups, in order (empty: one group of everything). */
-const std::vector<GroupSpec>& layoutOf(umb::Module m);
+const std::vector<GroupSpec>& layoutOf(tot::Module m);
 
 /** @brief The editor's look and feel: the knob, the switches, the menus, the tabs, the buttons. */
 class LookAndFeel final : public juce::LookAndFeel_V4 {
@@ -80,4 +80,4 @@ public:
     juce::Label* createSliderTextBox(juce::Slider&) override;
 };
 
-} // namespace umbui
+} // namespace totui

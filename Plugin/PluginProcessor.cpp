@@ -4,15 +4,15 @@
  */
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "umb/Export.h"
-#include "umb/Leveler.h"
-#include "umb/Midi.h"
-#include "umb/Presets.h"
-#include "umb/WavWriter.h"
+#include "tot/Export.h"
+#include "tot/Leveler.h"
+#include "tot/Midi.h"
+#include "tot/Presets.h"
+#include "tot/WavWriter.h"
 #include <cmath>
 #include <cstdlib>
 
-using namespace umb;
+using namespace tot;
 
 // ---------------------------------------------------------------------------------------------------
 // StoreParameter (after Phosphene's Plugin/PluginProcessor.cpp at 9a2f615, as in Ephemeris)
@@ -95,9 +95,9 @@ void designBiquad(double b0, double b1, double b2, double a0, double a1, double 
 
 } // namespace
 
-UmbraProcessor::UmbraProcessor()
+TotalityProcessor::TotalityProcessor()
     : juce::AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-      juce::Thread("Umbra composer")
+      juce::Thread("Totality composer")
 {
     ParamStore& s = store();
     for (int id = 0; id < s.count(); ++id) {
@@ -107,12 +107,12 @@ UmbraProcessor::UmbraProcessor()
     }
     engine_.setLive(true);   // the performer's controls act, the mixer is in a track's path (Engine.h)
     seed_ = static_cast<uint64_t>(juce::Time::currentTimeMillis() % 100000);
-    if (const char* env = std::getenv("UMB_SEED")) seed_ = std::strtoull(env, nullptr, 10);
-    autoPlay_ = std::getenv("UMB_PLAY") != nullptr;
-    if (const char* set = std::getenv("UMB_SET")) s.set(s.id(Module::Set, 0, set::Minutes), static_cast<float>(std::atof(set)));   // a set of so many minutes
-    // UMB_MUTE=1 (and the screenshot mode): silent from the first sample, never unmuted from inside. The house rule for
+    if (const char* env = std::getenv("TOT_SEED")) seed_ = std::strtoull(env, nullptr, 10);
+    autoPlay_ = std::getenv("TOT_PLAY") != nullptr;
+    if (const char* set = std::getenv("TOT_SET")) s.set(s.id(Module::Set, 0, set::Minutes), static_cast<float>(std::atof(set)));   // a set of so many minutes
+    // TOT_MUTE=1 (and the screenshot mode): silent from the first sample, never unmuted from inside. The house rule for
     // every automated run -- tests, screenshots, the manual -- is that nothing makes a sound.
-    forceMute_ = std::getenv("UMB_MUTE") != nullptr || std::getenv("UMB_SHOT") != nullptr;
+    forceMute_ = std::getenv("TOT_MUTE") != nullptr || std::getenv("TOT_SHOT") != nullptr;
     mute_ = forceMute_;
     // The performer's controllers as a keyboard has them: the mod wheel the master filter, the expression pedal the throw.
     for (auto& c : ccMap_) c = -1;
@@ -122,7 +122,7 @@ UmbraProcessor::UmbraProcessor()
     compose();
 }
 
-UmbraProcessor::~UmbraProcessor()
+TotalityProcessor::~TotalityProcessor()
 {
     stopTimer();
     newer_ = true;
@@ -130,7 +130,7 @@ UmbraProcessor::~UmbraProcessor()
     if (exporter_ && exporter_->joinable()) exporter_->join();
 }
 
-Playing UmbraProcessor::composeNow(ParamStore& snapshot)
+Playing TotalityProcessor::composeNow(ParamStore& snapshot)
 {
     snapshot.copyValuesFrom(store());
     Curation cur;
@@ -155,7 +155,7 @@ Playing UmbraProcessor::composeNow(ParamStore& snapshot)
     return out;
 }
 
-void UmbraProcessor::compose()
+void TotalityProcessor::compose()
 {
     // One at a time: a press while composing is remembered and composed when the first is done.
     if (composing_.exchange(true)) { again_ = true; return; }
@@ -165,7 +165,7 @@ void UmbraProcessor::compose()
     startThread();
 }
 
-void UmbraProcessor::newSeed()
+void TotalityProcessor::newSeed()
 {
     {
         std::lock_guard<std::mutex> g(lock_);
@@ -175,7 +175,7 @@ void UmbraProcessor::newSeed()
     compose();
 }
 
-void UmbraProcessor::reroll(const juce::String& unit)
+void TotalityProcessor::reroll(const juce::String& unit)
 {
     {
         std::lock_guard<std::mutex> g(lock_);
@@ -184,7 +184,7 @@ void UmbraProcessor::reroll(const juce::String& unit)
     compose();
 }
 
-juce::String UmbraProcessor::curationText() const
+juce::String TotalityProcessor::curationText() const
 {
     std::lock_guard<std::mutex> g(lock_);
     juce::String t;
@@ -192,7 +192,7 @@ juce::String UmbraProcessor::curationText() const
     return t.isEmpty() ? juce::String("nothing rerolled") : t.trimEnd();
 }
 
-int UmbraProcessor::trackAt(double beat) const
+int TotalityProcessor::trackAt(double beat) const
 {
     std::lock_guard<std::mutex> g(lock_);
     int found = -1;
@@ -205,7 +205,7 @@ int UmbraProcessor::trackAt(double beat) const
     return found;
 }
 
-int UmbraProcessor::composedPreset(Module m, int instance) const
+int TotalityProcessor::composedPreset(Module m, int instance) const
 {
     const int lead = engine_.leadDeck();
     const double beat = position_.load();
@@ -217,7 +217,7 @@ int UmbraProcessor::composedPreset(Module m, int instance) const
     return preset;
 }
 
-void UmbraProcessor::applyPreset(Module m, int instance, int index)
+void TotalityProcessor::applyPreset(Module m, int instance, int index)
 {
     const std::vector<SoundPreset>& list = factoryPresets(m);
     if (index < 0 || index >= static_cast<int>(list.size())) return;
@@ -231,14 +231,14 @@ void UmbraProcessor::applyPreset(Module m, int instance, int index)
     }
 }
 
-void UmbraProcessor::length(double& beats, double& seconds) const
+void TotalityProcessor::length(double& beats, double& seconds) const
 {
     std::lock_guard<std::mutex> g(lock_);
     beats = current_.set.lengthBeats;
     seconds = current_.set.decks[0].tempo.secondsAt(beats);
 }
 
-void UmbraProcessor::run()
+void TotalityProcessor::run()
 {
     ParamStore snapshot;
     Playing p = composeNow(snapshot);
@@ -262,7 +262,7 @@ void UmbraProcessor::run()
     trimsFor_ = id;
 }
 
-void UmbraProcessor::takeTrims()
+void TotalityProcessor::takeTrims()
 {
     std::vector<float> trims[kDecks];
     {
@@ -283,7 +283,7 @@ void UmbraProcessor::takeTrims()
     for (int d = 0; d < kDecks; ++d) if (!trims[d].empty()) engine_.setLevelTrims(d, trims[d]);
 }
 
-SetScore UmbraProcessor::forPlayback(const Playing& p) const
+SetScore TotalityProcessor::forPlayback(const Playing& p) const
 {
     SetScore out = p.set;
     const double bpm = hostBpm_.load();
@@ -292,7 +292,7 @@ SetScore UmbraProcessor::forPlayback(const Playing& p) const
     return out;
 }
 
-void UmbraProcessor::loadEngine(const Playing& p)
+void TotalityProcessor::loadEngine(const Playing& p)
 {
     const SetScore s = forPlayback(p);
     engine_.prepare(sampleRate_, blockSize_);
@@ -307,7 +307,7 @@ void UmbraProcessor::loadEngine(const Playing& p)
         }
 }
 
-void UmbraProcessor::timerCallback()
+void TotalityProcessor::timerCallback()
 {
     // The cue sender follows its two parameters (message thread: the socket is opened and closed here).
     {
@@ -317,7 +317,7 @@ void UmbraProcessor::timerCallback()
             cues_.stop();
             cuePort_ = port;
             if (port > 0) {
-                const char* host = std::getenv("UMB_CUE_HOST");
+                const char* host = std::getenv("TOT_CUE_HOST");
                 if (!cues_.start(host != nullptr ? host : "127.0.0.1", port)) cuePort_ = 0;
             }
         }
@@ -381,7 +381,7 @@ void UmbraProcessor::timerCallback()
     takeTrims();
 }
 
-void UmbraProcessor::takeMeters(float* deckPeak, float* deckRms, float& outPeak, float& momentaryLufs)
+void TotalityProcessor::takeMeters(float* deckPeak, float* deckRms, float& outPeak, float& momentaryLufs)
 {
     const int n = meterCount_.exchange(0, std::memory_order_acquire);
     for (int d = 0; d < kDecks; ++d) {
@@ -394,7 +394,7 @@ void UmbraProcessor::takeMeters(float* deckPeak, float* deckRms, float& outPeak,
     momentaryLufs = lufs_.load(std::memory_order_relaxed);
 }
 
-void UmbraProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+void TotalityProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     sampleRate_ = sampleRate;
     blockSize_ = std::max(1, samplesPerBlock);
@@ -425,7 +425,7 @@ void UmbraProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         kCoef_ = 1.0 - std::exp(-1.0 / (0.4 * fs / 3.0));   // a 400 ms window as an exponential of a third of it
         kMs_ = 0.0;
     }
-    if (const char* secs = std::getenv("UMB_PLAY"); secs != nullptr && std::getenv("UMB_RECORD") != nullptr) {
+    if (const char* secs = std::getenv("TOT_PLAY"); secs != nullptr && std::getenv("TOT_RECORD") != nullptr) {
         recordTarget_ = static_cast<size_t>(std::atof(secs) * sampleRate) * 2;
         record_.assign(recordTarget_, 0.0f);
         recordPos_ = 0;
@@ -436,12 +436,12 @@ void UmbraProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
     playedBpm_ = wrapperType != wrapperType_Standalone ? hostBpm_.load() : 0.0;
 }
 
-bool UmbraProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
+bool TotalityProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
     return layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo();
 }
 
-void UmbraProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
+void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi)
 {
     juce::ScopedNoDenormals noDenormals;
     perform(midi);
@@ -520,7 +520,7 @@ void UmbraProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     if (wrapperType == wrapperType_Standalone && engine_.seconds() > engine_.lengthSeconds() + 8.0) playing_ = false;
 }
 
-bool UmbraProcessor::saveSet(const juce::File& file)
+bool TotalityProcessor::saveSet(const juce::File& file)
 {
     SetFile sf;
     {
@@ -530,14 +530,14 @@ bool UmbraProcessor::saveSet(const juce::File& file)
     }
     sf.minutes = store().get(store().id(Module::Compose, 0, compose::Minutes));
     sf.set = store().get(store().id(Module::Set, 0, set::Minutes));
-    return umb::saveSet(file.getFullPathName().toRawUTF8(), sf, store());
+    return tot::saveSet(file.getFullPathName().toRawUTF8(), sf, store());
 }
 
-bool UmbraProcessor::loadSet(const juce::File& file)
+bool TotalityProcessor::loadSet(const juce::File& file)
 {
     SetFile sf;
     std::string err;
-    if (!umb::loadSet(file.getFullPathName().toRawUTF8(), sf, store(), &err)) return false;
+    if (!tot::loadSet(file.getFullPathName().toRawUTF8(), sf, store(), &err)) return false;
     {
         std::lock_guard<std::mutex> g(lock_);
         seed_ = sf.seed;
@@ -551,7 +551,7 @@ bool UmbraProcessor::loadSet(const juce::File& file)
     return true;
 }
 
-void UmbraProcessor::exportTo(const juce::File& wav, int extras)
+void TotalityProcessor::exportTo(const juce::File& wav, int extras)
 {
     if (exporting_.exchange(true)) return;
     if (exporter_ && exporter_->joinable()) exporter_->join();
@@ -583,18 +583,18 @@ void UmbraProcessor::exportTo(const juce::File& wav, int extras)
         const TempoMap& tm = p.set.decks[0].tempo;
         if (p.isSet) {
             cues = setCues(p.setInfo, tm);
-            title = std::string("Umbra set ") + kDramaturgyNames[static_cast<int>(p.setInfo.dramaturgy)] + " seed " + std::to_string(seed);
+            title = std::string("Totality set ") + kDramaturgyNames[static_cast<int>(p.setInfo.dramaturgy)] + " seed " + std::to_string(seed);
         } else if (!p.tracks.empty()) {
             const TrackInfo& info = p.tracks[0].info;
             trackCues(info, 0.0, tm, std::string(), cues);
-            title = "Umbra " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " " + info.camelot
+            title = "Totality " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " " + info.camelot
                   + " seed " + std::to_string(seed);
         }
         WavWriter w;
         bool ok = w.open(wav.getFullPathName().toRawUTF8(), static_cast<int>(kRate), 2, WavFormat::Pcm24);
         for (const CueAt& c : cues) w.addCue(static_cast<uint64_t>(std::llround(c.seconds * kRate)), c.label);
         w.setInfo("INAM", title);
-        w.setInfo("ISFT", std::string("Umbra ") + UMB_VERSION);
+        w.setInfo("ISFT", std::string("Totality ") + TOT_VERSION);
         w.setInfo("IGNR", "Techno");
         ok = ok && writeCuesJson(wav.getFullPathName().toStdString() + ".cues.json", cues, kRate);
         // The stems: a WAV per element, their sum the mix before the master (Engine.h).
@@ -624,7 +624,7 @@ void UmbraProcessor::exportTo(const juce::File& wav, int extras)
         w.close();
         for (WavWriter& sw : stemWav) sw.close();
         const juce::File mid = wav.withFileExtension(".mid");
-        ok = ok && writeMidiFile(p.isSet ? flattenSet(p.set) : p.set.decks[0], mid.getFullPathName().toRawUTF8(), "Umbra", params.get());
+        ok = ok && writeMidiFile(p.isSet ? flattenSet(p.set) : p.set.decks[0], mid.getFullPathName().toRawUTF8(), "Totality", params.get());
         // The DJ loops of a track.
         if (ok && (extras & kLoops) != 0 && !p.isSet && !p.tracks.empty()) {
             const juce::File dir = wav.getParentDirectory().getChildFile(wav.getFileNameWithoutExtension() + "_loops");
@@ -640,9 +640,9 @@ void UmbraProcessor::exportTo(const juce::File& wav, int extras)
     });
 }
 
-void UmbraProcessor::writeRecording()
+void TotalityProcessor::writeRecording()
 {
-    const char* path = std::getenv("UMB_RECORD");
+    const char* path = std::getenv("TOT_RECORD");
     if (path == nullptr || record_.empty()) return;
     WavWriter w;
     if (!w.open(path, static_cast<int>(sampleRate_), 2, WavFormat::Float32)) return;
@@ -653,7 +653,7 @@ void UmbraProcessor::writeRecording()
     recordTarget_ = 0;
 }
 
-juce::String UmbraProcessor::status() const
+juce::String TotalityProcessor::status() const
 {
     if (composing_) return "composing ...";
     if (exporting_) return "exporting ...";
@@ -673,18 +673,18 @@ juce::String UmbraProcessor::status() const
     return t;
 }
 
-int UmbraProcessor::controllerFor(int id) const
+int TotalityProcessor::controllerFor(int id) const
 {
     for (int c = 0; c < 128; ++c) if (ccMap_[static_cast<size_t>(c)].load() == id) return c;
     return -1;
 }
 
-void UmbraProcessor::forget(int id)
+void TotalityProcessor::forget(int id)
 {
     for (auto& c : ccMap_) if (c.load() == id) c = -1;
 }
 
-void UmbraProcessor::setFromMidi(int id, float value)
+void TotalityProcessor::setFromMidi(int id, float value)
 {
     StoreParameter* p = parameter(id);
     if (p == nullptr) return;
@@ -695,7 +695,7 @@ void UmbraProcessor::setFromMidi(int id, float value)
     p->endChangeGesture();
 }
 
-void UmbraProcessor::perform(const juce::MidiBuffer& midi)
+void TotalityProcessor::perform(const juce::MidiBuffer& midi)
 {
     const ParamStore& s = store();
     for (const auto meta : midi) {
@@ -728,9 +728,9 @@ void UmbraProcessor::perform(const juce::MidiBuffer& midi)
     }
 }
 
-void UmbraProcessor::getStateInformation(juce::MemoryBlock& destData)
+void TotalityProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
-    juce::XmlElement xml("Umbra");
+    juce::XmlElement xml("Totality");
     {
         std::lock_guard<std::mutex> g(lock_);
         xml.setAttribute("seed", juce::String(static_cast<juce::int64>(seed_)));
@@ -746,10 +746,10 @@ void UmbraProcessor::getStateInformation(juce::MemoryBlock& destData)
     copyXmlToBinary(xml, destData);
 }
 
-void UmbraProcessor::setStateInformation(const void* data, int sizeInBytes)
+void TotalityProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     const auto xml = getXmlFromBinary(data, sizeInBytes);
-    if (xml == nullptr || !xml->hasTagName("Umbra")) return;
+    if (xml == nullptr || !xml->hasTagName("Totality")) return;
     store().resetDefaults();
     store().parseText(xml->getStringAttribute("params").toStdString());
     if (xml->hasAttribute("controllers")) {
@@ -770,7 +770,7 @@ void UmbraProcessor::setStateInformation(const void* data, int sizeInBytes)
     compose();
 }
 
-juce::AudioProcessorEditor* UmbraProcessor::createEditor() { return new UmbraEditor(*this); }
+juce::AudioProcessorEditor* TotalityProcessor::createEditor() { return new TotalityEditor(*this); }
 
 /** @brief The plugin's factory, called by the JUCE wrappers. */
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new UmbraProcessor(); }
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new TotalityProcessor(); }

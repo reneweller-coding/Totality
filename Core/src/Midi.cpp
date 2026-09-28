@@ -3,14 +3,14 @@
  * @brief Standard MIDI File writer.
  * @note The encoder is copied from Ephemeris `Core/src/Midi.cpp` at d047d79 (27.09.2026).
  */
-#include "umb/Midi.h"
+#include "tot/Midi.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <map>
 #include <string>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -142,7 +142,7 @@ std::vector<uint8_t> encodeMidi(const Score& score, const char* title, const Par
     file.push_back(static_cast<uint8_t>(kMidiPpq & 0xFF));
 
     std::vector<Ev> cond;
-    cond.push_back(metaText(0, 0x03, title != nullptr ? title : "Umbra"));
+    cond.push_back(metaText(0, 0x03, title != nullptr ? title : "Totality"));
     cond.push_back(meta(0, 0x58, { 4, 2, 24, 8 }));
     cond.push_back(meta(0, 0x59, { static_cast<uint8_t>(static_cast<int8_t>(minorKeySharps(score.keyRoot))), 1 }));
     const std::vector<TempoPoint>& pts = score.tempo.points();
@@ -201,4 +201,4 @@ bool writeMidiFile(const Score& score, const char* path, const char* title, cons
     return std::fclose(f) == 0 && ok;
 }
 
-} // namespace umb
+} // namespace tot

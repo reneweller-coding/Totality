@@ -1,21 +1,21 @@
 <#
 .SYNOPSIS
-    Umbra -- builds a release: binaries, tests, manual, staging, checksums, portable zip, setup.
+    Totality -- builds a release: binaries, tests, manual, staging, checksums, portable zip, setup.
 
 .DESCRIPTION
-    After Ephemeris' Deploy\build_release.ps1 (Umbra has no data files either).
+    After Ephemeris' Deploy\build_release.ps1 (Totality has no data files either).
 
       1. configure and build build-release (Release, static runtime, AVX2) -- with Intel's icx where oneAPI is
          installed (26.09.2026: the whole engine 10 to 15 % faster than MSVC's, pluginval passes; -Compiler msvc
          builds as before)
       2. run the tests (ctest), unless -SkipTests; pluginval at strictness 10 where it is unpacked
-      3. the manual: Tools\manual\make_manual.py with the release's umb_render
+      3. the manual: Tools\manual\make_manual.py with the release's tot_render
       4. stage what is installed under Deploy\stage, and nothing else
       5. check the stage: every file there, the binaries without a DLL dependency on the MSVC runtime
       6. SHA256SUMS.txt, the portable zip, and the setup with Inno Setup (ISCC), unless -NoSetup
 
-    Signing: with UMB_SIGN_THUMBPRINT (a certificate in the user's store) or UMB_SIGN_PFX and UMB_SIGN_PASSWORD (a .pfx
-    file), the binaries and the setup are signed with signtool (SHA-256, timestamped: UMB_SIGN_TIMESTAMP, else
+    Signing: with TOT_SIGN_THUMBPRINT (a certificate in the user's store) or TOT_SIGN_PFX and TOT_SIGN_PASSWORD (a .pfx
+    file), the binaries and the setup are signed with signtool (SHA-256, timestamped: TOT_SIGN_TIMESTAMP, else
     DigiCert's server); without them the release is built unsigned (Windows' SmartScreen then warns once).
 
     The version comes from the project() line of CMakeLists.txt, the one source of truth.
@@ -36,9 +36,9 @@ $deploy = Join-Path $root "Deploy"
 $build = Join-Path $root "build-release"
 
 $project = Get-Content (Join-Path $root "CMakeLists.txt") -Raw
-if ($project -notmatch 'project\(\s*Umbra\s+VERSION\s+([0-9.]+)') { throw "no version in CMakeLists.txt" }
+if ($project -notmatch 'project\(\s*Totality\s+VERSION\s+([0-9.]+)') { throw "no version in CMakeLists.txt" }
 $Version = $Matches[1]
-Write-Host "Umbra $Version"
+Write-Host "Totality $Version"
 
 # 1. Build: with icx where oneAPI is installed (its environment and Visual Studio's, Ninja from Visual Studio), else MSVC.
 $icxVars = Get-ChildItem "C:\Program Files (x86)\Intel\oneAPI\compiler\*\env\vars.bat" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
@@ -50,45 +50,45 @@ if ($Compiler -eq "icx") {
     $vcvars = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Auxiliary\Build\vcvars64.bat" | Select-Object -First 1
     $ninja = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe" | Select-Object -First 1
     $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer"
-    $script = Join-Path $env:TEMP "umbra_icx_build.cmd"
+    $script = Join-Path $env:TEMP "totality_icx_build.cmd"
     @(
         "@echo off",
         "call `"$($vcvars.FullName)`" > nul",
         "set PATH=$installer;%PATH%",
         "call `"$($icxVars.FullName)`" intel64 > nul",
         "set PATH=$($ninja.DirectoryName);%PATH%",
-        "cmake -S `"$root`" -B `"$build`" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icx -DUMB_STATIC_RUNTIME=ON -DUMB_BUILD_PLUGIN=ON -DUMB_BUILD_TOOLS=ON || exit /b 1",
+        "cmake -S `"$root`" -B `"$build`" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=icx -DCMAKE_CXX_COMPILER=icx -DTOT_STATIC_RUNTIME=ON -DTOT_BUILD_PLUGIN=ON -DTOT_BUILD_TOOLS=ON || exit /b 1",
         "cmake --build `"$build`" --parallel || exit /b 1"
     ) | Set-Content -Encoding ascii $script
     & cmd /c $script
     if ($LASTEXITCODE -ne 0) { throw "build failed" }
-    $render = Join-Path $build "Tools\render\umb_render.exe"
+    $render = Join-Path $build "Tools\render\tot_render.exe"
 } else {
-    & cmake -S $root -B $build -G $Generator -A x64 -DUMB_STATIC_RUNTIME=ON -DUMB_BUILD_PLUGIN=ON -DUMB_BUILD_TOOLS=ON
+    & cmake -S $root -B $build -G $Generator -A x64 -DTOT_STATIC_RUNTIME=ON -DTOT_BUILD_PLUGIN=ON -DTOT_BUILD_TOOLS=ON
     if ($LASTEXITCODE -ne 0) { throw "configure failed" }
     & cmake --build $build --config Release --parallel
     if ($LASTEXITCODE -ne 0) { throw "build failed" }
-    $render = Join-Path $build "Tools\render\Release\umb_render.exe"
+    $render = Join-Path $build "Tools\render\Release\tot_render.exe"
 }
 
 # Signing where a certificate is given (see the description); a no-op without one.
 function Sign-Files([string[]]$files) {
-    $thumb = $env:UMB_SIGN_THUMBPRINT
-    $pfx = $env:UMB_SIGN_PFX
+    $thumb = $env:TOT_SIGN_THUMBPRINT
+    $pfx = $env:TOT_SIGN_PFX
     if (-not $thumb -and -not $pfx) { return }
     $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
     if (-not $signtool) { throw "signtool not found (Windows SDK)" }
-    $stamp = if ($env:UMB_SIGN_TIMESTAMP) { $env:UMB_SIGN_TIMESTAMP } else { "http://timestamp.digicert.com" }
+    $stamp = if ($env:TOT_SIGN_TIMESTAMP) { $env:TOT_SIGN_TIMESTAMP } else { "http://timestamp.digicert.com" }
     $signArgs = @("sign", "/fd", "sha256", "/tr", $stamp, "/td", "sha256")
-    if ($thumb) { $signArgs += @("/sha1", $thumb) } else { $signArgs += @("/f", $pfx, "/p", $env:UMB_SIGN_PASSWORD) }
+    if ($thumb) { $signArgs += @("/sha1", $thumb) } else { $signArgs += @("/f", $pfx, "/p", $env:TOT_SIGN_PASSWORD) }
     & $signtool.FullName @signArgs @files
     if ($LASTEXITCODE -ne 0) { throw "signing failed" }
     Write-Host "signed $($files.Count) files"
 }
 
-# 2. Tests (they run muted where they may: UMB_MUTE; the host test lifts it for itself).
+# 2. Tests (they run muted where they may: TOT_MUTE; the host test lifts it for itself).
 if (-not $SkipTests) {
-    $env:UMB_MUTE = "1"
+    $env:TOT_MUTE = "1"
     & ctest --test-dir $build -C Release -j 6 --output-on-failure
     if ($LASTEXITCODE -ne 0) { throw "tests failed" }
 }
@@ -97,8 +97,8 @@ if (-not $SkipTests) {
 $pluginval = Join-Path $root "ThirdParty\pluginval\pluginval.exe"
 if (-not (Test-Path $pluginval)) { $pluginval = Join-Path $root "..\BerlinSchoolGenerator\ThirdParty\pluginval\pluginval.exe" }
 if (Test-Path $pluginval) {
-    $env:UMB_MUTE = "1"
-    $vst3 = Join-Path $build "Plugin\Umbra_artefacts\Release\VST3\Umbra.vst3"
+    $env:TOT_MUTE = "1"
+    $vst3 = Join-Path $build "Plugin\Totality_artefacts\Release\VST3\Totality.vst3"
     $p = Start-Process -FilePath $pluginval -ArgumentList @("--strictness-level", "10", "--timeout-ms", "900000", "--validate", "`"$vst3`"") -Wait -PassThru -NoNewWindow
     if ($p.ExitCode -ne 0) { throw "pluginval failed ($($p.ExitCode))" }
     Write-Host "pluginval: strictness 10 passed"
@@ -106,8 +106,8 @@ if (Test-Path $pluginval) {
     Write-Host "pluginval not in ThirdParty\pluginval: skipped"
 }
 
-# 3. The manual, from this build's umb_render and standalone: the screenshots are taken again (docs\screenshots).
-$standalone = Get-ChildItem -Recurse (Join-Path $build "Plugin\Umbra_artefacts") -Filter Umbra.exe | Select-Object -First 1
+# 3. The manual, from this build's tot_render and standalone: the screenshots are taken again (docs\screenshots).
+$standalone = Get-ChildItem -Recurse (Join-Path $build "Plugin\Totality_artefacts") -Filter Totality.exe | Select-Object -First 1
 & python (Join-Path $root "Tools\manual\make_shots.py") $standalone.FullName
 if ($LASTEXITCODE -ne 0) { throw "screenshots failed" }
 & python (Join-Path $root "Tools\manual\make_preview.py")
@@ -118,22 +118,22 @@ if ($LASTEXITCODE -ne 0) { throw "manual failed" }
 $stage = Join-Path $deploy "stage"
 if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
 New-Item -ItemType Directory -Force $stage | Out-Null
-$art = Join-Path $build "Plugin\Umbra_artefacts\Release"
-Copy-Item (Join-Path $art "Standalone\Umbra.exe") $stage
-Copy-Item -Recurse (Join-Path $art "VST3\Umbra.vst3") $stage
+$art = Join-Path $build "Plugin\Totality_artefacts\Release"
+Copy-Item (Join-Path $art "Standalone\Totality.exe") $stage
+Copy-Item -Recurse (Join-Path $art "VST3\Totality.vst3") $stage
 Copy-Item $render $stage
-Copy-Item (Join-Path $root "docs\manual\Umbra-Manual.pdf") $stage
-Copy-Item (Join-Path $deploy "umbra.ico") $stage
+Copy-Item (Join-Path $root "docs\manual\Totality-Manual.pdf") $stage
+Copy-Item (Join-Path $deploy "totality.ico") $stage
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $stage "LICENSE.txt")
 Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.txt")
 
 # 5. Check: the files, and no dependency on the dynamic MSVC runtime.
-$expected = @("Umbra.exe", "umb_render.exe", "Umbra.vst3", "Umbra-Manual.pdf", "umbra.ico", "LICENSE.txt", "README.txt")
+$expected = @("Totality.exe", "tot_render.exe", "Totality.vst3", "Totality-Manual.pdf", "totality.ico", "LICENSE.txt", "README.txt")
 foreach ($f in $expected) { if (-not (Test-Path (Join-Path $stage $f))) { throw "missing in the stage: $f" } }
 $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($dumpbin) {
-    $binaries = @((Join-Path $stage "Umbra.exe"), (Join-Path $stage "umb_render.exe")) +
-                @(Get-ChildItem -Recurse (Join-Path $stage "Umbra.vst3") -Filter *.vst3 -File | ForEach-Object { $_.FullName })
+    $binaries = @((Join-Path $stage "Totality.exe"), (Join-Path $stage "tot_render.exe")) +
+                @(Get-ChildItem -Recurse (Join-Path $stage "Totality.vst3") -Filter *.vst3 -File | ForEach-Object { $_.FullName })
     foreach ($b in $binaries) {
         $deps = & $dumpbin.FullName /DEPENDENTS $b | Select-String -Pattern "(?i)((vcruntime|msvcp)\d+.*|libmmd|svml_disp\w*|libirngmd|libiomp\w*)\.dll"
         if ($deps) { throw "$b depends on a runtime DLL (MSVC's or Intel's): $deps" }
@@ -152,7 +152,7 @@ $sums = Get-ChildItem -Recurse -File $stage | Sort-Object FullName | ForEach-Obj
     "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower(), $rel
 }
 $sums | Set-Content -Encoding utf8 (Join-Path $stage "SHA256SUMS.txt")
-$zip = Join-Path $out "Umbra-$Version-portable.zip"
+$zip = Join-Path $out "Totality-$Version-portable.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
 Write-Host "wrote $zip"
@@ -160,8 +160,8 @@ if (-not $NoSetup) {
     $iscc = Get-ChildItem "C:\Program Files\Inno Setup *\ISCC.exe", "C:\Program Files (x86)\Inno Setup *\ISCC.exe" -ErrorAction SilentlyContinue |
             Select-Object -First 1
     if (-not $iscc) { throw "Inno Setup not found. winget install JRSoftware.InnoSetup, or run with -NoSetup." }
-    & $iscc.FullName "/DVersion=$Version" (Join-Path $deploy "Umbra.iss")
+    & $iscc.FullName "/DVersion=$Version" (Join-Path $deploy "Totality.iss")
     if ($LASTEXITCODE -ne 0) { throw "setup failed" }
-    Sign-Files @((Join-Path $out "Umbra-$Version-Setup.exe"))
-    Write-Host "wrote $(Join-Path $out "Umbra-$Version-Setup.exe")"
+    Sign-Files @((Join-Path $out "Totality-$Version-Setup.exe"))
+    Write-Host "wrote $(Join-Path $out "Totality-$Version-Setup.exe")"
 }

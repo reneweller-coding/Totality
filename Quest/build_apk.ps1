@@ -1,5 +1,5 @@
-# Builds the Umbra Quest APK without Gradle (after Ephemeris' Quest\build_apk.ps1):
-#   CMake/NDK -> libumbquest.so, aapt2 link -> base.apk, add the native libs, zipalign, apksigner (debug key).
+# Builds the Totality Quest APK without Gradle (after Ephemeris' Quest\build_apk.ps1):
+#   CMake/NDK -> libtotquest.so, aapt2 link -> base.apk, add the native libs, zipalign, apksigner (debug key).
 # Windows PowerShell 5.1.  powershell -File Quest\build_apk.ps1
 param(
     [string]$Sdk = "C:\Android-Buildtools\sdk",
@@ -19,7 +19,7 @@ $bt = Join-Path $Sdk "build-tools\$BuildTools"
 $androidJar = Join-Path $Sdk "platforms\$Platform\android.jar"
 $build = Join-Path $root "build-quest"
 # The version from the project() line of CMakeLists.txt; the version code 10000 major + 100 minor + patch.
-if ((Get-Content (Join-Path $root "CMakeLists.txt") -Raw) -notmatch 'project\(\s*Umbra\s+VERSION\s+(\d+)\.(\d+)\.(\d+)') { throw "no version in CMakeLists.txt" }
+if ((Get-Content (Join-Path $root "CMakeLists.txt") -Raw) -notmatch 'project\(\s*Totality\s+VERSION\s+(\d+)\.(\d+)\.(\d+)') { throw "no version in CMakeLists.txt" }
 $versionName = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
 $versionCode = [int]$Matches[1] * 10000 + [int]$Matches[2] * 100 + [int]$Matches[3]
 $out = Join-Path $build "apk"
@@ -40,10 +40,10 @@ if ($LASTEXITCODE -ne 0) { throw "native build failed" }
 # 2. staging: the native libraries
 $libDir = Join-Path $out "lib\arm64-v8a"
 New-Item -ItemType Directory -Force $libDir | Out-Null
-Copy-Item (Join-Path $build "libumbquest.so") $libDir -Force
+Copy-Item (Join-Path $build "libtotquest.so") $libDir -Force
 Copy-Item (Join-Path $root "ThirdParty\openxr-loader\prefab\modules\openxr_loader\libs\android.arm64-v8a\libopenxr_loader.so") $libDir -Force
 
-# 3. no assets: Umbra opens no data files, every sound is synthesised.
+# 3. no assets: Totality opens no data files, every sound is synthesised.
 
 # 4. resources (the launcher icon at five densities) -> compiled, then the manifest -> base.apk (no code)
 $resZip = Join-Path $out "res.zip"
@@ -57,7 +57,7 @@ if ($LASTEXITCODE -ne 0) { throw "aapt2 link failed" }
 
 # 5. add the libraries (jar keeps the zip valid; extractNativeLibs=true allows compressed .so)
 Push-Location $out
-& (Join-Path $Jdk "bin\jar.exe") uf $base lib\arm64-v8a\libumbquest.so lib\arm64-v8a\libopenxr_loader.so
+& (Join-Path $Jdk "bin\jar.exe") uf $base lib\arm64-v8a\libtotquest.so lib\arm64-v8a\libopenxr_loader.so
 Pop-Location
 if ($LASTEXITCODE -ne 0) { throw "jar failed" }
 
@@ -71,11 +71,11 @@ if (-not (Test-Path $keystore)) {
         -storepass android -keypass android -dname "CN=Android Debug,O=Android,C=US"
     if ($LASTEXITCODE -ne 0) { throw "keytool failed" }
 }
-$final = Join-Path $build "UmbraQuest.apk"
+$final = Join-Path $build "TotalityQuest.apk"
 & (Join-Path $bt "apksigner.bat") sign --ks $keystore --ks-pass pass:android --key-pass pass:android --out $final $aligned
 if ($LASTEXITCODE -ne 0) { throw "apksigner failed" }
 
 Write-Host ("APK size: {0:N0} bytes" -f (Get-Item $final).Length)
 Write-Host "APK: $final"
 Write-Host "install:  adb install -r `"$final`""
-Write-Host "config:   adb push umb.cfg /sdcard/Android/data/com.reneweller.umbra.quest/files/umb.cfg"
+Write-Host "config:   adb push tot.cfg /sdcard/Android/data/com.reneweller.totality.quest/files/tot.cfg"

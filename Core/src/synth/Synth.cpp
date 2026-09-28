@@ -2,12 +2,12 @@
  * @file Synth.cpp
  * @brief The mono synth.
  */
-#include "umb/synth/Synth.h"
-#include "umb/Params.h"
+#include "tot/synth/Synth.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kPiD = 3.141592653589793;
@@ -138,4 +138,4 @@ void MonoSynth::process(float* L, float* R, int n)
     }
 }
 
-} // namespace umb
+} // namespace tot

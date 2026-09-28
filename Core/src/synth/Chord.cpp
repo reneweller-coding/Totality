@@ -2,12 +2,12 @@
  * @file Chord.cpp
  * @brief The dub chord's voices and bus.
  */
-#include "umb/synth/Chord.h"
-#include "umb/Params.h"
+#include "tot/synth/Chord.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -161,4 +161,4 @@ void ChordSynth::process(float* L, float* R, int n, int64_t sample)
     }
 }
 
-} // namespace umb
+} // namespace tot

@@ -2,14 +2,14 @@
  * @file Study.cpp
  * @brief The study: blocks, operations per style, the reduction, micro-automation, delay throws, the loudness mark.
  */
-#include "umb/compose/Study.h"
-#include "umb/Dsp.h"
-#include "umb/Leveler.h"
+#include "tot/compose/Study.h"
+#include "tot/Dsp.h"
+#include "tot/Leveler.h"
 #include <algorithm>
 #include <cmath>
 #include <string>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -326,4 +326,4 @@ Score composeStudy(const ParamStore& p, uint64_t seed)
     return sc;
 }
 
-} // namespace umb
+} // namespace tot

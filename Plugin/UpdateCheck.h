@@ -1,9 +1,9 @@
 /**
  * @file UpdateCheck.h
- * @brief Whether a newer Umbra is out (26.09.2026): once a day, in the background, a question to GitHub about the
+ * @brief Whether a newer Totality is out (26.09.2026): once a day, in the background, a question to GitHub about the
  *        latest release -- nothing is sent but the request itself, and nothing is downloaded or installed; the status
  *        row shows the version with a link to its page. The check can be switched off (the application's settings,
- *        not the project's: Umbra/Umbra.updates in the user's application data). One check is shared by every
+ *        not the project's: Totality/Totality.updates in the user's application data). One check is shared by every
  *        instance of the plugin in a host.
  */
 #pragma once

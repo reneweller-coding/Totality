@@ -2,15 +2,15 @@
  * @file Set.cpp
  * @brief The set composer (Set.h).
  */
-#include "umb/compose/Set.h"
-#include "umb/Dsp.h"
-#include "umb/compose/Style.h"
+#include "tot/compose/Set.h"
+#include "tot/Dsp.h"
+#include "tot/compose/Style.h"
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <set>
 
-namespace umb {
+namespace tot {
 
 const char* const kDramaturgyNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat" };
 
@@ -309,4 +309,4 @@ Score flattenSet(const SetScore& set)
     return s;
 }
 
-} // namespace umb
+} // namespace tot

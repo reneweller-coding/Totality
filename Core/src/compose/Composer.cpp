@@ -2,18 +2,18 @@
  * @file Composer.cpp
  * @brief One track: form, harmony, rack, layers, candidates, events, hands, sounds (Composer.h).
  */
-#include "umb/compose/Composer.h"
-#include "umb/Presets.h"
-#include "umb/Dsp.h"
-#include "umb/compose/Corridor.h"
-#include "umb/compose/GestureEngine.h"
-#include "umb/pattern/Rack.h"
+#include "tot/compose/Composer.h"
+#include "tot/Presets.h"
+#include "tot/Dsp.h"
+#include "tot/compose/Corridor.h"
+#include "tot/compose/GestureEngine.h"
+#include "tot/pattern/Rack.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
 #include <set>
 
-namespace umb {
+namespace tot {
 
 const char* const kFormNames[] = { "Arc", "Peak", "Endless" };
 const char* const kUnitNames[8] = { "form", "harmony", "rack", "layers", "blocks", "events", "hands", "sounds" };
@@ -843,4 +843,4 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     return sc;
 }
 
-} // namespace umb
+} // namespace tot

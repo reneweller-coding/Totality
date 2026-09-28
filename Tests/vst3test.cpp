@@ -12,7 +12,7 @@
  * thread (PluginProcessor.h), so this test runs the message loop while it plays, as a host's would.
  * The path of the plugin comes from the command line, which CMake fills in with the built artefact.
  * @note Copied from Ephemeris `Tests/vst3test.cpp` at d047d79 (27.09.2026), after Phosphene's; the performer's MIDI is
- *       Umbra's.
+ *       Totality's.
  */
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -88,9 +88,9 @@ int finish()
 int main(int argc, char** argv)
 {
     juce::ScopedJuceInitialiser_GUI juceInit;
-    if (argc < 2) { std::printf("usage: umb_vst3test <path to Umbra.vst3>\n"); return 2; }
+    if (argc < 2) { std::printf("usage: tot_vst3test <path to Totality.vst3>\n"); return 2; }
     const juce::File plugin(juce::String::fromUTF8(argv[1]));
-    std::printf("Umbra VST3 test: %s\n", plugin.getFullPathName().toRawUTF8());
+    std::printf("Totality VST3 test: %s\n", plugin.getFullPathName().toRawUTF8());
     check(plugin.exists(), "the built VST3 is where the build says it is");
     if (!plugin.exists()) return finish();
 
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
     if (found.isEmpty()) return finish();
     const juce::PluginDescription& desc = *found[0];
     std::printf("  %s %s by %s\n", desc.name.toRawUTF8(), desc.version.toRawUTF8(), desc.manufacturerName.toRawUTF8());
-    check(desc.name == "Umbra", "it calls itself Umbra");
+    check(desc.name == "Totality", "it calls itself Totality");
     check(desc.isInstrument, "it says it is an instrument");
 
     // ---------------------------------------------------------------- an instance

@@ -2,12 +2,12 @@
  * @file Rumble.cpp
  * @brief The rumble: split, hall, clip, band filters, the phase-continuing sub, the duck.
  */
-#include "umb/synth/Rumble.h"
-#include "umb/Params.h"
+#include "tot/synth/Rumble.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -124,4 +124,4 @@ void Rumble::process(const float* kickBody, float* out, int n)
     }
 }
 
-} // namespace umb
+} // namespace tot

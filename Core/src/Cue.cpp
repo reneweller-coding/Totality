@@ -1,13 +1,13 @@
 /**
  * @file Cue.cpp
  * @brief Score cues for a visualiser (Cue.h).
- * @note Copied from Ephemeris `Core/src/Cue.cpp` (namespace eph) at d047d79 (27.09.2026); the marks are Umbra's.
+ * @note Copied from Ephemeris `Core/src/Cue.cpp` (namespace eph) at d047d79 (27.09.2026); the marks are Totality's.
  */
-#include "umb/Cue.h"
-#include "umb/Dsp.h"
-#include "umb/Params.h"
-#include "umb/compose/Composer.h"
-#include "umb/pattern/Rack.h"
+#include "tot/Cue.h"
+#include "tot/Dsp.h"
+#include "tot/Params.h"
+#include "tot/compose/Composer.h"
+#include "tot/pattern/Rack.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -30,7 +30,7 @@
   #include <unistd.h>
 #endif
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -147,11 +147,11 @@ std::vector<uint8_t> oscOf(const Cue& c)
 {
     const char* text = c.text;
     switch (c.kind) {
-    case CueKind::Beat:  return oscMessage("/umb/beat", "if", &c.a, &c.b, nullptr);
-    case CueKind::Bar:   return oscMessage("/umb/bar", "i", &c.a, nullptr, nullptr);
-    case CueKind::Block: return oscMessage("/umb/block", "s", nullptr, nullptr, &text);
-    case CueKind::Op:    return oscMessage("/umb/op", "s", nullptr, nullptr, &text);
-    case CueKind::Key:   return oscMessage("/umb/key", "s", nullptr, nullptr, &text);
+    case CueKind::Beat:  return oscMessage("/tot/beat", "if", &c.a, &c.b, nullptr);
+    case CueKind::Bar:   return oscMessage("/tot/bar", "i", &c.a, nullptr, nullptr);
+    case CueKind::Block: return oscMessage("/tot/block", "s", nullptr, nullptr, &text);
+    case CueKind::Op:    return oscMessage("/tot/op", "s", nullptr, nullptr, &text);
+    case CueKind::Key:   return oscMessage("/tot/key", "s", nullptr, nullptr, &text);
     }
     return {};
 }
@@ -230,4 +230,4 @@ void CueSender::loop()
     }
 }
 
-} // namespace umb
+} // namespace tot

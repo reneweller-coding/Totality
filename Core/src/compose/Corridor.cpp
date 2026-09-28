@@ -2,11 +2,11 @@
  * @file Corridor.cpp
  * @brief The hypnosis corridor's measures on the score.
  */
-#include "umb/compose/Corridor.h"
+#include "tot/compose/Corridor.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -110,4 +110,4 @@ CorridorStats corridorOf(const std::vector<BarProfile>& bars, int from, int to)
     return st;
 }
 
-} // namespace umb
+} // namespace tot

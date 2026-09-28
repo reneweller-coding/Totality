@@ -1,13 +1,13 @@
 /**
  * @file Spring.cpp
  * @brief Two dispersive springs.
- * @note Copied from Ephemeris `Core/src/fx/Spring.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/fx/Spring.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/fx/Spring.h"
+#include "tot/fx/Spring.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr float kApCoef = 0.62f;                        ///< the all-passes' coefficient (Välimäki et al. use about 0.6)
@@ -90,4 +90,4 @@ void Spring::process(const float* inL, const float* inR, float* outL, float* out
     }
 }
 
-} // namespace umb
+} // namespace tot

@@ -1,14 +1,16 @@
-# Umbra: Plan für den Hypnotic-Berlin-Techno-Generator
+# Totality: Plan für den Hypnotic-Berlin-Techno-Generator
 
-Stand 27.09.2026, Entwurf nach den Entscheidungen des Nutzers (Abschnitt 16). Name **Umbra**, Repo
-`G:\Tools\VRAudio\TechnoGenerator` (eigenes Projekt, nicht in Noctuary integriert), Namensraum `umb::`, Präfix `UMB_`,
-Werkzeuge `umb_render`, `umb_selftest`, Set-Datei `.umbset`. Code-Kommentare im Doxygen-Format wie Phosphene und
-Ephemeris; GUI und Handbuch auf Englisch, Plan und Journal auf Deutsch.
+Stand 27.09.2026, Entwurf nach den Entscheidungen des Nutzers (Abschnitt 16). Name **Totality** (bis 28.09.2026
+**Umbra**, Risiko 7), Repo `G:\Tools\VRAudio\TechnoGenerator` (eigenes Projekt, nicht in Noctuary integriert),
+Namensraum `tot::`, Präfix `TOT_`, Werkzeuge `tot_render`, `tot_selftest`, Set-Datei `.totset`. Code-Kommentare im
+Doxygen-Format wie Phosphene und Ephemeris; GUI und Handbuch auf Englisch, Plan und Journal auf Deutsch.
 
-Der Name: Die Umbra ist der Kernschatten einer Finsternis, der Bereich, in dem die Lichtquelle ganz verdeckt ist. Was
-dort bleibt, ist Form ohne Glanz. Berliner Techno nimmt weg, was glänzt (Melodie, Akkordwechsel, Drops), bis Puls,
-Raum und kleine Veränderung übrig bleiben, und in diesem Rest geschieht die Hypnose. Die Geschwister heißen Noctuary,
-Phosphene und Ephemeris; Umbra gehört in dieselbe Familie der Himmels- und Lichtwörter.
+Der Name: Die Totalität ist der Abschnitt einer totalen Sonnenfinsternis, in dem der Mond die Sonne ganz verdeckt;
+übrig bleiben die schwarze Scheibe und ihre Korona. Was dort bleibt, ist Form ohne Glanz. Berliner Techno nimmt weg,
+was glänzt (Melodie, Akkordwechsel, Drops), bis Puls, Raum und kleine Veränderung übrig bleiben, und in diesem Rest
+geschieht die Hypnose. Die Geschwister heißen Noctuary, Phosphene und Ephemeris; Totality gehört in dieselbe Familie
+der Himmels- und Lichtwörter. Bis zum 28.09.2026 hieß das Projekt Umbra, nach dem Kernschatten einer Finsternis; der
+Name ist als Audio-Software vergeben (Risiko 7).
 
 **Grundlagen dieses Entwurfs.** Das Recherchedokument des Nutzers (`docs/research/Berlin-Techno-Analyse-2026-09-27.pdf`,
 im Folgenden **Dok.** mit Abschnittsnummer), seine Ergänzung (`docs/research/Ergaenzung-2026-09-27.md`, **Erg. 1** bis
@@ -19,6 +21,22 @@ aus einer zitierten Quelle, **[A]** daraus abgeleitet, **[I]** inferiert und zu 
 wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
+
+**28.09.2026, morgens: Totality.** Der Nutzer hat den Generator umbenannt, weil "Umbra" als Audio-Software vergeben
+ist (Risiko 7). Alles heißt jetzt so: Plugin, Standalone und Installer (`Totality.vst3`, `Totality.exe`, neue AppId,
+damit er nicht in den alten Ordner installiert), der Kern `TotalityCore`, Namensraum `tot::`, Präfix `TOT_` (auch die
+Umgebungsvariablen), `tot_render`, Set-Dateien `.totset`, die OSC-Adressen `/tot/beat` ... `/tot/key`, das Quest-Paket
+`com.reneweller.totality.quest` (`TotalityQuest.apk`), das Handbuch, die Update-Prüfung (`reneweller-coding/Totality`),
+der Ordner der Referenz-Tonspur (`%TEMP%\totality_refs`). Der Plugin-Code ist `Totl`: ein Host sieht ein neues
+Instrument, Projekte mit dem alten laden es nicht. Geblieben ist das Wort als Begriff: die Kick-Scheibe des
+Eclipse-Blicks heißt im Code weiter die Umbra, und "Umbra" ist eines der Nomen der Sub-Gruppe "Dark Sub".
+
+Dazu das Logo, gewählt aus sechs Vorschlägen (Korona, Diamantring, sechzehn Steps, Wortmarke, Kontaktphasen, das
+bisherige Icon): **die Korona** (`Deploy/make_icon.py`). Die schwarze Mondscheibe mit dem hellen Rand der Chromosphäre
+und die Korona in 48 Strahlen, lang am Äquator, kurz an den Polen, wie sie im Sonnenminimum steht; bis 32 Pixel 24
+Strahlen, dicker und kürzer. Dieselbe Zeichnung ist das Icon (`.ico`, Installer, Launcher-Icon der Quest in fünf
+Dichten, jetzt aus demselben Skript), der Kopf des Plugins (`drawLogo`), das Logo auf dem Quest-Panel in Lichtpunkten
+(`addLogo`), das Deckblatt des Handbuchs und die Social Preview. Screenshots, Handbuch, APK und Release neu gebaut.
 
 **28.09.2026, später in der Nacht: Presets.** Auf die nachgereichte Bitte ("Presets für die einzelnen Synth, ähnlich wie
 für Ephemeris ... 1024 pro Synth-Engine ... vom Composer ausgewählt und beim Abspielen angezeigt ... Knöpfe/Encoder/
@@ -45,7 +63,7 @@ Mixer-Züge auf die absoluten Preset-Werte setzen").
   Automationsgesten laufen relativ zum Wert des Tracks.
 - **Anzeige:** jede Synth-Seite hat oben ein Preset-Feld (Menü der 1024 in ihren Gruppen, zurück/vor, "this track:
   Punchy Drum Hall (Hypnotic Thud)"), die Arrange-Seite listet die Sounds des Tracks, die Quest zeigt Kick und Ping,
-  `umb_render` druckt alle.
+  `tot_render` druckt alle.
 
 Die Kalibrierung mit Presets (dieselben 12 Tracks wie in Phase 4): 10 bis 14 von 96 Werten außerhalb des 10.–90.-
 Perzentils der Referenzen, je nach gezogenen Presets (vorher 10; bei gleicher Verteilung wären etwa 19 zu erwarten).
@@ -60,8 +78,8 @@ und dynamischer als die schmalen, flachen Referenzen (schon vor den Presets knap
 und was noch fehlt nacheinander in dieser Nacht" hin, ohne Agenten; alles lokal committet, nichts veröffentlicht.
 
 Was vorher fehlte:
-- **OSC-Cues für Kaleidoscope** (10.3): `Cue.h` aus Ephemeris, Umbras Marken: `/umb/beat`, `/umb/bar`, `/umb/block`,
-  `/umb/op`, `/umb/key` (Camelot); der Audio-Thread stempelt, ein eigener Thread sendet (`testCues`: Bytes nach OSC 1.0,
+- **OSC-Cues für Kaleidoscope** (10.3): `Cue.h` aus Ephemeris, Totalitys Marken: `/tot/beat`, `/tot/bar`, `/tot/block`,
+  `/tot/op`, `/tot/key` (Camelot); der Audio-Thread stempelt, ein eigener Thread sendet (`testCues`: Bytes nach OSC 1.0,
   Marken, Tap, ein Datagramm durch das Loopback).
 - **Stems, deren Summe die Mischung ergibt**: jeder Stem durch eigene Kopien der linearen Stufen (Gruppen-Hochpass, Tilt,
   die Frequenzweichen der Ducks, Isolator und Filter des Mixerkanals) und mal den Gains der nichtlinearen (Drum-Bus-
@@ -73,10 +91,10 @@ Was vorher fehlte:
   Partitur, wie sie komponiert ist). Ein Mute lässt die Noten weg, die Fahnen klingen aus (`testPerform`).
 - **Style-Tab**: `custom.*`, ein eigener Stil über dem Profil (Tempo, Formgewichte, Länge, Rack, Swing, Ränder, längster
   Kick-out, Ereignisse, Korridor, Ziel-LUFS), dazu die Zahlen des Profils und die Referenz-Mediane.
-- **Namensprüfung (Risiko 7):** "Umbra" ist als Audio-Software **vergeben**: Orchestral Tools vertreibt ein kommerzielles
-  "Umbra" (VST/AU/AAX, Sample-Instrument), H.G. Fortune ein freies "Umbra"-VSTi (2008), dazu ein "Umbra VSTi" für Trap.
-  Vor einer Veröffentlichung entscheidet der Nutzer; eine erste Suche nach "Totality" fand keine Audio-Software (keine
-  Markenrecherche). Bis dahin bleibt der Name.
+- **Namensprüfung (Risiko 7):** "Umbra" ist als Audio-Software **vergeben**: Orchestral Tools vertreibt ein
+  kommerzielles "Umbra" (VST/AU/AAX, Sample-Instrument), H.G. Fortune ein freies "Umbra"-VSTi (2008), dazu
+  ein "Umbra VSTi" für Trap. Eine erste Suche nach "Totality" fand keine Audio-Software (keine Markenrecherche).
+  **Der Nutzer hat entschieden (28.09.2026): der Generator heißt Totality.**
 - **Rekordbox/Traktor**: die Prüfung der Cue-Marken in DJ-Software bleibt beim Nutzer (15.8); JSON-Cues liegen daneben.
 
 **Phase 5, GUI** (`Plugin/`, Gerüst aus Ephemeris): Tabs nach 10.1 -- Set, Arrange (Zeitleiste, Operationen, Matrix je
@@ -85,9 +103,9 @@ Stimme ein Ring von Perlen, ein Takt je Umlauf, Polymeter präzedieren, Konjunkt
 das Step-Raster mit Off-Grid-Strich), Low End, Drums (zwölf Lanes), Tones, Dub, Mixer (Meter je Deck, Ausgang, Lautheit
 über 400 ms K-gewichtet), Perform (Mute-Pads, Master-Filter, Wurf, Kills und Fader je Deck, Learn an jedem Regler,
 Rechtsklick vergisst; Tasten C3 bis F#3 schalten die Mutes, Modrad Filter, Expression Wurf), Export (WAV mit Cues, MIDI,
-Stems, DJ-Loops, `.umbset`, OSC), Style. Die Parameterseiten entstehen aus den Tabellen (`EditorTheme.cpp`, `layoutOf`).
-Im Host gilt das Host-Tempo, Sprünge des Playheads werden verfolgt. `UMB_SHOT`/`UMB_TAB`/`UMB_SHOT_FULL`/`UMB_SET` für
-Bilder ohne Menschen; Update-Prüfung wie Ephemeris (`reneweller-coding/Umbra`).
+Stems, DJ-Loops, `.totset`, OSC), Style. Die Parameterseiten entstehen aus den Tabellen (`EditorTheme.cpp`, `layoutOf`).
+Im Host gilt das Host-Tempo, Sprünge des Playheads werden verfolgt. `TOT_SHOT`/`TOT_TAB`/`TOT_SHOT_FULL`/`TOT_SET` für
+Bilder ohne Menschen; Update-Prüfung wie Ephemeris (`reneweller-coding/Totality`).
 Prüfsteine: `vst3test` 30 von 30 (Tempo, Sprung, MIDI, Zustand, 44,1/96 kHz, zweite Instanz, Editor), **pluginval
 Strenge 10 bestanden**.
 
@@ -96,17 +114,17 @@ Mischpult -- links Pinch Play/Stop, rechts Pinch Kick-out/-in, beide zusammen de
 Master-Filter, rechts Echo-Wurf; ein Pinch wirkt beim Öffnen, damit beide zusammen nicht zugleich zwei einzelne sind.
 Die **Eclipse im Raum**: 3 m voraus, 1,3 m über den Augen, zum Spieler geneigt, am Sessionbeginn verankert; Korona
 schwillt mit jeder Kick, Perlen des nächsten Takts blenden über das erste Achtel ein (keine Sprünge, Kaleidoscope-Regeln).
-`umb.cfg` mit Seed, Stil, Set-Länge, Qualität, OSC, beliebigen Knöpfen. APK gebaut (4,8 MB, arm64, ohne Warnung),
+`tot.cfg` mit Seed, Stil, Set-Länge, Qualität, OSC, beliebigen Knöpfen. APK gebaut (4,8 MB, arm64, ohne Warnung),
 **auf dem Gerät ungetestet** (kein Headset angeschlossen).
 Qualitätsstufe `Engine::Quality::Quest`: Granularwolke aus, der Rumble clippt ohne Überabtastung. Kosten je Stufe mit der
-CMake-Option `UMB_PROFILE` gemessen (20-Minuten-Set, Seed 2026, Desktop): Rumble 12 %, Kit 13 %, Dub-Kette 11 %,
+CMake-Option `TOT_PROFILE` gemessen (20-Minuten-Set, Seed 2026, Desktop): Rumble 12 %, Kit 13 %, Dub-Kette 11 %,
 Raum 9 %, Master-Clipper 7,5 %; gesamt 7,8 % eines Kerns, in der Quest-Stufe 7,5 %. Auf der Quest 2 wären das mit dem
 üblichen Faktor 3 bis 4 etwa 23 bis 30 % -- am Rand des Plans; messen kann es nur das Gerät. Weitere Hebel (nicht gebaut):
 das abgehende Deck eines Blends in der niedrigen Stufe (11), ein kleinerer Raum.
 
-**Phase 7, Qualität und Release:** Version 1.0.0. Handbuch aus dem Programm (`Tools/manual`: `umb_render --dump-params`
+**Phase 7, Qualität und Release:** Version 1.0.0. Handbuch aus dem Programm (`Tools/manual`: `tot_render --dump-params`
 für die Tabellen, die Screenshots aus dem Standalone, der Text in `chapters.txt`; PDF über Edge), Social Preview
-(`docs/social-preview.png`), Installer (`Deploy/Umbra.iss`, Inno Setup) und `Deploy/build_release.ps1` (icx,
+(`docs/social-preview.png`), Installer (`Deploy/Totality.iss`, Inno Setup) und `Deploy/build_release.ps1` (icx,
 statische Laufzeit, Tests, pluginval, Handbuch, Prüfung der Abhängigkeiten, Prüfsummen, portables Zip, Setup): der lokale Durchlauf mit icx bestand alle 30 Tests und pluginval, keine Laufzeit-DLL, Setup 10,3 MB und
 portables Zip 11,8 MB in `Deploy/out`.
 Nicht getan, bewusst: Hörrunden (des Nutzers), Nachkalibrierung (die offenen Befunde der Phase 4 -- Endless flach, Dub am
@@ -142,7 +160,7 @@ Level, Cut, Clipper, Limiter).
   (`compose/Corridor`: Taktähnlichkeit bei Abstand 1/2/4, Mikroveränderung, Dichte, auf der Partitur wie `analyze_ref.py`
   auf dem Audio).
 - **Kuration:** jeder Teil auf eigenem Strom (`form`, `harmony`, `rack`, `rack.<layer>`, `layers`, `blocks`, `block<n>`,
-  `events`, `hands`, `sounds`; im Set `track<n>` und `track<n>.<unit>`, `set`); `.umbset` (aus Ephemeris) hält Seed,
+  `events`, `hands`, `sounds`; im Set `track<n>` und `track<n>.<unit>`, `set`); `.totset` (aus Ephemeris) hält Seed,
   Längen, Rerolls und geänderte Knöpfe.
 - **Set:** Dramaturgien Warm-up (125 → 130), Peak (128 → 134), Closing (132 → 127), Sunday (126 → 128), Flat (130),
   höchstens 1 BPM je Track, die Rampe im Blend; die Stile wandern mit der Energie über Dub, Hypnotic, Ostgut, Raw, um den
@@ -156,7 +174,7 @@ Prüfstein von Abschnitt 14:
 
 | Prüfstein | Ergebnis |
 |---|---|
-| Zwei-Stunden-Set aus einem Seed | 27 Tracks in 121 Minuten (Seed 2026, Peak: 128 → 134 BPM, Hypnotic → Ostgut), 6 Live-Loops, 8 Breaks, Cues, MIDI, `.umbset`; 11-fache Echtzeit, 9,3 % eines Kerns (zwei Decks in den Blends); −10,1 LUFS, True Peak −0,99 dBTP, lautestes Kurzzeitfenster −8,1 LUFS ([Bericht](eval/set-seed2026.md)) |
+| Zwei-Stunden-Set aus einem Seed | 27 Tracks in 121 Minuten (Seed 2026, Peak: 128 → 134 BPM, Hypnotic → Ostgut), 6 Live-Loops, 8 Breaks, Cues, MIDI, `.totset`; 11-fache Echtzeit, 9,3 % eines Kerns (zwei Decks in den Blends); −10,1 LUFS, True Peak −0,99 dBTP, lautestes Kurzzeitfenster −8,1 LUFS ([Bericht](eval/set-seed2026.md)) |
 | Determinismus | derselbe Seed, dasselbe Set und derselbe Track; ein Block, eine Lage, die Hände einzeln neu, der Rest bitgleich (`testCuration`, `testSet`) |
 | Blend-Test | nur ein Deck besitzt je das Tiefband (1 408 Takte eines 40-Minuten-Sets geprüft), Bass-Swap in einem Sample, zwei Decks bitgleich über Blockgrößen (`testSet`) |
 | Grammatik | 32 Tracks: je Blockgrenze genau eine Operation, alles auf 4-Takt-Linien, Rückkehr auf 16-Takt-Linien, nichts Tonales in den ersten und letzten 32 Takten, Harmonik nach Dok. 8.9 (`testComposer`) |
@@ -175,7 +193,7 @@ Kalibrierung gegen die Referenzen, drei komponierte Tracks je Stil (Median der d
 
 Befunde, alle von Tests oder Messungen gefunden:
 - **Balance und Breite hängen am Fenster.** `analyze_ref.py` misst sie auf der mittleren Minute; bei einem
-  Peak-Track liegt dort der Kick-out (Schwerpunkt 3,6 kHz, nur Hats). Umbras Tracks werden jetzt auf ihrer lautesten
+  Peak-Track liegt dort der Kick-out (Schwerpunkt 3,6 kHz, nur Hats). Totalitys Tracks werden jetzt auf ihrer lautesten
   Minute gemessen (der Body voll, wie die mittlere Minute einer Referenz meist), die Referenzen wie bisher.
 - **Die Rezepte der Stile** sind auf der lautesten Minute von je drei komponierten Tracks gefittet (Tilt Hypnotic 12,
   Ostgut 12,5, Dub 13, Raw 4,5 dB; Raum, Busse, Flächen, Ping und Echo je Stil). Dub braucht helle Stabs (1–5 kHz) und
@@ -184,7 +202,7 @@ Befunde, alle von Tests oder Messungen gefunden:
   Fläche füllt das FDN weit stärker, bei Send 0,2 lag der Raum 6 dB über der Drone selbst (ein Set kam kurzzeitig auf
   −4,3 LUFS). Drone- und 303-Send auf ein Zehntel.
 - **Die Lautheit bewegt sich an den Rändern**: Die Referenzen liegen im Intro 4 bis 9, im Outro 5 bis 19 dB unter dem
-  Body, Umbras Tracks lagen 1 bis 4 darunter (LRA 1–2 statt 3–5). Das Rumble kommt jetzt mit dem Body (p 0,7), und die
+  Body, Totalitys Tracks lagen 1 bis 4 darunter (LRA 1–2 statt 3–5). Das Rumble kommt jetzt mit dem Body (p 0,7), und die
   Ränder laufen durch den Gruppen-Hochpass (die Fahrt aus Dok. 8.5s Tabelle; je Stil p 0,1 bis 0,6).
 - **Raw kürzt**: Die Raw-Referenzen haben 0,5 Reduktionen je Titel, Median 3 Takte; ein Kick-out von 32 Takten gab LRA
   4,7 statt 1,2. Die längste Reduktion ist jetzt eine Größe des Profils (Raw 8 Takte).
@@ -195,7 +213,7 @@ Befunde, alle von Tests oder Messungen gefunden:
 
 Abweichungen vom Plan, bewusst:
 - **Kandidaten variieren nur die Würfe** (7.9 nannte Op, Ereignisse und Motion-Seeds): sonst hielte die Kuration nicht.
-- **Dur (0,04) entfällt** (Umbras Skalen sind Moll-Modi); der Tonartwechsel in einem Track (p 0,04) ist nicht gebaut.
+- **Dur (0,04) entfällt** (Totalitys Skalen sind Moll-Modi); der Tonartwechsel in einem Track (p 0,04) ist nicht gebaut.
 - **Klänge als Rezept plus gezogene Bereiche je Track**, noch keine Preset-Bänke als Programmwechsel (Phase 5/7).
 - **Das Glue sitzt im Track-Bus jedes Decks**, nicht im Master: So kommt der Leveler-Trim weiter hinter dem Glue.
 - **Endless nicht im Hauptdeck eines Sets**; Deck C trägt die Loops.
@@ -215,7 +233,7 @@ Dreiklänge in den Terzen der Tonart, add9 nur, wo die Skala die None hat).
 
 Gemessen an zehnminütigen Studien (Seed 7; Dub mit Sub-Besitz) gegen die Mediane der Referenzen, mit demselben Werkzeug:
 
-| Größe | Hypnotic: Umbra / Ref. | Ostgut | Dub | Raw |
+| Größe | Hypnotic: Totality / Ref. | Ostgut | Dub | Raw |
 |---|---|---|---|---|
 | Bänder dB gegen 40–140 Hz: 250 Hz–1 kHz | −8,6 / −12,8 | −14,7 / −12,0 | −14,2 / −13,4 | −14,8 / −13,0 |
 | 1–5 kHz | −15,1 / −15,8 | −16,9 / −15,4 | −23,7 / −17,9 | −18,2 / −18,5 |
@@ -270,9 +288,9 @@ Offen, für Phase 4: die Klangrezepte der Stile (Hypnotic ist zu breit und hat 4
 Rückwege teilen sich einen Ducker), und der Hörvergleich je Profil durch den Nutzer.
 
 **27.09.2026, abends: Referenzmessung und der größte Teil von Phase 2.** Die 30 Referenztitel (`Tools/ref_sets.txt`)
-liegen als Tonspur in `%TEMP%\umbra_refs` (Entscheidung 16.1: Audio behalten, außerhalb des Repos) und sind mit
+liegen als Tonspur in `%TEMP%\totality_refs` (Entscheidung 16.1: Audio behalten, außerhalb des Repos) und sind mit
 `Tools/analyze_ref.py` vermessen; im Repo stehen nur die Statistiken (`Tools/ref_stats.json`). Dasselbe Werkzeug misst
-Umbras Renders.
+Totalitys Renders.
 
 | Größe (Median) | Hypnotic (7) | Ostgut (11) | Raw (6) | Dub (6) | alle (30) | Studie, Hypnotic (Seed 7/8) |
 |---|---|---|---|---|---|---|
@@ -296,7 +314,7 @@ Befunde der Messung:
 - **Die Spektralziele von Dok. 8.7 sind so nicht reproduzierbar**: Leistungsgewichtet liegen über 5 kHz 1,2 % und der
   Schwerpunkt bei 248 Hz, nicht bei 7 % und 1,5 bis 3,5 kHz (vermutlich betragsgewichtet oder anders gefiltert gemessen).
   Kalibriert wird gegen die eigene Messung.
-- **Der Kick-Grundton liegt bei 54 Hz**, nicht bei den 60 Hz des Korpus in Dok. 8.7; Umbras Standard (tonal auf 41 bis
+- **Der Kick-Grundton liegt bei 54 Hz**, nicht bei den 60 Hz des Korpus in Dok. 8.7; Totalitys Standard (tonal auf 41 bis
   62 Hz, A → 55 Hz) passt.
 - **Reduktionen sind kurz**: im Median 2 Takte, 1,3 je Titel; lange Kick-outs sind die Ausnahme (Efdemin 32, Function
   20, Kobosil 14 Takte). Die Studie mit ihrem 8-Takt-Kick-out liegt am langen Ende. Für die Form (Phase 4) heißt das:
@@ -319,7 +337,7 @@ Gebaut in Phase 2 (aus Abschnitt 14): Polymeter (3, 5, 6, 7, 12, Reset alle 16 T
 Block) als zyklische Layer, Euklid E(3,8)/E(5,16)/E(7,16) neben den Vierteln, Displacement, Ghost-Ketten (Erg. 7),
 Trig-Conditions (OH 2:4, Shaker 3:4), Fills (Tom/Conga nach dem letzten Viertel einer 8-Takt-Phrase), die Ping-Stimme
 (FM mit √2, Low-Pass-Gate mit Vactrol-Abfall nach Parker und D'Angelo, wandernder Bandpass) samt zyklischer Figur,
-Mininotation (`umb_render --patterns`), die symbolische Wiederholung je Stimme (`--stats`), die globalen LFOs (7, 11,
+Mininotation (`tot_render --patterns`), die symbolische Wiederholung je Stimme (`--stats`), die globalen LFOs (7, 11,
 13 Beats, 0,065 und 0,05 Hz) auf Filter, Pegel und Decay der Lanes und den Rumble-Drive, ein Raum-Send (FDN, Rückweg
 250 Hz bis 6 kHz) für Hats, Perkussion und Ping. Kalibriert: Rumble-Sub 0 dB (Sub-Anteil 0,45 wie Hypnotic), Rumble-
 Ausgang neu (Level weiter "Rumble gegen Kick"), Raum 17 dB unter den trockenen Hats. `ctest` 18 von 18. Aus Phase 2
@@ -327,7 +345,7 @@ offen: die Onset-Profile gegen die Referenzen im Einzelnen (die Hypnotic-Titel h
 16tel-Teppich im Höhenband, die Studie ein Offbeat-Profil).
 
 **27.09.2026: Phase 0 fertig, Phase 1 hörbar** (Freigabe des Nutzers: "Ja, bitte ziehe das erst mal so durch", damit
-auch die Vorschläge 16.2). `umb_render --seed 7 --minutes 7` spielt die Studie (`compose/Study.h`): sieben Blöcke zu
+auch die Vorschläge 16.2). `tot_render --seed 7 --minutes 7` spielt die Studie (`compose/Study.h`): sieben Blöcke zu
 32 Takten, Kick und Rumble ab Takt 1, Offbeat-Hat ab Takt 9, Rolling-Hat zur Hälfte ab Takt 17, der Hat-Bus öffnet von
 1,5 kHz über 24 Takte, dann je Block genau eine Operation (Ghost-Kicks, Open-Hat, die zweite Hälfte der Rolling-Hat,
 Shaker/Tom/Rim/Ride gemischt), die Reduktion (Kick-out Takte 16 bis 23 des Blocks bei 55 % des Körpers, Rausch-Swell,
@@ -355,7 +373,7 @@ Gebaut: aus Ephemeris (d047d79) `Vec`, `Dsp`, `Adaa`, `Halfband`, `Clock`, `WavW
 das Kit mit `PercKernel` und der Ducker; aus Noctuary (7a48fdd) der Oversampler. Neu: die Parametertabellen, die
 909-Engine und die Top-Schicht der Kick, `Kick::asymptoticPhase`, der frequenzgeteilte Rumble, der Sub-Bass mit
 Kick-Lock, die im Code erzeugte 909-Metalltabelle (60 Teiltöne, 6 Bit), Einzelausgänge der Lanes, das Pattern-Rack mit
-allen Matrizen, Velocity- und Timing-Werten von Dok. 8.2/8.3, die Studie, die Engine, `umb_render`.
+allen Matrizen, Velocity- und Timing-Werten von Dok. 8.2/8.3, die Studie, die Engine, `tot_render`.
 
 Befunde unterwegs, alle von Tests oder Messungen gefunden:
 - **Der Rumble lag 29 dB unter der Kick** und erreichte den Clip nie (Hallrückweg mit Spitzen bei −13 dBFS): Drive
@@ -400,13 +418,13 @@ Die drei Entscheidungen, die alles andere bestimmen:
    32-Takt-Blöcken mit **genau einer Operation je Block** (Treppe: Add, Remove, Swap, Hold) und setzt darunter
    Mikroereignisse und Automationsrampen. Die Partitur enthält trotzdem jede Note (Determinismus, MIDI-Export).
 2. **Das Tieffundament ist ein gekoppeltes System.** Kick, Rumble und Sub teilen sich das Band unter 150 Hz, und genau
-   dort entscheidet sich, ob ein Track schiebt oder sich selbst auslöscht (Erg. 4). Umbra baut die Kick mit
+   dort entscheidet sich, ob ein Track schiebt oder sich selbst auslöscht (Erg. 4). Totality baut die Kick mit
    geschlossener Phase (Phosphene), führt den Rumble **frequenzgeteilt**: Hall nur auf 80 bis 300 Hz, darunter ein Sinus,
    der die Phase der Kick an der Übergabe fortsetzt, und duckt ereignisgesteuert vom Kick-Trigger, nicht vom Pegel. Ein
    Track hat einen **Tiefenbesitzer**: Rumble oder Sub-Bass, nie beide voll. Erster Prüfstein ist, was bei Phosphene der
    rollende Bass war: **ein Groove, der rollt** (Abschnitt 14).
 3. **Hypnose ist messbar und wird gesteuert.** Hohe Vorhersagbarkeit des Rasters, darüber ein stetiger, kleiner Strom
-   von Neuigkeit (Dok. 1: "a hi-hat opening by 2 % can qualify as a major emotional event"). Umbra misst beides auf der
+   von Neuigkeit (Dok. 1: "a hi-hat opening by 2 % can qualify as a major emotional event"). Totality misst beides auf der
    Partitur und auf dem Audio: Entropierate und Predictive Information Rate (Abdallah und Plumbley 2009) der
    Onset-Folgen, dazu die Rate der Klangfarbenänderung von Takt zu Takt. Die Korridore werden an den Referenzen gemessen
    (13.4), und der Komponist wählt je Block unter mehreren Kandidaten den, der im Korridor seines Profils liegt (7.9).
@@ -533,7 +551,7 @@ und Raw-Referenzen des Dokuments (13.4) messen die anderen drei.
 
 Dok. 1 und 5 beschreiben denselben Mechanismus aus drei Richtungen: Repetition plus Mikroveränderung (Dettmann,
 Goldmann, Garcia), der Groove als Tasche, in der man bleibt (Hood: "Stay in the pocket and watch it put people in a
-trance", höchstens vier Elemente zugleich), und die Winzigkeit der Ereignisse (2 % Hat-Öffnung). Umbra macht daraus drei
+trance", höchstens vier Elemente zugleich), und die Winzigkeit der Ereignisse (2 % Hat-Öffnung). Totality macht daraus drei
 Größen, die gemessen und gesteuert werden:
 
 - **Vorhersagbarkeit des Rasters:** Entropierate h der Onset-Folge je Band oder Layer (Zustand je 16tel), geschätzt als
@@ -559,7 +577,7 @@ Dok. 7 ist die Übersicht und wird hier nicht wiederholt. Die Kurzfassung: Es gi
 Die dokumentierten regelbasierten Systeme (Eigenfeldts GERP, GEDMAS, GESMI; Collins' Infno) arbeiten mit
 Onset-Wahrscheinlichkeitsmatrizen, Sektionsalphabeten und Markov-Ketten erster Ordnung und berichten keinen formalen
 Hörtest; Produzentenformalismen (Elektron-Trig-Conditions, Ableton-Groove, Tidal-Mininotation) sind direkt
-wiederverwendbar. Umbra folgt diesem Weg: Regeln und Wahrscheinlichkeiten mit Zustand, kalibriert an Messungen, keine
+wiederverwendbar. Totality folgt diesem Weg: Regeln und Wahrscheinlichkeiten mit Zustand, kalibriert an Messungen, keine
 lernenden Anteile zu Beginn.
 
 Eigener Stand, der hier zählt: Phosphene (Kick mit geschlossener Phase und Phasenkopplung an den Bass, zwölf
@@ -570,7 +588,7 @@ Impulsantworten, 4×-Oversampling, Mid/Side, Patina, spektrales Ducking, Granula
 
 ### 2.11 Die Ergänzung, geprüft
 
-| Punkt | Urteil | Was Umbra daraus macht | Beleg und Vorbehalt |
+| Punkt | Urteil | Was Totality daraus macht | Beleg und Vorbehalt |
 |---|---|---|---|
 | **Erg. 1** FM-Ping, Low-Pass-Gate | übernommen | eigene Stimme `Ping` (5.5): FM mit inharmonischem Verhältnis oder angeschlagenes LPG mit Vactrol-Verhalten, Ostinati über 5 oder 7 Steps | LPG-Modell nach Parker und D'Angelo (DAFx 2013); Verhältnisse und Bereiche [I] |
 | **Erg. 2** Berghain-Akustik, Fletcher-Munson | teilweise | kein fester "Dark Tilt"; das Master-Tilt zielt auf die gemessene Spektralverteilung der Referenzen (Dok. 8.7: > 5 kHz ≈ 7 %, Schwerpunkt 1,5 bis 3,5 kHz) | 18 m Deckenhöhe in der Presse belegt; **RT60 3 bis 4 s und "ungedämpfte Betonflächen" nicht belegt**, für die Halle am Berghain ist eine raumakustische Beratung dokumentiert (K5 Akustik), ohne Zahlen. Das Gebäude ist ein ehemaliges Heizkraftwerk. Richtung der Isophonen (ISO 226) richtig, die Schlussfolgerung auf eine feste EQ-Kurve nicht zwingend |
@@ -596,11 +614,11 @@ Impulsantworten, 4×-Oversampling, Mid/Side, Patina, spektrales Ducking, Granula
    └──────────────────────────────┘     Throw, Kill, Filter) ───────────────── │ DJ-Mixer: Isolator, FX-Send       │
             │                                                                   │ → Master: Glue, Clip, TP-Limiter  │
             ▼                                                                   └───────────────────────────────────┘
-   MIDI (SMF 1), Stems, DJ-Loops, Cue-Marken, .umbset, OSC                     Offline-Render (Orakel), Leveler
+   MIDI (SMF 1), Stems, DJ-Loops, Cue-Marken, .totset, OSC                     Offline-Render (Orakel), Leveler
 ```
 
 **Der Unterschied zu den Geschwistern.** Phosphene schreibt Motive in Sektionen, Ephemeris lässt ein Sequenzer-Rack
-voraus laufen. Umbra lässt ein **Pattern-Rack** voraus laufen: Layer mit Matrizen, Loop-Länge, Periode, Rotation,
+voraus laufen. Totality lässt ein **Pattern-Rack** voraus laufen: Layer mit Matrizen, Loop-Länge, Periode, Rotation,
 Displacement, Trig-Conditions und dem Zustand ihrer Ghost-Ketten. Der Komponist schreibt zweierlei in die Partitur:
 Noten (für Audio und MIDI) und **Block-Operationen** (Add, Remove, Swap, Hold, Reduction), damit Sperren und Neuwürfeln
 auf der Ebene von Block und Layer arbeiten. Automationen sind parametrische Kurven wie die Gesten in Ephemeris und dürfen
@@ -612,15 +630,15 @@ vorigen Tracks läuft unter dem neuen weiter). Der DJ-Mixer summiert die Decks m
 gemeinsamen FX-Send. Außerhalb von Blends rechnet nur ein Deck.
 
 **Schichten im Kern (`Core/`):**
-- `umb/Vec.h`, `umb/Dsp.h`, `umb/Adaa.h`, `umb/Halfband.h`, `umb/Oversample.h`: SIMD, Grundbausteine, Oversampling.
-- `umb/Clock.h`, `umb/Score.h`, `umb/Params.h`, `umb/Presets.h`, `umb/Midi.h`, `umb/SetFile.h`, `umb/Cue.h`,
-  `umb/Loudness.h`, `umb/Leveler.h`.
-- `umb/pattern/*`: Rack, Layer, Matrizen, Ghost-Ketten, Polymeter und Slipping, Trig-Conditions, Groove (Swing,
+- `tot/Vec.h`, `tot/Dsp.h`, `tot/Adaa.h`, `tot/Halfband.h`, `tot/Oversample.h`: SIMD, Grundbausteine, Oversampling.
+- `tot/Clock.h`, `tot/Score.h`, `tot/Params.h`, `tot/Presets.h`, `tot/Midi.h`, `tot/SetFile.h`, `tot/Cue.h`,
+  `tot/Loudness.h`, `tot/Leveler.h`.
+- `tot/pattern/*`: Rack, Layer, Matrizen, Ghost-Ketten, Polymeter und Slipping, Trig-Conditions, Groove (Swing,
   Timing, Velocity), Mininotation.
-- `umb/compose/*`: Komponist, Form, Blöcke und Ereignisse, Automation, Harmonie, Stilprofile, Set, Evaluation.
-- `umb/synth/*`: Kick, Rumble, Bass, Kit (PercKernel), Ping, Chord, Drone, Textur, Filter, VCO, Modulation.
-- `umb/fx/*`: Bandecho, Feder, Platte, FDN, Faltung, Tempo-Delay, Phaser, Lo-Fi, Sättigung.
-- `umb/mix/*`: Kanalzug, Ducker, Multiband-Ducker, Bus, Deck, Isolator, Master.
+- `tot/compose/*`: Komponist, Form, Blöcke und Ereignisse, Automation, Harmonie, Stilprofile, Set, Evaluation.
+- `tot/synth/*`: Kick, Rumble, Bass, Kit (PercKernel), Ping, Chord, Drone, Textur, Filter, VCO, Modulation.
+- `tot/fx/*`: Bandecho, Feder, Platte, FDN, Faltung, Tempo-Delay, Phaser, Lo-Fi, Sättigung.
+- `tot/mix/*`: Kanalzug, Ducker, Multiband-Ducker, Bus, Deck, Isolator, Master.
 
 **Threads und Determinismus** wie Phosphene und Ephemeris: Audio allokiert nie; der Komponist arbeitet in Häppchen mit
 der Frist "Queue nie unter 16 Takten"; ein RNG je Modul mit `fork()` aus dem Seed. Die Motion-Würfe eines Takts hängen
@@ -637,7 +655,7 @@ Geschwister trommelgetrieben ist; Räume und Mastering-Bausteine aus Noctuary.
 | Modul | Herkunft | Einsatz hier | Anpassung |
 |---|---|---|---|
 | `Vec.h`, `Dsp.h`, `Adaa.h`, `Halfband.h`, `Clock.h`, `WavWriter.h` | Ephemeris | überall | Namensraum |
-| `Params.h`, `Presets.h` (Klänge als Programmwechsel), `Score.h`, `Midi.h`, `SetFile.h`, `Cue.h` | Ephemeris | Parameter, Partitur, Export | Module `kick`, `rumble`, `kit`, `ping`, `bass`, `chord`, `drone`, `dub`, `deck`, `djmix`, `master`; Block-Ops in der Partitur; `.umbset`; OSC `/umb/...` |
+| `Params.h`, `Presets.h` (Klänge als Programmwechsel), `Score.h`, `Midi.h`, `SetFile.h`, `Cue.h` | Ephemeris | Parameter, Partitur, Export | Module `kick`, `rumble`, `kit`, `ping`, `bass`, `chord`, `drone`, `dub`, `deck`, `djmix`, `master`; Block-Ops in der Partitur; `.totset`; OSC `/tot/...` |
 | `Leveler.h`, `Loudness.h` | Ephemeris | jeder Track auf das Lautheitsziel seines Profils | Ziel −11 bis −10 LUFS statt Ambient-Pegel (8.5) |
 | `compose/Composer`, `compose/Style`, `compose/Harmony` | Ephemeris | Gerüst des Composer-Threads, Profile mit designierten Initialisierern, Tonart | Block-Grammatik neu (7.2); Harmonie auf Dok. 8.6 zurückgeschnitten |
 | `compose/GestureEngine` (Minimum Jerk, zwei Hände) | Ephemeris | Automationskurven, Delay-Würfe, Filterfahrten | Kurven auf 4/16/32-Takt-Rastern verankert |
@@ -658,7 +676,7 @@ Geschwister trommelgetrieben ist; Räume und Mastering-Bausteine aus Noctuary.
 | `Body.h` (zwölf Moden, gestimmt) | Noctuary | "Boom" des Rumbles auf f0 (Dok. 8.4 Variante c), Resonanz der Pings | keine |
 | `Cloud.h`, `GrainRing.h` | Noctuary | Granular-Soundscapes der Hypnotic-Mitte (Rødhåd, Dok. 3) | aus dem eigenen Chord-/Ping-Bus |
 | `Modulation.h` (Lorenz, Rössler, Kuramoto) | Noctuary | Makro-Drift unter den LFOs | auf das Block-Parametersystem |
-| `Tools/library/guide.py` (Fenster des Produktionsguides) | Noctuary | Vorbild: die Mix-Regeln von Dok. 8.7 als Fenster, durch die jedes Preset läuft | neu für Umbra |
+| `Tools/library/guide.py` (Fenster des Produktionsguides) | Noctuary | Vorbild: die Mix-Regeln von Dok. 8.7 als Fenster, durch die jedes Preset läuft | neu für Totality |
 | `Plugin/`, `Quest/`, `Deploy/`, `Tests/` (TestSupport, vectest, vst3test, bench), `Tools/manual`, `UpdateCheck` | Ephemeris | Gerüste | Projektname, Pfade |
 
 Nicht übernommen: aus Phosphene der Psytrance-Korpus, die Transformer-Gewichte, `Melody` (Constraint-Markov für Leads),
@@ -882,7 +900,7 @@ Delay. Alternativ das Akzentmodell A(i) = C^L(p_i) mit C ≈ 0,7 bis 0,85.
 ### 6.7 Mininotation
 
 Jedes Pattern lässt sich als Tidal/Strudel-Mininotation ausgeben (`bd*4`, `[~ oh]*4`, `perc(5,16,2)`, `hh*16?0.3`,
-Dok. 8.0): `umb_render --patterns` schreibt sie je Layer und Block. Damit sind Muster lesbar, vergleichbar und in
+Dok. 8.0): `tot_render --patterns` schreibt sie je Layer und Block. Damit sind Muster lesbar, vergleichbar und in
 Strudel hörbar, ohne den Generator zu starten.
 
 ## 7. Der Komponist
@@ -1025,7 +1043,7 @@ Limiting in den Kanalzügen und Bussen. Ephemeris' Leveler misst den lautesten T
 
 - **Ziele** [Q] (TrackSensei, Trackscore, Vendor): Sub 20 bis 60 Hz ≈ 40 % und Bass 60 bis 250 Hz ≈ 45 bis 52 % der
   Tiefton-Energie; über 5 kHz ≈ 7 %; Schwerpunkt 1,5 bis 3,5 kHz. Gemessen an den Referenzen (13.4) vor dem Einbau.
-- **Tilt** (Erg. 2): ein Master-Regler, dessen Standard aus dem Abstand zwischen Umbra und Referenzen über 3 kHz folgt,
+- **Tilt** (Erg. 2): ein Master-Regler, dessen Standard aus dem Abstand zwischen Totality und Referenzen über 3 kHz folgt,
   nicht aus einer festen Kurve.
 - **Cut** (Erg. 3, Dok. 8.7): optionales Master-Profil für Vinyl: Seite höchstens 12 bis 15 Minuten bei 45 U/min, Mono
   unter einer Weiche (150 Hz), keine Gegenphase 80 bis 300 Hz, dynamische Höhenbegrenzung 6 bis 10 kHz (die
@@ -1042,12 +1060,12 @@ Limiting in den Kanalzügen und Bussen. Ephemeris' Leveler misst den lautesten T
 - **Cue-Marken:** Intro-Ende, Bass-Einsatz (Bass-Swap-Punkt auf der 32-Takt-Grenze), Reduktionen, Outro-Beginn; als
   RIFF-`cue `/`LIST adtl`-Chunk in der WAV und als JSON daneben. Ob Rekordbox und Traktor den WAV-Chunk lesen, ist zu
   prüfen (15.8).
-- **`.umbset`** (Text wie `.ephset`): Seed, Profil(e), Dramaturgie, Sperren, auf Wunsch die ausgerollte Partitur.
+- **`.totset`** (Text wie `.ephset`): Seed, Profil(e), Dramaturgie, Sperren, auf Wunsch die ausgerollte Partitur.
 - **Presets:** Klänge je Stimme (Programmwechsel), Pattern-Sätze, Stilprofile, Set-Dramaturgien.
 
 ## 10. GUI
 
-### 10.1 Desktop (JUCE, Layout aus Parametern, `UMB_SHOT`-Screenshot-Modus, Englisch)
+### 10.1 Desktop (JUCE, Layout aus Parametern, `TOT_SHOT`-Screenshot-Modus, Englisch)
 
 | Tab | Inhalt |
 |---|---|
@@ -1060,7 +1078,7 @@ Limiting in den Kanalzügen und Bussen. Ephemeris' Leveler misst den lautesten T
 | **Dub** | die Kette: Lo-Fi, Phaser, Delays, Bandecho, Feder, Platte; Wurf-Tasten |
 | **Mixer / Master** | Kanalzüge, Sends, Ducking, Bus, Master, Lautheit (LUFS, Short-Term, True Peak, Crest), Tilt, Cut |
 | **Perform** | live wie am Mischpult: Layer muten und entmuten, Isolator-Kills je Deck, Filter greifen, Delay-Wurf, Loop auf das dritte Deck legen; MIDI-Learn |
-| **Export** | MIDI, Stems, DJ-Loops, Cues, `.umbset` |
+| **Export** | MIDI, Stems, DJ-Loops, Cues, `.totset` |
 | **Style** | Profile ansehen, editieren, Korridore und Messwerte der Referenzen |
 
 ### 10.2 Quest 2
@@ -1072,7 +1090,7 @@ Handmenü wie in Noctuary Quest.
 
 ### 10.3 Kaleidoscope-Kopplung
 
-OSC `/umb/beat`, `/umb/bar`, `/umb/block`, `/umb/op`, `/umb/event`, `/umb/conjunction`, `/umb/key` aus `Cue.h`.
+OSC `/tot/beat`, `/tot/bar`, `/tot/block`, `/tot/op`, `/tot/event`, `/tot/conjunction`, `/tot/key` aus `Cue.h`.
 
 ## 11. Vektorisierung und CPU
 
@@ -1100,17 +1118,17 @@ OSC `/umb/beat`, `/umb/bar`, `/umb/block`, `/umb/op`, `/umb/event`, `/umb/conjun
 
 ## 12. Plattformen und Build
 
-- Aufbau wie Ephemeris: `Core/`, `Plugin/` (JUCE, VST3 + Standalone), `Quest/`, `Tools/render` (`umb_render`:
+- Aufbau wie Ephemeris: `Core/`, `Plugin/` (JUCE, VST3 + Standalone), `Quest/`, `Tools/render` (`tot_render`:
   Offline-Render, `--bench`, `--midi`, `--stems`, `--loops`, `--cues`, `--patterns`, `--set-file`, `--seed`, `--style`,
   `--minutes`, `--tracks`), `Tools/*.py`, `Tests/`, `Deploy/`, `docs/`.
-- CMake-Optionen `UMB_BUILD_PLUGIN`, `UMB_BUILD_TOOLS`, `UMB_AVX2`, `UMB_STATIC_RUNTIME`; kein Fast-Math.
+- CMake-Optionen `TOT_BUILD_PLUGIN`, `TOT_BUILD_TOOLS`, `TOT_AVX2`, `TOT_STATIC_RUNTIME`; kein Fast-Math.
 - **VST3:** Host-Playhead als Takt, Host-Tempo gilt (7.7). **Standalone:** eigene Uhr, ASIO/WASAPI, Recorder, Exporte,
-  Sets mit Drift. **Quest:** `UMB_MUTE=1` für Tests.
+  Sets mit Drift. **Quest:** `TOT_MUTE=1` für Tests.
 - Update-Prüfung einmal am Tag wie Ephemeris; Installer (Inno Setup) und Release-Skripte aus Ephemeris.
 
 ## 13. Tests und Messungen
 
-### 13.1 Selbsttest (`umb_selftest`, Muster Ephemeris)
+### 13.1 Selbsttest (`tot_selftest`, Muster Ephemeris)
 
 - **Kick:** geschlossene Phase gegen numerisches Integral; 909-Engine alias-arm (4×); Stimmung in 41 bis 62 Hz, Quinte
   für C bis D#; Tail-Limit.
@@ -1154,7 +1172,7 @@ mit dem Nutzer abzustimmen:
 Gegenpol *Legacy* (160 BPM) bleibt draußen.
 
 **Verfahren.** `Tools/fetch_refs.py` liest `Tools/ref_sets.txt` (Profil, Künstler, Titel, URL), lädt mit `yt-dlp` nur
-die Tonspur in einen Ordner außerhalb des Repos (`%TEMP%\umbra_refs`), dekodiert mit `ffmpeg`, und die Messwerkzeuge
+die Tonspur in einen Ordner außerhalb des Repos (`%TEMP%\totality_refs`), dekodiert mit `ffmpeg`, und die Messwerkzeuge
 schreiben nur Statistiken (`Tools/ref_stats.json`); das Audio wird danach gelöscht, sofern der Nutzer nicht anders
 entscheidet. Vor jedem Laden legt der Plan die konkrete Liste mit Quelle vor (16.2).
 
@@ -1183,11 +1201,11 @@ Aufwand in Arbeitstagen nach der Erfahrung mit Phosphene und Ephemeris; die Reih
 
 | Phase | Inhalt | Prüfstein | Tage |
 |---|---|---|---|
-| **0 Gerüst** | Repo, CMake, Modulkopie (Ephemeris-Gerüst, Phosphene-Kit, Noctuary-Oversampling), Parametersystem, Clock, Partitur mit Block-Ops und Kurven, `umb_render`, Selbsttest-Skelett | `umb_render` gibt Stille mit Tempo-Karte aus; Vektortests grün | 1 bis 2 |
+| **0 Gerüst** | Repo, CMake, Modulkopie (Ephemeris-Gerüst, Phosphene-Kit, Noctuary-Oversampling), Parametersystem, Clock, Partitur mit Block-Ops und Kurven, `tot_render`, Selbsttest-Skelett | `tot_render` gibt Stille mit Tempo-Karte aus; Vektortests grün | 1 bis 2 |
 | **1 Ein Groove, der rollt** | Kick (drei Engines, zwei Schichten), Rumble frequenzgeteilt, Sub, CH-Offbeat und Rolling-Hat, Ducker, Rack mit Anker/Motion und Swing; erste Referenzmessung (nach Freigabe der Liste) | fünf Minuten eines Hypnotic-Loops, dessen Tief schiebt; Rumble-Test grün; Kick und Balance gegen die Referenzen; erste CPU-Zahlen | 3 bis 4 |
 | **2 Die Pattern-Ebene** | alle Kit-Lanes, Matrizen von Dok. 8.2, Ghost-Ketten, Polymeter, Euklid, Displacement, Slipping, Trig-Conditions, Velocity/Timing, Fills, Mininotation; die Ping-Stimme | zehn Minuten mit Polymeter und Slipping; Rack-Tests grün; Onset-Profile gegen die Referenzen | 3 bis 4 |
 | **3 Klang und Mix** | Bass-Synth mit Schaltungsfiltern, 303-Rolle, Dub-Chord mit Kette (Bandecho, Feder, Platte), Drone, Textur, Granular, globale Modulation, Kanalzüge, Multiband-Ducking, Bus, Master mit Clipper und TP-Limiter, Leveler, Tilt, Cut | Spektrum, Breite, Lautheit und Crest im Korridor der Referenzen; Hörvergleich je Profil | 4 bis 5 |
-| **4 Komponist und Set** | Block-Grammatik mit Arc/Peak/Endless, Automation, Mikroereignisse, Harmonie, vier Profile mit Morph, Kandidaten und Hypnose-Korridor, Set mit Decks, Isolator, Bass-Swap, Tempodrift, Live-Rekomposition, Sperren, `.umbset`, MIDI, Stems, DJ-Loops, Cues | ein Zwei-Stunden-Set aus einem Seed; Determinismus; Blend-Test; Evaluationsbericht | 5 bis 6 |
+| **4 Komponist und Set** | Block-Grammatik mit Arc/Peak/Endless, Automation, Mikroereignisse, Harmonie, vier Profile mit Morph, Kandidaten und Hypnose-Korridor, Set mit Decks, Isolator, Bass-Swap, Tempodrift, Live-Rekomposition, Sperren, `.totset`, MIDI, Stems, DJ-Loops, Cues | ein Zwei-Stunden-Set aus einem Seed; Determinismus; Blend-Test; Evaluationsbericht | 5 bis 6 |
 | **5 GUI** | Tabs, Eclipse-Ansicht, Arrange, Perform, Handbuch-Generator | Standalone und VST3 bedienbar; pluginval Strenge 10 | 4 bis 5 |
 | **6 Quest** | NDK-Build, Qualitätsstufen, Performer-Oberfläche, Eclipse im Raum | Set läuft auf der Quest 2 unter 30 % eines Kerns, auch im Blend | 3 |
 | **7 Qualität und Release** | Hörrunden, Nachkalibrierung, Cues, Installer, Handbuch, Social Preview | v1.0 | 3 bis 4 |
@@ -1210,7 +1228,8 @@ Nach Phase 1 gibt es den ersten hörbaren Prüfstein, nach Phase 4 ist das Produ
    Hörrunden, Parameter offen im Style-Tab.
 6. **Quest-Budget im Blend:** zwei Decks mit Rumble-Hall. Gegenmittel: Qualitätsstufen ab Phase 1, das abgehende Deck
    niedrig.
-7. **Name:** vor dem Release prüfen, ob "Umbra" als Audio-Software schon vergeben ist.
+7. **Name:** vor dem Release prüfen, ob "Umbra" als Audio-Software schon vergeben ist. Geprüft: vergeben;
+   am 28.09.2026 in Totality umbenannt.
 8. **DJ-Software:** ob Cue-Chunks in WAV von Rekordbox, Traktor und Serato gelesen werden, ist ungeprüft; JSON-Cues sind
    die Rückfallebene.
 9. **Rechtliches:** Künstlernamen nur in der Dokumentation, keine Fremd-Samples.
@@ -1220,7 +1239,7 @@ Nach Phase 1 gibt es den ersten hörbaren Prüfstein, nach Phase 4 ist das Produ
 ### 16.1 Getroffen
 
 1. **Eigenes Projekt** in `G:\Tools\VRAudio\TechnoGenerator`, nicht in Noctuary integriert.
-2. **Name:** Umbra.
+2. **Name:** Umbra; am 28.09.2026 umbenannt in **Totality** (Risiko 7).
 3. **Stilbreite:** Hypnotic im Zentrum, dazu Ostgut, Dub und Raw/Peak als Profile, zwischen denen interpoliert wird;
    Hypnotic ist der Standard und wird zuerst kalibriert.
 4. **Quest:** ja, der komplette Generator auf dem Gerät.
@@ -1243,7 +1262,7 @@ Nach Phase 1 gibt es den ersten hörbaren Prüfstein, nach Phase 4 ist das Produ
 
 ## 17. Literatur (Auswahl, je Baustein)
 
-Die vollständige Quellenliste steht in Dok. 9; hier nur, was Umbra über das Dokument hinaus oder an zentraler Stelle
+Die vollständige Quellenliste steht in Dok. 9; hier nur, was Totality über das Dokument hinaus oder an zentraler Stelle
 benutzt.
 
 - Abdallah, S.; Plumbley, M. (2009). Information dynamics: patterns of expectation and surprise in the perception of

@@ -4,7 +4,7 @@
  *
  * **Parameters.** Every entry of the engine's ParamStore is a host parameter (StoreParameter, after Phosphene's and
  * Ephemeris'): the store is the only place a value lives, read and written as a relaxed atomic, so a knob in the plugin
- * and the same knob in umb_render stand at the same place.
+ * and the same knob in tot_render stand at the same place.
  *
  * **Composing.** "Compose" snapshots the parameters, the seed and the rerolls and hands them to the composer thread: a
  * track (composeTrack) or, with set.minutes above zero, a set (composeSet). The finished score waits until the message
@@ -24,19 +24,19 @@
  * (learn()). The bindings are part of the state.
  *
  * **Cues** (PLAN 10.3, Cue.h): with cue.enabled the beats, bars, blocks, operations and keys go out as OSC over UDP to
- * `UMB_CUE_HOST` (default this machine) at cue.port, each at the moment it is heard.
+ * `TOT_CUE_HOST` (default this machine) at cue.port, each at the moment it is heard.
  *
  * **Mute** (after Phosphene). The output can be muted: silence at the very end of processBlock, after the meters and the
- * test recording have read the block. `UMB_MUTE=1` -- and the screenshot mode `UMB_SHOT` -- start the plugin muted, and
+ * test recording have read the block. `TOT_MUTE=1` -- and the screenshot mode `TOT_SHOT` -- start the plugin muted, and
  * then it never unmutes itself: an automated run makes no sound.
  *
  * @note After Ephemeris' Plugin/PluginProcessor.h at d047d79 (27.09.2026).
  */
 #pragma once
-#include "umb/Engine.h"
-#include "umb/SetFile.h"
-#include "umb/compose/Composer.h"
-#include "umb/compose/Set.h"
+#include "tot/Engine.h"
+#include "tot/SetFile.h"
+#include "tot/compose/Composer.h"
+#include "tot/compose/Set.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <array>
@@ -49,7 +49,7 @@
 class StoreParameter final : public juce::RangedAudioParameter {
 public:
     /** @brief Binds parameter @p id of @p store (which outlives this object) under the display name @p name. */
-    StoreParameter(umb::ParamStore& store, int id, const juce::String& name);
+    StoreParameter(tot::ParamStore& store, int id, const juce::String& name);
     float getValue() const override;                  ///< the store's value, normalised
     void setValue(float newValue) override;           ///< writes the store (relaxed atomic)
     float getDefaultValue() const override;           ///< the descriptor's default, normalised
@@ -64,7 +64,7 @@ public:
     int paramId() const { return id_; }               ///< the id in the store
 
 private:
-    umb::ParamStore& store_;
+    tot::ParamStore& store_;
     int id_;
     juce::String name_;
     juce::NormalisableRange<float> range_;
@@ -74,22 +74,22 @@ private:
 struct TrackPlace {
     double start = 0.0, swapIn = 0.0, end = 0.0;
     int deck = 0;
-    umb::TrackInfo info;
+    tot::TrackInfo info;
 };
 
 /** @brief What plays: a set, or a track as deck A of a one-track set, with where its tracks lie. */
 struct Playing {
-    umb::SetScore set;
+    tot::SetScore set;
     bool isSet = false;
     std::vector<TrackPlace> tracks;
-    umb::SetInfo setInfo;   ///< a set's (empty for a track)
+    tot::SetInfo setInfo;   ///< a set's (empty for a track)
 };
 
-/** @brief The Umbra processor. */
-class UmbraProcessor final : public juce::AudioProcessor, private juce::Thread, private juce::Timer {
+/** @brief The Totality processor. */
+class TotalityProcessor final : public juce::AudioProcessor, private juce::Thread, private juce::Timer {
 public:
-    UmbraProcessor();                                ///< registers every parameter and composes a first track
-    ~UmbraProcessor() override;                      ///< stops the composer and the exporter
+    TotalityProcessor();                                ///< registers every parameter and composes a first track
+    ~TotalityProcessor() override;                      ///< stops the composer and the exporter
 
     // Composing and curating.
     void compose();                                  ///< compose with the current settings, seed and rerolls
@@ -114,17 +114,17 @@ public:
     void copyPlaying(Playing& out) const { std::lock_guard<std::mutex> g(lock_); out = current_; }
     /**
      * @brief The factory preset the composer chose for instance @p instance of synth @p m in the track whose sounds the
-     *        knobs show (Engine::leadDeck): its index in umb::factoryPresets(m), -1 if none.
+     *        knobs show (Engine::leadDeck): its index in tot::factoryPresets(m), -1 if none.
      */
-    int composedPreset(umb::Module m, int instance) const;
+    int composedPreset(tot::Module m, int instance) const;
     /** @brief Puts factory preset @p index of @p m on instance @p instance's knobs, through the host's parameters. */
-    void applyPreset(umb::Module m, int instance, int index);
+    void applyPreset(tot::Module m, int instance, int index);
     /** @brief The length of what plays, in beats and seconds (as composed). */
     void length(double& beats, double& seconds) const;
 
     // Files.
-    bool saveSet(const juce::File& file);            ///< writes seed, lengths, rerolls and parameters as an .umbset
-    bool loadSet(const juce::File& file);            ///< reads an .umbset and composes it
+    bool saveSet(const juce::File& file);            ///< writes seed, lengths, rerolls and parameters as an .totset
+    bool loadSet(const juce::File& file);            ///< reads an .totset and composes it
     /** @brief What an export writes beside the WAV and its MIDI and cues. */
     enum ExportExtra { kStems = 1, kLoops = 2 };
     /**
@@ -135,7 +135,7 @@ public:
     void exportTo(const juce::File& wav, int extras);
     juce::String status() const;                     ///< one line for the panel
     /**
-     * @brief The test mode (UMB_SEED, UMB_PLAY = seconds, UMB_RECORD = a WAV file; UMB_SET = minutes, a set): a fixed
+     * @brief The test mode (TOT_SEED, TOT_PLAY = seconds, TOT_RECORD = a WAV file; TOT_SET = minutes, a set): a fixed
      *        seed, play at once, record what the audio thread renders; recordingDone() when the seconds are full.
      */
     bool recordingDone() const { return recordTarget_ > 0 && recordPos_.load() >= recordTarget_; }
@@ -148,9 +148,9 @@ public:
 
     // Muting.
     bool muted() const { return mute_.load(std::memory_order_relaxed); }   ///< the output is silenced
-    /** @brief Mutes or unmutes; does nothing while `UMB_MUTE` forces it. */
+    /** @brief Mutes or unmutes; does nothing while `TOT_MUTE` forces it. */
     void setMuted(bool on) { if (!forceMute_) mute_.store(on, std::memory_order_relaxed); }
-    bool muteForced() const { return forceMute_; }   ///< `UMB_MUTE` (or `UMB_SHOT`) was set: the switch is stuck on
+    bool muteForced() const { return forceMute_; }   ///< `TOT_MUTE` (or `TOT_SHOT`) was set: the switch is stuck on
 
     // Performing.
     /** @brief Binds the next MIDI controller that arrives to store id @p id; -1 cancels. */
@@ -161,7 +161,7 @@ public:
     /** @brief Unbinds store id @p id. */
     void forget(int id);
 
-    umb::ParamStore& store() { return engine_.params(); }   ///< the engine's parameters
+    tot::ParamStore& store() { return engine_.params(); }   ///< the engine's parameters
     /** @brief The host parameter of store id @p id, or null. */
     StoreParameter* parameter(int id) { return id >= 0 && id < static_cast<int>(params_.size()) ? params_[static_cast<size_t>(id)] : nullptr; }
     /** @brief Sets store id @p id to the real value @p value through its host parameter (a gesture). */
@@ -174,7 +174,7 @@ public:
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;   ///< plays, following the host's playhead
     juce::AudioProcessorEditor* createEditor() override;   ///< the panel
     bool hasEditor() const override { return true; }  ///< it has one
-    const juce::String getName() const override { return JucePlugin_Name; }   ///< "Umbra"
+    const juce::String getName() const override { return JucePlugin_Name; }   ///< "Totality"
     bool acceptsMidi() const override { return true; }   ///< MIDI in: the performer's keys and controllers
     bool producesMidi() const override { return false; }   ///< no MIDI out (the export writes files)
     double getTailLengthSeconds() const override { return 8.0; }   ///< the rooms ring on
@@ -190,11 +190,11 @@ private:
     void run() override;                             // the composer thread
     void timerCallback() override;                   // loads a finished score on the message thread
     /** @brief Composes with the knobs as they are (copied into @p snapshot). */
-    Playing composeNow(umb::ParamStore& snapshot);
+    Playing composeNow(tot::ParamStore& snapshot);
     /** @brief Hands the loudness corrections, measured while it plays, to the engine (message thread). */
     void takeTrims();
     /** @brief @p p's set as the engine plays it here: in a host at the host's tempo (constant), in the standalone as composed. */
-    umb::SetScore forPlayback(const Playing& p) const;
+    tot::SetScore forPlayback(const Playing& p) const;
     /** @brief Loads @p p into the engine (message thread, processing suspended by the caller). */
     void loadEngine(const Playing& p);
     /** @brief The performer's MIDI: keys toggle the mutes, controllers move what they are bound to (audio thread). */
@@ -202,10 +202,10 @@ private:
     /** @brief Sets store id @p id to the real value @p value through its host parameter. */
     void setFromMidi(int id, float value);
 
-    umb::Engine engine_;
+    tot::Engine engine_;
     std::vector<StoreParameter*> params_;
     uint64_t seed_ = 1;
-    umb::Curation curation_;
+    tot::Curation curation_;
     mutable std::mutex lock_;
     std::unique_ptr<Playing> pending_;               ///< composed, waiting to be loaded
     Playing current_;                                ///< what the engine plays
@@ -214,7 +214,7 @@ private:
     // The loudness (Leveler.h): measured on the composer thread once the score is handed over, while it plays.
     std::atomic<bool> newer_{ false };               ///< a newer score is asked for: the measuring of the last one stops
     uint64_t composed_ = 0, pendingId_ = 0, playingId_ = 0;   ///< counts the compositions; pending_'s, current_'s (lock_)
-    std::vector<float> trims_[umb::kDecks];          ///< the corrections found for the composition trimsFor_ (lock_)
+    std::vector<float> trims_[tot::kDecks];          ///< the corrections found for the composition trimsFor_ (lock_)
     uint64_t trimsFor_ = 0;
     bool levelled_ = false;                          ///< current_ carries its corrections (lock_)
     std::atomic<double> position_{ 0.0 }, seekRequest_{ -1.0 };
@@ -228,9 +228,9 @@ private:
     bool autoPlay_ = false;
     // The meters: the decks through their taps, the output's peak and a K-weighted mean square.
     std::vector<float> tapBuf_;                      ///< kDecks x 2 x block (prepareToPlay)
-    std::array<float*, umb::kDecks> tapL_{}, tapR_{};
-    std::array<std::atomic<float>, umb::kDecks> meterPeak_{};   ///< audio thread raises, the editor takes (exchange 0)
-    std::array<std::atomic<double>, umb::kDecks> meterSum_{};   ///< sums of squares since the editor last took them
+    std::array<float*, tot::kDecks> tapL_{}, tapR_{};
+    std::array<std::atomic<float>, tot::kDecks> meterPeak_{};   ///< audio thread raises, the editor takes (exchange 0)
+    std::array<std::atomic<double>, tot::kDecks> meterSum_{};   ///< sums of squares since the editor last took them
     std::atomic<int> meterCount_{ 0 };               ///< samples in those sums
     std::atomic<float> outPeak_{ 0.0f }, lufs_{ -70.0f };
     struct Biquad { double b0 = 1, b1 = 0, b2 = 0, a1 = 0, a2 = 0, z1 = 0, z2 = 0;
@@ -238,8 +238,8 @@ private:
     Biquad kShelf_[2], kHigh_[2];
     double kMs_ = 0.0, kCoef_ = 0.0;
     std::atomic<int> scoreVersion_{ 0 };
-    umb::CueSender cues_;                            ///< the OSC cues' socket and thread (message thread starts and stops it)
-    umb::CueTap cueTap_;                             ///< audio thread: beat range -> cues
+    tot::CueSender cues_;                            ///< the OSC cues' socket and thread (message thread starts and stops it)
+    tot::CueTap cueTap_;                             ///< audio thread: beat range -> cues
     int cuePort_ = 0;                                ///< the port the sender was started for, 0 = off (message thread)
     double lastBeat_ = -1.0;                         ///< the beat after the last block (audio thread), to see a jump
     std::array<std::atomic<int>, 128> ccMap_{};      ///< controller number -> store id, -1 unbound

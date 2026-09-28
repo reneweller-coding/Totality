@@ -1,4 +1,4 @@
-# Umbra: Zwei-Stunden-Set, Seed 2026
+# Totality: Zwei-Stunden-Set, Seed 2026
 
 Erzeugt von `Tools/eval_report.py` (PLAN 13.5).
 

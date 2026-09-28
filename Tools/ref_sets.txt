@@ -1,5 +1,5 @@
 # Reference recordings for the calibration (PLAN 13.4). Only statistics of them are kept (Tools/ref_stats.json);
-# the audio is fetched into %TEMP%\umbra_refs and deleted after the measurement.
+# the audio is fetched into %TEMP%\totality_refs and deleted after the measurement.
 # profile | artist - title | Beatport BPM and key from the research document (Dok. 1), or - | YouTube URL
 ostgut   | Klock & Dettmann - Dawning                         | 125 Ebm | https://www.youtube.com/watch?v=-z4QdShPw_A
 ostgut   | Marcel Dettmann - Quicksand                        | 125 Ab  | https://www.youtube.com/watch?v=dhNbnPCBGng

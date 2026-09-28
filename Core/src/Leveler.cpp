@@ -3,16 +3,16 @@
  * @brief Every track as loud as its style means (Leveler.h).
  * @note Copied from Ephemeris `Core/src/Leveler.cpp` (namespace eph, prefix EPH_) at d047d79 (27.09.2026).
  */
-#include "umb/Leveler.h"
-#include "umb/Engine.h"
-#include "umb/Loudness.h"
-#include "umb/compose/Style.h"
+#include "tot/Leveler.h"
+#include "tot/Engine.h"
+#include "tot/Loudness.h"
+#include "tot/compose/Style.h"
 #include <algorithm>
 #include <cmath>
 #include <memory>
 #include <optional>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kRate = 48000.0;
@@ -106,4 +106,4 @@ std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, dou
     return out;
 }
 
-} // namespace umb
+} // namespace tot

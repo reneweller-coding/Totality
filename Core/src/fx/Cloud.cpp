@@ -2,12 +2,12 @@
  * @file Cloud.cpp
  * @brief The granular cloud (Cloud.h).
  */
-#include "umb/fx/Cloud.h"
-#include "umb/Params.h"
+#include "tot/fx/Cloud.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -101,4 +101,4 @@ void GrainCloud::process(const float* inL, const float* inR, float* L, float* R,
     }
 }
 
-} // namespace umb
+} // namespace tot

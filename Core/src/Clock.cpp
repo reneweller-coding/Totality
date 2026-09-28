@@ -2,13 +2,13 @@
  * @file Clock.cpp
  * @brief Note divisions and the tempo map.
  * @note Copied from Phosphene `Core/src/Clock.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Core/src/Clock.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/Clock.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/Clock.h"
+#include "tot/Clock.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 const char* const kSyncDivNames[kNumSyncDivs] = {
     "Free", "64 bars", "32 bars", "16 bars", "8 bars", "4 bars", "2 bars", "1 bar",
@@ -116,4 +116,4 @@ double TempoMap::beatAt(double seconds) const
     return a.beat + segmentBeats(a.bpm, s, seconds - seconds_[static_cast<size_t>(i)]);
 }
 
-} // namespace umb
+} // namespace tot

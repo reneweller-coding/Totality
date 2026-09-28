@@ -8,10 +8,10 @@
  * @note The operations and the half-band are copied from Ephemeris `Tests/vectest.cpp` at d047d79 (27.09.2026); the
  *       kit section follows Phosphene's.
  */
-#include "umb/Halfband.h"
-#include "umb/Params.h"
-#include "umb/Vec.h"
-#include "umb/synth/Kit.h"
+#include "tot/Halfband.h"
+#include "tot/Params.h"
+#include "tot/Vec.h"
+#include "tot/synth/Kit.h"
 #include "TestSupport.h"
 #include <algorithm>
 #include <cmath>
@@ -19,8 +19,8 @@
 #include <cstring>
 #include <memory>
 
-using namespace umb;
-using namespace umbtest;
+using namespace tot;
+using namespace tottest;
 
 namespace {
 
@@ -142,9 +142,9 @@ void testKit()
 
 int main()
 {
-    std::printf("umb_vectest: path %s, %d lanes\n", kVecPathName, W);
-#if defined(UMB_EXPECT_PATH)
-    check(std::strcmp(kVecPathName, UMB_EXPECT_PATH) == 0, "built for the expected path", fmt("expected %s, got %s", UMB_EXPECT_PATH, kVecPathName));
+    std::printf("tot_vectest: path %s, %d lanes\n", kVecPathName, W);
+#if defined(TOT_EXPECT_PATH)
+    check(std::strcmp(kVecPathName, TOT_EXPECT_PATH) == 0, "built for the expected path", fmt("expected %s, got %s", TOT_EXPECT_PATH, kVecPathName));
 #endif
     testOps();
     testHalfband();

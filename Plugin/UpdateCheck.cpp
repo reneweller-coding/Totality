@@ -6,25 +6,25 @@
 #include <cstdlib>
 
 namespace {
-const char* const kReleases = "https://api.github.com/repos/reneweller-coding/Umbra/releases/latest";
+const char* const kReleases = "https://api.github.com/repos/reneweller-coding/Totality/releases/latest";
 constexpr juce::int64 kDay = 24 * 60 * 60 * 1000;
 
 juce::PropertiesFile::Options options()
 {
     juce::PropertiesFile::Options o;
-    o.applicationName = "Umbra";
-    o.filenameSuffix = ".updates";   // its own file: the standalone keeps its window and audio in Umbra.settings
-    o.folderName = "Umbra";
+    o.applicationName = "Totality";
+    o.filenameSuffix = ".updates";   // its own file: the standalone keeps its window and audio in Totality.settings
+    o.folderName = "Totality";
     o.osxLibrarySubFolder = "Application Support";
     return o;
 }
 } // namespace
 
-UpdateCheck::UpdateCheck() : juce::Thread("Umbra update check"), settings_(std::make_unique<juce::PropertiesFile>(options()))
+UpdateCheck::UpdateCheck() : juce::Thread("Totality update check"), settings_(std::make_unique<juce::PropertiesFile>(options()))
 {
     // What the last check found, until the next one.
     const juce::String latest = settings_->getValue("latest");
-    if (later(latest, UMB_VERSION)) {
+    if (later(latest, TOT_VERSION)) {
         newer_ = latest.trimCharactersAtStart("vV");
         page_ = settings_->getValue("page");
     }
@@ -88,11 +88,11 @@ void UpdateCheck::run()
 {
     settings_->setValue("lastCheck", juce::String(juce::Time::currentTimeMillis()));
     settings_->saveIfNeeded();
-    // UMB_UPDATE_URL points the question elsewhere (a test aid: another repository's releases).
-    const char* other = std::getenv("UMB_UPDATE_URL");
+    // TOT_UPDATE_URL points the question elsewhere (a test aid: another repository's releases).
+    const char* other = std::getenv("TOT_UPDATE_URL");
     const auto request = juce::URL(other != nullptr ? juce::String(other) : juce::String(kReleases)).createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
         .withConnectionTimeoutMs(8000)
-        .withExtraHeaders(juce::String("User-Agent: Umbra/") + UMB_VERSION + "\r\nAccept: application/vnd.github+json"));
+        .withExtraHeaders(juce::String("User-Agent: Totality/") + TOT_VERSION + "\r\nAccept: application/vnd.github+json"));
     if (request == nullptr || threadShouldExit()) return;
     const juce::var release = juce::JSON::parse(request->readEntireStreamAsString());
     const juce::String tag = release.getProperty("tag_name", "").toString(), url = release.getProperty("html_url", "").toString();
@@ -101,7 +101,7 @@ void UpdateCheck::run()
     settings_->setValue("page", url);
     settings_->saveIfNeeded();
     const juce::ScopedLock g(lock_);
-    if (later(tag, UMB_VERSION)) {
+    if (later(tag, TOT_VERSION)) {
         newer_ = tag.trimCharactersAtStart("vV");
         page_ = url;
     } else {

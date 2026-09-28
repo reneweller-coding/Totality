@@ -6,21 +6,21 @@
 #include "EditorEclipse.h"
 #include "EditorPerform.h"
 #include "EditorStyle.h"
-#include "umb/Presets.h"
+#include "tot/Presets.h"
 #include <cstdlib>
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
-const juce::Colour kBack = umbui::colour::bg, kPanel = umbui::colour::panel, kInk = umbui::colour::ink, kDim = umbui::colour::dim,
-                   kAccent = umbui::colour::amber, kOnset = umbui::colour::onset;
+const juce::Colour kBack = totui::colour::bg, kPanel = totui::colour::panel, kInk = totui::colour::ink, kDim = totui::colour::dim,
+                   kAccent = totui::colour::amber, kOnset = totui::colour::onset;
 
 /** @brief Colour of a block by its marker: the edges dark, the body brighter towards the peak, a reduction the motion's teal. */
 juce::Colour blockColour(const juce::String& name)
 {
-    using umbui::Family;
-    auto tone = [](Family f, float k) { return umbui::familyColour(f).interpolatedWith(umbui::colour::bg, k); };
+    using totui::Family;
+    auto tone = [](Family f, float k) { return totui::familyColour(f).interpolatedWith(totui::colour::bg, k); };
     if (name.startsWith("Intro") || name.startsWith("Outro")) return tone(Family::Space, 0.72f);
     if (name.startsWith("Reduction") || name.contains("kick out")) return tone(Family::Motion, 0.62f);
     if (name.startsWith("Return")) return tone(Family::Filter, 0.6f);
@@ -28,14 +28,14 @@ juce::Colour blockColour(const juce::String& name)
     return tone(Family::Source, 0.72f);
 }
 
-/** @brief The documents folder of Umbra. */
-juce::File documents() { return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Umbra"); }
+/** @brief The documents folder of Totality. */
+juce::File documents() { return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Totality"); }
 
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------
 
-PresetBar::PresetBar(UmbraProcessor& p, Module m, int instance) : proc_(p), module_(m), instance_(instance)
+PresetBar::PresetBar(TotalityProcessor& p, Module m, int instance) : proc_(p), module_(m), instance_(instance)
 {
     const std::vector<SoundPreset>& list = factoryPresets(m);
     juce::PopupMenu* root = menu_.getRootMenu();
@@ -50,7 +50,7 @@ PresetBar::PresetBar(UmbraProcessor& p, Module m, int instance) : proc_(p), modu
     next_.onClick = [this] { const int n = static_cast<int>(factoryPresets(module_).size()); choose(menu_.getSelectedId() % n); };
     prev_.setTooltip("the preset before");
     next_.setTooltip("the next preset");
-    composed_.setColour(juce::Label::textColourId, umbui::colour::dim);
+    composed_.setColour(juce::Label::textColourId, totui::colour::dim);
     composed_.setTooltip("The preset the composer chose for this synth in the track that plays (compose.pick_sounds; reroll sounds "
                          "draws others). Its values stand on the knobs; turn one and the sound follows.");
     for (juce::Component* c : { static_cast<juce::Component*>(&menu_), static_cast<juce::Component*>(&prev_), static_cast<juce::Component*>(&next_),
@@ -97,7 +97,7 @@ void PresetBar::paint(juce::Graphics&) {}
 
 // ---------------------------------------------------------------------------------------------------
 
-ParamPage::ParamPage(UmbraProcessor& p, std::vector<std::pair<Module, int>> groups, int instances, std::vector<juce::String> names)
+ParamPage::ParamPage(TotalityProcessor& p, std::vector<std::pair<Module, int>> groups, int instances, std::vector<juce::String> names)
     : proc_(p), groups_(std::move(groups)), instances_(instances)
 {
     if (instances_ > 1) {
@@ -131,7 +131,7 @@ void ParamPage::build()
         const ParamDesc& d = s.desc(id);
         auto* label = labels_.add(new juce::Label({}, title.isEmpty() ? juce::String(d.name) : shortName(d.name, title)));
         label->setJustificationType(juce::Justification::centred);
-        label->setColour(juce::Label::textColourId, big ? umbui::colour::ink : umbui::colour::dim);
+        label->setColour(juce::Label::textColourId, big ? totui::colour::ink : totui::colour::dim);
         label->setFont(juce::FontOptions(big ? 13.0f : 12.0f));
         label->setMinimumHorizontalScale(0.75f);
         addAndMakeVisible(label);
@@ -178,7 +178,7 @@ void ParamPage::build()
             Box box;
             const std::string& k0 = s.key(s.id(g.first, instance, 0));
             box.title = juce::String(k0.substr(0, k0.find('.'))) + " preset";
-            box.colour = umbui::familyColour(umbui::Family::Source);
+            box.colour = totui::familyColour(totui::Family::Source);
             auto* bar = new PresetBar(proc_, g.first, instance);
             controls_.add(bar);
             addAndMakeVisible(bar);
@@ -191,10 +191,10 @@ void ParamPage::build()
         }
         // A module with instances shown beside others (the decks): its groups carry the instance's name.
         const juce::String suffix = instances_ <= 1 && g.first == Module::Deck ? juce::String(" ") + juce::String::charToString(static_cast<juce::juce_wchar>('A' + instance)) : juce::String();
-        for (const umbui::GroupSpec& spec : umbui::layoutOf(g.first)) {
+        for (const totui::GroupSpec& spec : totui::layoutOf(g.first)) {
             Box box;
             box.title = juce::String(spec.title) + suffix;
-            box.colour = g.first == Module::Deck ? umbui::deckColour(instance) : umbui::familyColour(spec.family);
+            box.colour = g.first == Module::Deck ? totui::deckColour(instance) : totui::familyColour(spec.family);
             for (const char* key : spec.keys) {
                 const bool big = key[0] == '*', narrow = key[0] == '~';
                 const std::string name = big || narrow ? key + 1 : key;
@@ -209,8 +209,8 @@ void ParamPage::build()
         }
         // Whatever the panel does not name, so nothing added to a table is lost from the editor.
         Box more;
-        more.title = umbui::layoutOf(g.first).empty() ? juce::String("Settings") : juce::String("More");
-        more.colour = umbui::familyColour(umbui::Family::Space);
+        more.title = totui::layoutOf(g.first).empty() ? juce::String("Settings") : juce::String("More");
+        more.colour = totui::familyColour(totui::Family::Space);
         for (int i = 0; i < count; ++i) {
             if (placed[static_cast<size_t>(i)]) continue;
             const Cell c = make(s.id(g.first, instance, i), more.colour, false);
@@ -299,9 +299,9 @@ void ParamPage::paint(juce::Graphics& g)
 {
     for (const Box& box : boxes_) {
         const auto r = box.bounds.toFloat();
-        g.setColour(umbui::colour::group);
+        g.setColour(totui::colour::group);
         g.fillRoundedRectangle(r, 6.0f);
-        g.setColour(umbui::colour::edge);
+        g.setColour(totui::colour::edge);
         g.drawRoundedRectangle(r.reduced(0.5f), 6.0f, 1.0f);
         g.setColour(box.colour);
         g.setFont(juce::FontOptions(11.5f, juce::Font::bold));
@@ -398,9 +398,9 @@ void ArrangeView::paint(juce::Graphics& g)
             const TrackPlace& t = playing_.tracks[i];
             const float y = 2.0f + rowH * static_cast<float>(t.deck == 1 ? 1 : 0);
             const float x0 = xOf(t.start), x1 = xOf(t.end), xs = xOf(t.swapIn);
-            g.setColour(umbui::deckColour(t.deck).interpolatedWith(kBack, 0.7f));
+            g.setColour(totui::deckColour(t.deck).interpolatedWith(kBack, 0.7f));
             g.fillRect(x0 + 1.0f, y, std::max(1.0f, x1 - x0 - 2.0f), rowH - 2.0f);
-            g.setColour(umbui::deckColour(t.deck).interpolatedWith(kBack, 0.45f));
+            g.setColour(totui::deckColour(t.deck).interpolatedWith(kBack, 0.45f));
             g.fillRect(xs, y, 2.0f, rowH - 2.0f);   // its swap: from here it owns the low end
             g.setColour(kInk);
             const juce::String name = "T" + juce::String(static_cast<int>(i) + 1) + " " + juce::String(t.info.style) + " " + juce::String(t.info.camelot);
@@ -474,7 +474,7 @@ void ArrangeView::mouseDown(const juce::MouseEvent& e)
 
 // ---------------------------------------------------------------------------------------------------
 
-ArrangePage::ArrangePage(UmbraProcessor& p) : proc_(p), view_(p, true)
+ArrangePage::ArrangePage(TotalityProcessor& p) : proc_(p), view_(p, true)
 {
     addAndMakeVisible(view_);
     which_.setColour(juce::Label::textColourId, kInk);
@@ -543,20 +543,20 @@ void ArrangePage::paint(juce::Graphics& g) { g.fillAll(kPanel); }
 
 // ---------------------------------------------------------------------------------------------------
 
-ExportPage::ExportPage(UmbraProcessor& p) : proc_(p)
+ExportPage::ExportPage(TotalityProcessor& p) : proc_(p)
 {
     wav_.onClick = [this] { exportWith(0); };
-    stems_.onClick = [this] { exportWith(UmbraProcessor::kStems); };
-    loops_.onClick = [this] { exportWith(UmbraProcessor::kLoops); };
-    all_.onClick = [this] { exportWith(UmbraProcessor::kStems | UmbraProcessor::kLoops); };
+    stems_.onClick = [this] { exportWith(TotalityProcessor::kStems); };
+    loops_.onClick = [this] { exportWith(TotalityProcessor::kLoops); };
+    all_.onClick = [this] { exportWith(TotalityProcessor::kStems | TotalityProcessor::kLoops); };
     save_.onClick = [this] {
         documents().createDirectory();
-        chooser_ = std::make_unique<juce::FileChooser>("Save set", documents().getChildFile("umbra.umbset"), "*.umbset");
+        chooser_ = std::make_unique<juce::FileChooser>("Save set", documents().getChildFile("totality.totset"), "*.totset");
         chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
-                              [this](const juce::FileChooser& fc) { if (fc.getResult() != juce::File()) proc_.saveSet(fc.getResult().withFileExtension(".umbset")); });
+                              [this](const juce::FileChooser& fc) { if (fc.getResult() != juce::File()) proc_.saveSet(fc.getResult().withFileExtension(".totset")); });
     };
     load_.onClick = [this] {
-        chooser_ = std::make_unique<juce::FileChooser>("Load set", documents(), "*.umbset");
+        chooser_ = std::make_unique<juce::FileChooser>("Load set", documents(), "*.totset");
         chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
                               [this](const juce::FileChooser& fc) { if (fc.getResult().existsAsFile()) proc_.loadSet(fc.getResult()); });
     };
@@ -571,7 +571,7 @@ ExportPage::ExportPage(UmbraProcessor& p) : proc_(p)
 void ExportPage::exportWith(int extras)
 {
     documents().createDirectory();
-    chooser_ = std::make_unique<juce::FileChooser>("Export", documents().getChildFile("umbra.wav"), "*.wav");
+    chooser_ = std::make_unique<juce::FileChooser>("Export", documents().getChildFile("totality.wav"), "*.wav");
     chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
                           [this, extras](const juce::FileChooser& fc) {
                               if (fc.getResult() != juce::File()) proc_.exportTo(fc.getResult().withFileExtension(".wav"), extras);
@@ -606,7 +606,7 @@ void ExportPage::paint(juce::Graphics& g)
         "- the MIDI file with the tempo map and a channel per part,\n"
         "- with stems: a 32-bit WAV per element into <name>_stems; their sum is the mix before the master, exactly,\n"
         "- with DJ loops (a track): 4 and 8 bars of its loudest block, seamless, the mix and kick, hats and perc alone.\n"
-        "An .umbset holds the seed, the lengths, the rerolls and every changed knob.";
+        "An .totset holds the seed, the lengths, the rerolls and every changed knob.";
     g.drawFittedText(text, getLocalBounds().reduced(16).withTrimmedTop(64).withHeight(140), juce::Justification::topLeft, 8);
 }
 
@@ -619,44 +619,38 @@ void drawLogo(juce::Graphics& g, juce::Rectangle<float> r)
     const juce::Point<float> c = r.getCentre();
     g.setColour(juce::Colour(12, 12, 15));
     g.fillRoundedRectangle(r, s / 5.0f);
-    const float disc = s * (s > 24.0f ? 0.2f : 0.24f);
-    juce::ColourGradient corona(juce::Colour(238, 214, 168).withAlpha(0.85f), c.x, c.y, juce::Colour(238, 214, 168).withAlpha(0.0f),
-                                c.x + disc * 1.8f, c.y, true);
-    g.setGradientFill(corona);
-    g.fillEllipse(c.x - disc * 1.8f, c.y - disc * 1.8f, disc * 3.6f, disc * 3.6f);
-    if (s > 24.0f) {
-        const int rings = s <= 48.0f ? 2 : 3;
-        const float width = std::max(1.0f, s / 90.0f);
-        for (int k = 0; k < rings; ++k) {
-            const float rad = disc * 1.55f + (s * 0.44f - disc * 1.55f) * static_cast<float>(k) / static_cast<float>(std::max(1, rings - 1));
-            g.setColour(juce::Colour(120, 112, 104).withAlpha(0.33f));
-            g.drawEllipse(c.x - rad, c.y - rad, 2.0f * rad, 2.0f * rad, width);
-            static const int steps[3] = { 16, 12, 7 };
-            for (int i = 0; i < steps[k]; i += (k == 0 ? 3 : 2)) {
-                const float a = -juce::MathConstants<float>::halfPi + juce::MathConstants<float>::twoPi * static_cast<float>(i) / static_cast<float>(steps[k]) + 0.4f * static_cast<float>(k);
-                const float pr = std::max(s * 0.018f, width * 1.4f);
-                g.setColour(i == 0 ? juce::Colour(214, 85, 63) : juce::Colour(238, 214, 168).withAlpha(0.8f));
-                g.fillEllipse(c.x + rad * std::cos(a) - pr, c.y + rad * std::sin(a) - pr, 2.0f * pr, 2.0f * pr);
-            }
-        }
+    // The streamers of the corona, long along the equator (make_icon.py: streamers, layout).
+    const bool small = s <= 32.0f;
+    const float disc = s * (small ? 0.22f : 0.2f);
+    const int count = small ? 24 : 48;
+    const float width = std::max(1.0f, disc * (small ? 0.09f : 0.055f));
+    const juce::Colour corona(238, 214, 168);
+    for (int i = 0; i < count; ++i) {
+        const float a = juce::MathConstants<float>::twoPi * static_cast<float>(i) / static_cast<float>(count);
+        const float w = 0.55f + 0.45f * std::sin(7.0f * a + 1.3f) * std::sin(3.0f * a);
+        const float e = std::pow(std::abs(std::cos(a)), 3.0f);
+        const float length = disc * (0.18f + 0.95f * e * (0.6f + 0.4f * w) + 0.12f * w) * (small ? 0.8f : 1.0f);
+        const float r0 = disc * 1.08f, r1 = r0 + length;
+        g.setColour(corona.withAlpha(0.45f + 0.5f * std::abs(std::cos(a))));
+        g.drawLine(c.x + r0 * std::cos(a), c.y + r0 * std::sin(a), c.x + r1 * std::cos(a), c.y + r1 * std::sin(a), width);
     }
+    // The rim of light, and the moon's disc.
+    g.setColour(corona);
+    g.fillEllipse(c.x - disc * 1.06f, c.y - disc * 1.06f, 2.12f * disc, 2.12f * disc);
     g.setColour(juce::Colour(5, 5, 7));
     g.fillEllipse(c.x - disc, c.y - disc, 2.0f * disc, 2.0f * disc);
-    const float a = -juce::MathConstants<float>::pi / 4.0f, br = disc * 0.14f;
-    g.setColour(juce::Colour(255, 246, 226));
-    g.fillEllipse(c.x + disc * std::cos(a) - br, c.y + disc * std::sin(a) - br, 2.0f * br, 2.0f * br);
 }
 
 // ---------------------------------------------------------------------------------------------------
 
-UmbraEditor::UmbraEditor(UmbraProcessor& p) : juce::AudioProcessorEditor(p), proc_(p), arrange_(p, false)
+TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEditor(p), proc_(p), arrange_(p, false)
 {
     setLookAndFeel(&lnf_);
     addAndMakeVisible(body_);
     body_.painter = [this](juce::Graphics& g) { g.fillAll(kBack); drawLogo(g, logo_); };
     body_.onResize = [this] { layoutBody(); };
     ParamStore& s = proc_.store();
-    title_.setText("UMBRA", juce::dontSendNotification);
+    title_.setText("TOTALITY", juce::dontSendNotification);
     title_.setFont(juce::FontOptions(20.0f, juce::Font::bold));
     title_.setColour(juce::Label::textColourId, kAccent);
     body_.addAndMakeVisible(title_);
@@ -688,19 +682,19 @@ UmbraEditor::UmbraEditor(UmbraProcessor& p) : juce::AudioProcessorEditor(p), pro
     seed_.onClick = [this] { proc_.newSeed(); };
     play_.onClick = [this] { proc_.setPlaying(!proc_.isPlaying()); };
     for (auto* b : { &compose_, &seed_, &play_ }) body_.addAndMakeVisible(b);
-    // Mute, as in Phosphene: silence at the output; UMB_MUTE (or the screenshot mode) holds it on.
+    // Mute, as in Phosphene: silence at the output; TOT_MUTE (or the screenshot mode) holds it on.
     mute_.setClickingTogglesState(true);
     mute_.setToggleState(proc_.muted(), juce::dontSendNotification);
-    mute_.setEnabled(!proc_.muteForced() || std::getenv("UMB_SHOT") != nullptr);
-    mute_.setColour(juce::TextButton::buttonOnColourId, umbui::colour::red.withAlpha(0.55f));
-    mute_.setTooltip(proc_.muteForced() ? "Muted by UMB_MUTE: an automated run makes no sound" : "Silence the output");
+    mute_.setEnabled(!proc_.muteForced() || std::getenv("TOT_SHOT") != nullptr);
+    mute_.setColour(juce::TextButton::buttonOnColourId, totui::colour::red.withAlpha(0.55f));
+    mute_.setTooltip(proc_.muteForced() ? "Muted by TOT_MUTE: an automated run makes no sound" : "Silence the output");
     mute_.onClick = [this] { proc_.setMuted(mute_.getToggleState()); };
     body_.addAndMakeVisible(mute_);
     play_.setColour(juce::TextButton::buttonColourId, kAccent.withAlpha(0.22f));
     compose_.setColour(juce::TextButton::buttonColourId, kAccent.withAlpha(0.14f));
     // The update check: once a day it asks GitHub for the latest release (nothing else is sent); a newer one shows here.
     checkUpdates_.setToggleState(updates_->enabled(), juce::dontSendNotification);
-    checkUpdates_.setTooltip("Once a day, ask GitHub whether a newer Umbra is out (nothing else is sent, nothing is downloaded)");
+    checkUpdates_.setTooltip("Once a day, ask GitHub whether a newer Totality is out (nothing else is sent, nothing is downloaded)");
     checkUpdates_.onClick = [this] { updates_->setEnabled(checkUpdates_.getToggleState()); };
     body_.addAndMakeVisible(checkUpdates_);
     update_.setColour(juce::HyperlinkButton::textColourId, kAccent);
@@ -739,10 +733,10 @@ UmbraEditor::UmbraEditor(UmbraProcessor& p) : juce::AudioProcessorEditor(p), pro
     setResizeLimits(800, 520, 4800, 3100);
     setSize(1180, 760);
 
-    if (const char* shot = std::getenv("UMB_SHOT")) {
+    if (const char* shot = std::getenv("TOT_SHOT")) {
         shotPath_ = shot;
-        if (const char* tab = std::getenv("UMB_TAB")) tabs_.setCurrentTabIndex(juce::String(tab).getIntValue());
-        if (const char* size = std::getenv("UMB_SHOT_SIZE")) {
+        if (const char* tab = std::getenv("TOT_TAB")) tabs_.setCurrentTabIndex(juce::String(tab).getIntValue());
+        if (const char* size = std::getenv("TOT_SHOT_SIZE")) {
             const juce::String sz(size);
             setSize(sz.upToFirstOccurrenceOf("x", false, false).getIntValue(), sz.fromFirstOccurrenceOf("x", false, false).getIntValue());
         }
@@ -750,15 +744,15 @@ UmbraEditor::UmbraEditor(UmbraProcessor& p) : juce::AudioProcessorEditor(p), pro
     startTimerHz(15);
 }
 
-UmbraEditor::~UmbraEditor()
+TotalityEditor::~TotalityEditor()
 {
     stopTimer();
     setLookAndFeel(nullptr);
 }
 
-void UmbraEditor::paint(juce::Graphics& g) { g.fillAll(kBack); }
+void TotalityEditor::paint(juce::Graphics& g) { g.fillAll(kBack); }
 
-void UmbraEditor::resized()
+void TotalityEditor::resized()
 {
     // The body at the design size (1180 x 760), scaled to the window by its height, and as wide as the window allows.
     const float scale = juce::jlimit(0.5f, 4.0f, std::min(static_cast<float>(getWidth()) / 1180.0f, static_cast<float>(getHeight()) / 760.0f));
@@ -766,11 +760,11 @@ void UmbraEditor::resized()
     body_.setBounds(0, 0, juce::roundToInt(static_cast<float>(getWidth()) / scale), juce::roundToInt(static_cast<float>(getHeight()) / scale));
 }
 
-void UmbraEditor::parentHierarchyChanged()
+void TotalityEditor::parentHierarchyChanged()
 {
     // A maximise button beside the other two, on the next turn of the message loop (the standalone's window is still
     // putting its content in when this is called). A host's window finds nothing here.
-    juce::MessageManager::callAsync([safe = juce::Component::SafePointer<UmbraEditor>(this)] {
+    juce::MessageManager::callAsync([safe = juce::Component::SafePointer<TotalityEditor>(this)] {
         if (safe == nullptr) return;
         auto* window = safe->findParentComponentOfClass<juce::DocumentWindow>();
         if (window != nullptr)
@@ -781,7 +775,7 @@ void UmbraEditor::parentHierarchyChanged()
     });
 }
 
-void UmbraEditor::toggleFullScreen()
+void TotalityEditor::toggleFullScreen()
 {
     auto* window = findParentComponentOfClass<juce::DocumentWindow>();
     if (window == nullptr) return;
@@ -792,7 +786,7 @@ void UmbraEditor::toggleFullScreen()
     grabKeyboardFocus();
 }
 
-bool UmbraEditor::keyPressed(const juce::KeyPress& key)
+bool TotalityEditor::keyPressed(const juce::KeyPress& key)
 {
     if (key.getKeyCode() == juce::KeyPress::F11Key) { toggleFullScreen(); return true; }
     if (key.getKeyCode() == juce::KeyPress::escapeKey && juce::Desktop::getInstance().getKioskModeComponent() != nullptr) {
@@ -802,19 +796,19 @@ bool UmbraEditor::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
-void UmbraEditor::layoutBody()
+void TotalityEditor::layoutBody()
 {
     auto area = body_.getLocalBounds().reduced(10);
     auto top = area.removeFromTop(34);
     logo_ = top.removeFromLeft(34).toFloat().reduced(2.0f);
-    title_.setBounds(top.removeFromLeft(90));
+    title_.setBounds(top.removeFromLeft(112));
     style_.setBounds(top.removeFromLeft(120).reduced(3));
     key_.setBounds(top.removeFromLeft(64).reduced(3));
     scale_.setBounds(top.removeFromLeft(120).reduced(3));
     minutesLabel_.setBounds(top.removeFromLeft(70));
-    minutes_.setBounds(top.removeFromLeft(130).reduced(2));
+    minutes_.setBounds(top.removeFromLeft(122).reduced(2));
     setLabel_.setBounds(top.removeFromLeft(56));
-    setMinutes_.setBounds(top.removeFromLeft(130).reduced(2));
+    setMinutes_.setBounds(top.removeFromLeft(122).reduced(2));
     mute_.setBounds(top.removeFromRight(proc_.muteForced() && shotPath_.isEmpty() ? 100 : 70).reduced(3));
     play_.setBounds(top.removeFromRight(76).reduced(3));
     seed_.setBounds(top.removeFromRight(90).reduced(3));
@@ -832,7 +826,7 @@ void UmbraEditor::layoutBody()
     tabs_.setBounds(area);
 }
 
-void UmbraEditor::timerCallback()
+void TotalityEditor::timerCallback()
 {
     status_.setText(proc_.status(), juce::dontSendNotification);
     rerolls_.setText(proc_.curationText(), juce::dontSendNotification);
@@ -856,12 +850,12 @@ void UmbraEditor::timerCallback()
         if (juce::JUCEApplicationBase::isStandaloneApp()) juce::JUCEApplicationBase::quit();
         return;
     }
-    // The screenshot mode: wait for the first score, then draw the panel into a file and quit. UMB_SHOT_AT (a beat)
+    // The screenshot mode: wait for the first score, then draw the panel into a file and quit. TOT_SHOT_AT (a beat)
     // moves the playhead there first.
     if (shotPath_.isNotEmpty() && !proc_.isComposing() && shotTicks_ == 0)
-        if (const char* at = std::getenv("UMB_SHOT_AT")) proc_.seekTo(std::atof(at));
-    // UMB_SHOT_FULL: the window grows until nothing of the page in front scrolls, so the picture shows all of it.
-    if (shotPath_.isNotEmpty() && !proc_.isComposing() && (shotTicks_ == 6 || shotTicks_ == 12) && std::getenv("UMB_SHOT_FULL") != nullptr) {
+        if (const char* at = std::getenv("TOT_SHOT_AT")) proc_.seekTo(std::atof(at));
+    // TOT_SHOT_FULL: the window grows until nothing of the page in front scrolls, so the picture shows all of it.
+    if (shotPath_.isNotEmpty() && !proc_.isComposing() && (shotTicks_ == 6 || shotTicks_ == 12) && std::getenv("TOT_SHOT_FULL") != nullptr) {
         std::function<int(juce::Component&)> overflow = [&](juce::Component& c) {
             int most = 0;
             if (auto* v = dynamic_cast<juce::Viewport*>(&c))

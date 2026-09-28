@@ -2,13 +2,13 @@
  * @file Dynamics.cpp
  * @brief True-peak interpolator and lookahead limiter.
  * @note Copied from Phosphene `Core/src/Dynamics.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Core/src/fx/Dynamics.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/fx/Dynamics.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/fx/Dynamics.h"
+#include "tot/fx/Dynamics.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kPiD = 3.141592653589793;
@@ -179,4 +179,4 @@ void TruePeakLimiter::process(float* L, float* R, int n)
     reduction_ = static_cast<float>(-20.0 * std::log10(std::max(gain_, 1e-9)));
 }
 
-} // namespace umb
+} // namespace tot

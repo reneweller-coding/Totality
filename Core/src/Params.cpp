@@ -2,15 +2,15 @@
  * @file Params.cpp
  * @brief Module descriptor tables and the parameter store.
  * @note The store below the tables is copied from Ephemeris `Core/src/Params.cpp` at d047d79 (27.09.2026); the
- *       tables are Umbra's own.
+ *       tables are Totality's own.
  */
-#include "umb/Params.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
-namespace umb {
+namespace tot {
 
 const char* const kKeyNames[12] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 const char* const kScaleNames[] = { "Aeolian", "Dorian", "Phrygian", "Hexachord", "Minor Pentatonic" };
@@ -67,7 +67,7 @@ const ParamDesc kComposeParams[compose::Count] = {
 };
 
 /**
- * The kick (PLAN 5.1, Dok. 8.4). Phosphene's ranges, with Umbra's defaults: an end pitch tuned to the key in 41 to
+ * The kick (PLAN 5.1, Dok. 8.4). Phosphene's ranges, with Totality's defaults: an end pitch tuned to the key in 41 to
  * 62 Hz, a start about 2.5 octaves up that settles in some 20 ms, a decay of 380 ms between the peak-time and the
  * rolling recipe, the click band 2 to 5 kHz. The top layer is the 909 engine eight semitones down, high-passed at
  * 400 Hz, about 12 dB under the body (the Berghain recipe says -8 st and a mid layer; the level is [I]).
@@ -790,4 +790,4 @@ std::string ParamStore::format(int id) const
     return s;
 }
 
-} // namespace umb
+} // namespace tot

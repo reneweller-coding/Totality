@@ -1,14 +1,14 @@
-# Umbra for Meta Quest
+# Totality for Meta Quest
 
 The whole generator on the headset: the composer writes a track or a set, the engine synthesizes it, and the hands
 play it like hands at a mixer. Native OpenXR, no game engine — `NativeActivity` + `android_native_app_glue`, EGL,
 GLES 3, the Khronos OpenXR loader, `XR_EXT_hand_tracking`, Oboe, and the unchanged core from `../Core`. The frame of
 the app (session, swapchains, point renderer, font, hands, audio stream) is Ephemeris' Quest app, after Phosphene's;
-the player, the gestures, the panel and the Eclipse in the room are Umbra's.
+the player, the gestures, the panel and the Eclipse in the room are Totality's.
 
 ```
 Quest/
-  CMakeLists.txt        NDK build of libumbquest.so (links UmbraCore, oboe, openxr_loader)
+  CMakeLists.txt        NDK build of libtotquest.so (links TotalityCore, oboe, openxr_loader)
   AndroidManifest.xml   NativeActivity, hasCode=false, hand-tracking permission/features, VR category
   src/main.cpp          the app: OpenXR session, composer thread, Oboe, hand controls, the panel and the Eclipse
   res/mipmap-*/         the launcher icon at five densities (Deploy/make_icon.py)
@@ -21,11 +21,11 @@ Quest/
 ```powershell
 powershell -File Quest\fetch_thirdparty.ps1
 powershell -File Quest\build_apk.ps1
-adb install -r build-quest\UmbraQuest.apk
+adb install -r build-quest\TotalityQuest.apk
 ```
 
 Needs NDK r27 (`C:\Android-Buildtools\sdk\ndk\27.2.12479018`), build-tools 34, platform android-34 and JDK 17 — the
-parameters at the top of `build_apk.ps1`. No Gradle and no ninja. The APK is 4.8 MB: Umbra ships no data, every sound
+parameters at the top of `build_apk.ps1`. No Gradle and no ninja. The APK is 5.1 MB: Totality ships no data, every sound
 is synthesised.
 
 Built on 28.09.2026 without a headset attached: it compiles and links for arm64 without a warning and the APK is
@@ -70,10 +70,10 @@ rules), and nothing about the camera moves with the audio.
 
 ## Config
 
-`umb.cfg` in the app's external data folder, every key optional:
+`tot.cfg` in the app's external data folder, every key optional:
 
 ```
-adb push umb.cfg /sdcard/Android/data/com.reneweller.umbra.quest/files/umb.cfg
+adb push tot.cfg /sdcard/Android/data/com.reneweller.totality.quest/files/tot.cfg
 ```
 
 ```
@@ -83,7 +83,7 @@ minutes=7                  length of a track
 set_minutes=60             a set of so many minutes instead of single tracks
 style=Hypnotic             Hypnotic, Ostgut, Dub or Raw
 quality=desktop            everything (default here: quest)
-osc_host=192.168.1.20      the score cues to a visualiser (Cue.h: /umb/beat, /umb/bar, /umb/block, /umb/op, /umb/key)
+osc_host=192.168.1.20      the score cues to a visualiser (Cue.h: /tot/beat, /tot/bar, /tot/block, /tot/op, /tot/key)
 osc_port=9000
 knobs=compose.key=D;mix.hats_level=-5      any knobs, repeatable
 ```
@@ -91,7 +91,7 @@ knobs=compose.key=D;mix.hats_level=-5      any knobs, repeatable
 ## CPU (PLAN 11)
 
 The Quest's quality (`Engine::Quality::Quest`, the default here) lets the grain cloud rest and clips the rumble at the
-rate instead of four times it. Measured on the desktop (`umb_render --bench`, and with the CMake option `UMB_PROFILE`
+rate instead of four times it. Measured on the desktop (`tot_render --bench`, and with the CMake option `TOT_PROFILE`
 per stage), a 20-minute set of seed 2026 with its blends: 7.8 % of a core at the desktop quality, 7.5 % at the Quest's.
 The largest stages: the rumble (its hall and clip) 12 %, the twelve kit lanes 13 %, the dub chain 11 %, the room 9 %,
 the master's 4x clipper 7.5 %. What that is on the Quest 2 has to be measured there; with the usual factor of three

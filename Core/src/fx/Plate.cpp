@@ -1,14 +1,14 @@
 /**
  * @file Plate.cpp
  * @brief Dattorro's plate (Plate.h).
- * @note Copied from Ephemeris `Core/src/fx/Plate.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/fx/Plate.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/fx/Plate.h"
-#include "umb/Dsp.h"
+#include "tot/fx/Plate.h"
+#include "tot/Dsp.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kRef = 29761.0;   ///< the sample rate Dattorro's lengths are given at
@@ -142,4 +142,4 @@ void Plate::process(const float* inL, const float* inR, float* outL, float* outR
     }
 }
 
-} // namespace umb
+} // namespace tot

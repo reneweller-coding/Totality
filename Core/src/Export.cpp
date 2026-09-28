@@ -1,17 +1,17 @@
 /**
  * @file Export.cpp
- * @brief The cues and the DJ loops of an export (Export.h); moved here from umb_render.
+ * @brief The cues and the DJ loops of an export (Export.h); moved here from tot_render.
  */
-#include "umb/Export.h"
-#include "umb/Engine.h"
-#include "umb/WavWriter.h"
+#include "tot/Export.h"
+#include "tot/Engine.h"
+#include "tot/WavWriter.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
 #include <memory>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -142,4 +142,4 @@ bool renderLoops(const ParamStore& knobs, const Score& track, const TrackInfo& i
     return true;
 }
 
-} // namespace umb
+} // namespace tot

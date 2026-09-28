@@ -9,9 +9,9 @@
  * parameter pages are generated from the parameter tables (EditorTheme.h, layoutOf), so a parameter that exists is on
  * the panel without anyone writing it there.
  *
- * `UMB_SHOT` (a PNG file) and `UMB_TAB` (a tab index) render the panel into a picture after the first score is composed
- * and quit the standalone -- how the layout is checked without a person looking. `UMB_SHOT_SIZE` ("1600x1000") the
- * window's size, `UMB_SHOT_AT` (a beat) jumps there first; with `UMB_PLAY` set, the meters then show that place.
+ * `TOT_SHOT` (a PNG file) and `TOT_TAB` (a tab index) render the panel into a picture after the first score is composed
+ * and quit the standalone -- how the layout is checked without a person looking. `TOT_SHOT_SIZE` ("1600x1000") the
+ * window's size, `TOT_SHOT_AT` (a beat) jumps there first; with `TOT_PLAY` set, the meters then show that place.
  *
  * @note After Ephemeris' Plugin/PluginEditor.h at d047d79 (27.09.2026).
  */
@@ -25,20 +25,20 @@
 #include <vector>
 
 /**
- * @brief A synth's factory presets (umb/Presets.h): a menu of the 1024 in their sixteen groups, a step back and forth, and
+ * @brief A synth's factory presets (tot/Presets.h): a menu of the 1024 in their sixteen groups, a step back and forth, and
  *        the preset the composer chose for the track that plays -- the menu follows it while you have not chosen another.
  */
 class PresetBar final : public juce::Component, private juce::Timer {
 public:
-    PresetBar(UmbraProcessor& p, umb::Module m, int instance);
+    PresetBar(TotalityProcessor& p, tot::Module m, int instance);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
     void choose(int index);
-    UmbraProcessor& proc_;
-    umb::Module module_;
+    TotalityProcessor& proc_;
+    tot::Module module_;
     int instance_;
     int shown_ = -2;   ///< the composer's preset the label shows
     juce::ComboBox menu_;
@@ -56,7 +56,7 @@ public:
      * @param instances how many instances the modules have; above one, a selector picks the instance
      * @param names     the instances' names for the selector (empty: 1, 2, 3 ...)
      */
-    ParamPage(UmbraProcessor& p, std::vector<std::pair<umb::Module, int>> groups, int instances = 1,
+    ParamPage(TotalityProcessor& p, std::vector<std::pair<tot::Module, int>> groups, int instances = 1,
               std::vector<juce::String> names = {});
     void resized() override;                  ///< lays the groups out, flowing across the page
     void paint(juce::Graphics& g) override;   ///< the group boxes and their titles
@@ -65,8 +65,8 @@ public:
 
 private:
     void build();
-    UmbraProcessor& proc_;
-    std::vector<std::pair<umb::Module, int>> groups_;
+    TotalityProcessor& proc_;
+    std::vector<std::pair<tot::Module, int>> groups_;
     int instances_;
     juce::ComboBox instance_;
     juce::OwnedArray<juce::Component> controls_;
@@ -113,7 +113,7 @@ private:
 class ArrangeView final : public juce::Component {
 public:
     /** @brief Shows @p p's score; @p detailed adds the operations' names and a larger matrix (the Arrange tab). */
-    ArrangeView(UmbraProcessor& p, bool detailed) : proc_(p), detailed_(detailed) {}
+    ArrangeView(TotalityProcessor& p, bool detailed) : proc_(p), detailed_(detailed) {}
     void paint(juce::Graphics& g) override;                     ///< the tracks or blocks, the matrix, the playhead
     void mouseDown(const juce::MouseEvent& e) override;         ///< jumps to the clicked position
     static constexpr int kLanes = 6;                            ///< kick, hats, perc, ping, bass (sub, bass, 303), pads
@@ -122,7 +122,7 @@ public:
 private:
     static constexpr int kBins = 600;     ///< columns of the matrix across the length
     void rebuild();                       ///< the matrix of a new score
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     bool detailed_;
     int version_ = -1;                    ///< the score the matrix was built from
     Playing playing_;                     ///< a copy of what plays
@@ -135,13 +135,13 @@ private:
  */
 class ArrangePage final : public juce::Component, private juce::Timer {
 public:
-    explicit ArrangePage(UmbraProcessor& p);
+    explicit ArrangePage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     ArrangeView view_;
     juce::Label which_, sounds_;
     juce::OwnedArray<juce::TextButton> rerolls_;
@@ -152,16 +152,16 @@ private:
 /** @brief The Export tab (PLAN 10.1): the files, what each holds, the OSC cues' settings. */
 class ExportPage final : public juce::Component, private juce::Timer {
 public:
-    explicit ExportPage(UmbraProcessor& p);
+    explicit ExportPage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
     void exportWith(int extras);
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     juce::TextButton wav_{ "WAV + MIDI + cues" }, stems_{ "... with stems" }, loops_{ "... with DJ loops" }, all_{ "... with both" };
-    juce::TextButton save_{ "Save .umbset" }, load_{ "Load .umbset" };
+    juce::TextButton save_{ "Save .totset" }, load_{ "Load .totset" };
     juce::Label status_;
     std::unique_ptr<ParamPage> cue_;
     std::unique_ptr<juce::FileChooser> chooser_;
@@ -179,14 +179,14 @@ public:
     void resized() override { if (onResize) onResize(); }
 };
 
-/** @brief The logo (Deploy/make_icon.py, drawn as vectors): the eclipse -- a dark disc before its corona, the rings. */
+/** @brief The logo (Deploy/make_icon.py, drawn as vectors): the moon's dark disc, its rim, the corona in streamers. */
 void drawLogo(juce::Graphics& g, juce::Rectangle<float> r);
 
 /** @brief The editor. */
-class UmbraEditor final : public juce::AudioProcessorEditor, private juce::Timer {
+class TotalityEditor final : public juce::AudioProcessorEditor, private juce::Timer {
 public:
-    explicit UmbraEditor(UmbraProcessor& p);           ///< builds the panel for @p p
-    ~UmbraEditor() override;                           ///< stops the refresh timer
+    explicit TotalityEditor(TotalityProcessor& p);           ///< builds the panel for @p p
+    ~TotalityEditor() override;                           ///< stops the refresh timer
     void paint(juce::Graphics& g) override;            ///< the background
     void resized() override;                           ///< scales the body to the window
     void parentHierarchyChanged() override;            ///< the standalone's title bar gets a maximise button
@@ -196,8 +196,8 @@ private:
     void timerCallback() override;
     void layoutBody();                                 ///< the top bar, the arrange strip, the tabs, at the design scale
     void toggleFullScreen();                           ///< the standalone's window full screen and back
-    UmbraProcessor& proc_;
-    umbui::LookAndFeel lnf_;                           ///< first, so it outlives every component that uses it
+    TotalityProcessor& proc_;
+    totui::LookAndFeel lnf_;                           ///< first, so it outlives every component that uses it
     juce::TooltipWindow tooltips_{ nullptr, 700 };
     EditorBody body_;
     juce::TextButton full_{ "Full screen" };

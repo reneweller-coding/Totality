@@ -1,4 +1,4 @@
-"""The reference measurement (PLAN 13.4): what Berlin techno measures, and what Umbra's renders measure, the same way.
+"""The reference measurement (PLAN 13.4): what Berlin techno measures, and what Totality's renders measure, the same way.
 
 For every recording of Tools/ref_sets.txt (fetched by Tools/fetch_refs.py) and for any file given on the command line:
 
@@ -12,7 +12,7 @@ For every recording of Tools/ref_sets.txt (fetched by Tools/fetch_refs.py) and f
               centroid 1.5 .. 3.5 kHz)
   width       side over mid above 200 Hz and under 120 Hz, the correlation
   loudness    integrated LUFS, LRA and true peak from ffmpeg's ebur128 (BS.1770-4); the loudest 20 s (the energy mean
-              of the short-term loudness over the loudest window of 20 s: what Umbra's Leveler measures, PLAN 8.5)
+              of the short-term loudness over the loudest window of 20 s: what Totality's Leveler measures, PLAN 8.5)
   form        the loudness of every bar; reductions (runs of bars at least 6 dB under the body's median) and their
               lengths in bars; the strongest novelty boundaries (Foote 2000 on per-bar band energies) and where they fall
               against the 16- and 32-bar lines

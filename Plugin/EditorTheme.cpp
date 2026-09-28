@@ -5,7 +5,7 @@
 #include "EditorTheme.h"
 #include <cmath>
 
-namespace umbui {
+namespace totui {
 
 using namespace colour;
 
@@ -26,10 +26,10 @@ juce::Colour deckColour(int d)
     return juce::Colour(kDeck[static_cast<size_t>(juce::jlimit(0, 2, d))]);
 }
 
-const std::vector<GroupSpec>& layoutOf(umb::Module m)
+const std::vector<GroupSpec>& layoutOf(tot::Module m)
 {
     using F = Family;
-    using M = umb::Module;
+    using M = tot::Module;
     static const std::vector<GroupSpec> none;
     static const std::vector<GroupSpec> kick = {
         { "Engine", F::Source, { "~engine", "*tune", "level", "drive", "clip" } },
@@ -361,4 +361,4 @@ juce::Label* LookAndFeel::createSliderTextBox(juce::Slider& slider)
 }
 
 
-} // namespace umbui
+} // namespace totui

@@ -3,11 +3,11 @@
  * @brief The player's hands.
  * @note Copied from Ephemeris `Core/src/compose/GestureEngine.cpp` (namespace eph) at d047d79 (27.09.2026); the grid added.
  */
-#include "umb/compose/GestureEngine.h"
+#include "tot/compose/GestureEngine.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 void playHands(Score& score, const std::vector<HandKnob>& knobs, const HandStyle& style,
                const std::function<float(double)>& energy, double start, double end, Rng& rng)
@@ -87,4 +87,4 @@ void playHands(Score& score, const std::vector<HandKnob>& knobs, const HandStyle
     }
 }
 
-} // namespace umb
+} // namespace tot

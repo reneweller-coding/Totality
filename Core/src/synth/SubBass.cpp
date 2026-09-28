@@ -2,12 +2,12 @@
  * @file SubBass.cpp
  * @brief The sub bass voice.
  */
-#include "umb/synth/SubBass.h"
-#include "umb/Params.h"
+#include "tot/synth/SubBass.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -95,4 +95,4 @@ void SubBass::process(float* out, int n)
     }
 }
 
-} // namespace umb
+} // namespace tot

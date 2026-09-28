@@ -1,12 +1,12 @@
 """
-eval_report.py -- Umbra's evaluation (PLAN 13.5, Dok. 8.9): what the composer aimed at and what came out, per track,
+eval_report.py -- Totality's evaluation (PLAN 13.5, Dok. 8.9): what the composer aimed at and what came out, per track,
 against the references.
 
 usage:
   python Tools/eval_report.py --score track.json --wav track.wav [--score ... --wav ...] --out docs/eval/report.md
   python Tools/eval_report.py --score set.json --wav set.wav --out docs/eval/set.md      (a set: cut at its swaps)
 
-The score JSON is umb_render's --score-json (tracks, notes, operations, tempo). Per track:
+The score JSON is tot_render's --score-json (tracks, notes, operations, tempo). Per track:
 
   symbolic   syncopation after Longuet-Higgins and Lee (1984) per voice, polyphonic syncopation (after Witek et al.
              2014, simplified: a note in one stream left for a stronger place that another stream takes), Gomez-Marin's
@@ -204,7 +204,7 @@ def ref_bands(profile):
 
 
 def cut(wav, start_s, dur_s):
-    tmp = Path(tempfile.gettempdir()) / f"umb_eval_{int(start_s * 1000)}.wav"
+    tmp = Path(tempfile.gettempdir()) / f"tot_eval_{int(start_s * 1000)}.wav"
     subprocess.run(["ffmpeg", "-v", "quiet", "-y", "-ss", f"{start_s:.3f}", "-t", f"{dur_s:.3f}", "-i", str(wav), str(tmp)], check=True)
     return tmp
 
@@ -220,7 +220,7 @@ def main():
     ap.add_argument("--score", action="append", required=True, type=Path)
     ap.add_argument("--wav", action="append", default=[], type=Path)
     ap.add_argument("--out", required=True, type=Path)
-    ap.add_argument("--title", default="Umbra: Evaluation")
+    ap.add_argument("--title", default="Totality: Evaluation")
     args = ap.parse_args()
 
     lines = [f"# {args.title}", "", "Erzeugt von `Tools/eval_report.py` (PLAN 13.5).", ""]

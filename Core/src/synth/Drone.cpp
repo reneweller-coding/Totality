@@ -2,12 +2,12 @@
  * @file Drone.cpp
  * @brief The drone and the texture.
  */
-#include "umb/synth/Drone.h"
-#include "umb/Params.h"
+#include "tot/synth/Drone.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -154,4 +154,4 @@ void Texture::process(float* L, float* R, int n)
     }
 }
 
-} // namespace umb
+} // namespace tot

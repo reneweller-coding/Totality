@@ -1,4 +1,4 @@
-"""Umbra -- the picture GitHub shows when the project is linked: docs/social-preview.png (1280 x 640).
+"""Totality -- the picture GitHub shows when the project is linked: docs/social-preview.png (1280 x 640).
 
     python Tools/manual/make_preview.py
 
@@ -26,9 +26,9 @@ crop = shot.crop((0, 0, 1180, 760)).resize((780, 502), Image.LANCZOS)
 x0, y0 = W - 780 - 30, (H - 502) // 2
 img.paste(crop, (x0, y0))
 d.rectangle([x0 - 1, y0 - 1, x0 + 780, y0 + 502], outline=(43, 45, 54), width=2)
-logo = Image.open(os.path.join(ROOT, "Deploy", "umbra_512.png")).convert("RGBA").resize((150, 150), Image.LANCZOS)
+logo = Image.open(os.path.join(ROOT, "Deploy", "totality_512.png")).convert("RGBA").resize((150, 150), Image.LANCZOS)
 img.paste(logo, (60, 80), logo)
-d.text((60, 252), "UMBRA", font=font("segoeuib.ttf", 52), fill=(238, 214, 168))
+d.text((60, 252), "TOTALITY", font=font("segoeuib.ttf", 52), fill=(238, 214, 168))
 y = 330
 for line in ("A generator of hypnotic Berlin", "techno: tracks and DJ sets,", "composed, mixed and played", "by the program."):
     d.text((62, y), line, font=font("segoeui.ttf", 26), fill=(238, 228, 208))

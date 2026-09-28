@@ -1,8 +1,8 @@
-# The prose of the Umbra manual, one block per chapter (after Ephemeris' Tools/manual/chapters.txt).
+# The prose of the Totality manual, one block per chapter (after Ephemeris' Tools/manual/chapters.txt).
 #
 # Everything else in the manual -- the parameter tables and the pictures -- comes from the program itself:
-# `umb_render --dump-params` writes every parameter's description, and the standalone's screenshot mode
-# (UMB_SHOT, UMB_TAB, Tools/manual/make_shots.py) one picture per tab. Only the text that explains *why* lives here.
+# `tot_render --dump-params` writes every parameter's description, and the standalone's screenshot mode
+# (TOT_SHOT, TOT_TAB, Tools/manual/make_shots.py) one picture per tab. Only the text that explains *why* lives here.
 #
 # Format: "== Title | module prefixes | screenshot ==" starts a chapter. The module prefixes (space separated, may be
 # empty) are the parameter tables printed under the chapter; the screenshot is the tab's index
@@ -12,7 +12,7 @@
 
 == About | | - ==
 
-Umbra composes, mixes and plays hypnotic Berlin techno: tracks of six to eight minutes and DJ sets of up to four
+Totality composes, mixes and plays hypnotic Berlin techno: tracks of six to eight minutes and DJ sets of up to four
 hours, in which the tracks follow one another on two decks as a DJ would mix them. Nothing is played back from a
 recording. The kick, the rumble under it, the twelve lanes of the drum kit, the ping, the bass and the 303, the dub
 chord, the drone and the texture are synthesised; the tape echo, the spring, the plate and the rooms are simulated;
@@ -28,21 +28,22 @@ The same seed always gives the same track. A track is a seed, a style, a length 
 what a set file stores and what you can hand to someone else. The standalone and the plugin play what the offline
 renderer plays, sample for sample.
 
-An umbra is the core of a shadow, the dark disc of an eclipse. In Umbra's Patterns view the kick is that disc: every
-other part turns around it in rings, and its corona swells with every beat.
+Totality is the moment of a total eclipse when the moon covers the sun entirely and only the corona shines round the
+dark disc. In Totality's Patterns view the kick is that disc: every other part turns around it in rings, and its
+corona swells with every beat.
 
 == Quick start | | - ==
 
 The standalone plays by itself: press Play. Compose writes a new track with the knobs as they stand, New seed draws a
 fresh one. The status line tells what plays: its style and form, its tempo, its key with the Camelot label a DJ mixes
-by, and its length. While a track begins to play, Umbra measures its loudest part in the background and brings it to
+by, and its length. While a track begins to play, Totality measures its loudest part in the background and brings it to
 its style's loudness; the status says "levelling" until the correction has glided in.
 
-For a set, move Set min above zero: Umbra then writes a set of that many minutes -- a dramaturgy of tempo and energy,
+For a set, move Set min above zero: Totality then writes a set of that many minutes -- a dramaturgy of tempo and energy,
 tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line, loops of the last track
 under the next on the third deck, breaks from the mixer's effects.
 
-In a DAW, Umbra is an instrument plugin that follows the host's transport: it plays when the host plays, jumps when
+In a DAW, Totality is an instrument plugin that follows the host's transport: it plays when the host plays, jumps when
 the host jumps, and plays at the host's tempo (a set's own tempo drift is the standalone's and the export's). Its
 output is a finished stereo mix at about -10 LUFS with its true peak under -1 dBTP.
 
@@ -160,7 +161,7 @@ fader. Every control can be learned from a MIDI controller: click learn, move th
 it). By default the mod wheel moves the filter and the expression pedal the throw, and the keys from middle C up (C
 to F#) toggle the mutes of kick, sub, hats, perc, ping, bass and pads. The bindings are saved with the project.
 
-The perform controls are live only: an export or umb_render plays the track as it was composed.
+The perform controls are live only: an export or tot_render plays the track as it was composed.
 
 == Export and cues | cue | 9 ==
 
@@ -170,18 +171,18 @@ The export renders what plays at 48 kHz: a 24-bit WAV with cue markers (the bass
 the outro; in a set every track, swap and loop) and the same cues as JSON beside it, for DJ software that does not
 read the WAV's markers; the MIDI file with the tempo map and a channel per part; on request the stems -- a WAV per
 element, whose sum is exactly the mix before the master -- and the DJ loops of a track: 4 and 8 bars of its loudest
-block, seamless, as the mix and as kick, hats and percussion alone. An .umbset file holds the seed, the lengths, the
+block, seamless, as the mix and as kick, hats and percussion alone. An .totset file holds the seed, the lengths, the
 rerolls and every changed knob.
 
 The OSC cues tell a visualiser such as Kaleidoscope what the score knows, at the moment it is heard: the beat and the
 tempo, the bar, the block's name, the form's operation, the key. They go to this machine at the port given, or to
-UMB_CUE_HOST.
+TOT_CUE_HOST.
 
-    /umb/beat i f      beat number, tempo
-    /umb/bar i         bar number
-    /umb/block s       the block's name ("Intro", "Block 3", "Reduction", a set's track)
-    /umb/op s          the operation ("add ride", "kick out")
-    /umb/key s         the key as a Camelot label ("8A")
+    /tot/beat i f      beat number, tempo
+    /tot/bar i         bar number
+    /tot/block s       the block's name ("Intro", "Block 3", "Reduction", a set's track)
+    /tot/op s          the operation ("add ride", "kick out")
+    /tot/key s         the key as a Camelot label ("8A")
 
 == Style | custom | 10 ==
 
@@ -193,20 +194,20 @@ loudness the Leveler brings each track to.
 
 == Meta Quest | | - ==
 
-The whole generator runs on the headset (build-quest\UmbraQuest.apk, see Quest/README.md). The hands are the hands at
+The whole generator runs on the headset (build-quest\TotalityQuest.apk, see Quest/README.md). The hands are the hands at
 the mixer: left pinch play and stop, right pinch kick out and in, both hands together the next track; the left hand's
 height the master filter, the right's the echo throw. Above and ahead of the player the Eclipse turns at the size of a
-room. A file umb.cfg in the app's folder sets the seed, the style, a set's length and any knob.
+room. A file tot.cfg in the app's folder sets the seed, the style, a set's length and any knob.
 
 == The command line | | - ==
 
-umb_render composes and renders without a window, the same samples the plugin plays:
+tot_render composes and renders without a window, the same samples the plugin plays:
 
-    umb_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
-    umb_render --seed 2026 --set-minutes 120 --out set.wav --score-json set.json
-    umb_render --set "compose.style=Dub; compose.minutes=8" --seed 3 --out dub.wav
-    umb_render --list                  every parameter with its value
-    umb_render --bench --quality quest how fast, at the headset's quality
+    tot_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
+    tot_render --seed 2026 --set-minutes 120 --out set.wav --score-json set.json
+    tot_render --set "compose.style=Dub; compose.minutes=8" --seed 3 --out dub.wav
+    tot_render --list                  every parameter with its value
+    tot_render --bench --quality quest how fast, at the headset's quality
 
 The evaluation (Tools/eval_report.py) measures rendered tracks as the references were measured and writes a report of
 what lies outside their corridor.

@@ -3,11 +3,11 @@
  * @brief Automation curves and score housekeeping.
  * @note The curves are copied from Ephemeris `Core/src/Score.cpp` at d047d79 (27.09.2026).
  */
-#include "umb/Score.h"
+#include "tot/Score.h"
 #include <algorithm>
 #include <limits>
 
-namespace umb {
+namespace tot {
 
 const char* const kPartNames[kNumParts] = {
     "kick", "sub", "perc1", "perc2", "perc3", "perc4", "perc5", "perc6", "perc7", "perc8", "perc9", "perc10", "perc11",
@@ -91,4 +91,4 @@ float Score::gestureOffset(int param, double beat) const
     return latest == nullptr ? 0.0f : gestureValue(*latest, beat);
 }
 
-} // namespace umb
+} // namespace tot

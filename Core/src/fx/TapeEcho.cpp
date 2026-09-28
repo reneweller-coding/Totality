@@ -1,13 +1,13 @@
 /**
  * @file TapeEcho.cpp
  * @brief The tape echo.
- * @note Copied from Ephemeris `Core/src/fx/TapeEcho.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/fx/TapeEcho.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/fx/TapeEcho.h"
+#include "tot/fx/TapeEcho.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 void TapeEcho::prepare(double sampleRate, double maxSeconds, uint64_t seed)
 {
@@ -100,4 +100,4 @@ void TapeEcho::process(const float* inL, const float* inR, float* outL, float* o
     }
 }
 
-} // namespace umb
+} // namespace tot

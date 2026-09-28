@@ -2,12 +2,12 @@
  * @file Ping.cpp
  * @brief The ping voices: FM, the low-pass gate, the wandering band pass.
  */
-#include "umb/synth/Ping.h"
-#include "umb/Params.h"
+#include "tot/synth/Ping.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kTwoPiD = 6.283185307179586;
@@ -142,4 +142,4 @@ void Ping::process(float* L, float* R, int n, int64_t sample)
     }
 }
 
-} // namespace umb
+} // namespace tot

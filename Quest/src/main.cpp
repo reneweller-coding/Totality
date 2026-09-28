@@ -1,11 +1,11 @@
 /**
  * @file main.cpp
- * @brief Umbra for Meta Quest: the whole generator on the headset, played with the hands (PLAN 10.2).
+ * @brief Totality for Meta Quest: the whole generator on the headset, played with the hands (PLAN 10.2).
  *
  * No game engine -- `NativeActivity` + `android_native_app_glue`, EGL, GLES 3, the Khronos OpenXR loader,
  * `XR_EXT_hand_tracking`, Oboe for audio, and the unchanged core from `../Core`. The frame of the app -- the OpenXR
  * session, the swapchains, the point renderer, the font, the hands and the audio stream -- is Ephemeris' Quest app
- * (after Phosphene's); the player, the gestures, the panel and the Eclipse in the room are Umbra's.
+ * (after Phosphene's); the player, the gestures, the panel and the Eclipse in the room are Totality's.
  *
  * **Three threads.**
  *  - *Audio* (Oboe): `TrackPlayer::process` runs `Engine::process` and the play/stop fade. It never locks and never
@@ -36,7 +36,7 @@
  * with the audio, and every brightness is a continuous function of the bar position (the next bar's beads fade in as
  * the last ones fade out).
  *
- * **`umb.cfg`** in `<externalDataPath>` (`/sdcard/Android/data/com.reneweller.umbra.quest/files`):
+ * **`tot.cfg`** in `<externalDataPath>` (`/sdcard/Android/data/com.reneweller.totality.quest/files`):
  * @code
  *   mute=1              start silent (the test rule; the engine still runs)
  *   seed=2026           the first track's seed; the next takes the next seed
@@ -73,17 +73,17 @@
 #include <thread>
 #include <vector>
 
-#include "umb/Cue.h"
-#include "umb/Engine.h"
-#include "umb/Leveler.h"
-#include "umb/Presets.h"
-#include "umb/compose/Composer.h"
-#include "umb/compose/Set.h"
+#include "tot/Cue.h"
+#include "tot/Engine.h"
+#include "tot/Leveler.h"
+#include "tot/Presets.h"
+#include "tot/compose/Composer.h"
+#include "tot/compose/Set.h"
 
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "Umbra", __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "Umbra", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "Totality", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "Totality", __VA_ARGS__)
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
@@ -199,7 +199,7 @@ const unsigned char* glyph(char c)
 
 // ---------------------------------------------------------------- config
 
-/** @brief What `umb.cfg` can say. */
+/** @brief What `tot.cfg` can say. */
 struct Config {
     bool mute = false;              ///< start silent (test rule); the engine still runs
     uint64_t seed = 1;              ///< the first track's seed
@@ -211,12 +211,12 @@ struct Config {
     bool quest = true;              ///< the Quest's quality (Engine::Quality): the grain cloud rests; `quality=desktop` plays all
 };
 
-/** @brief Reads `<dir>/umb.cfg`; every key is optional. */
+/** @brief Reads `<dir>/tot.cfg`; every key is optional. */
 Config readConfig(const char* dir)
 {
     Config c;
     if (dir == nullptr) return c;
-    const std::string path = std::string(dir) + "/umb.cfg";
+    const std::string path = std::string(dir) + "/tot.cfg";
     FILE* f = std::fopen(path.c_str(), "r");
     if (f == nullptr) { LOGI("no config at %s", path.c_str()); return c; }
     char line[512];
@@ -236,7 +236,7 @@ Config readConfig(const char* dir)
         else if (k == "quality") c.quest = v != "desktop";
         else if (k == "style") { c.knobs += "compose.style=" + v; c.knobs += ";"; }
         else if (k == "knobs") { c.knobs += v; c.knobs += ";"; }
-        else LOGE("umb.cfg: unknown key %s", k.c_str());
+        else LOGE("tot.cfg: unknown key %s", k.c_str());
     }
     std::fclose(f);
     LOGI("config: mute %d, seed %llu, set %.0f min", c.mute ? 1 : 0, static_cast<unsigned long long>(c.seed), c.setMinutes);
@@ -285,7 +285,7 @@ public:
         engine_.setQuality(cfg.quest ? Engine::Quality::Quest : Engine::Quality::Desktop);
         if (!cfg.knobs.empty()) {
             std::string err;
-            if (!engine_.params().parseText(cfg.knobs, &err)) LOGE("umb.cfg knobs: %s", err.c_str());
+            if (!engine_.params().parseText(cfg.knobs, &err)) LOGE("tot.cfg knobs: %s", err.c_str());
         }
         if (cfg.minutes > 0.0) engine_.params().set(engine_.params().id(Module::Compose, 0, compose::Minutes), static_cast<float>(cfg.minutes));
         sr_ = static_cast<double>(sampleRate);
@@ -767,7 +767,7 @@ public:
     {
         dataDir_ = app_->activity->externalDataPath ? app_->activity->externalDataPath : "";
         config_ = readConfig(dataDir_.c_str());
-        // The cue bridge of PLAN 10.3, off unless umb.cfg names a host: a visualiser that is not there changes nothing.
+        // The cue bridge of PLAN 10.3, off unless tot.cfg names a host: a visualiser that is not there changes nothing.
         if (!config_.oscHost.empty()) {
             if (cues_.start(config_.oscHost, config_.oscPort)) {
                 LOGI("cues: OSC to %s:%d", config_.oscHost.c_str(), config_.oscPort);
@@ -864,9 +864,9 @@ private:
         android.applicationVM = app_->activity->vm;
         android.applicationActivity = app_->activity->clazz;
         XrInstanceCreateInfo ci{ XR_TYPE_INSTANCE_CREATE_INFO, &android };
-        std::strncpy(ci.applicationInfo.applicationName, "Umbra", XR_MAX_APPLICATION_NAME_SIZE - 1);
+        std::strncpy(ci.applicationInfo.applicationName, "Totality", XR_MAX_APPLICATION_NAME_SIZE - 1);
         ci.applicationInfo.applicationVersion = 1;
-        std::strncpy(ci.applicationInfo.engineName, "UmbraCore", XR_MAX_ENGINE_NAME_SIZE - 1);
+        std::strncpy(ci.applicationInfo.engineName, "TotalityCore", XR_MAX_ENGINE_NAME_SIZE - 1);
         ci.applicationInfo.apiVersion = XR_API_VERSION_1_0;
         ci.enabledExtensionCount = 3;
         ci.enabledExtensionNames = exts;
@@ -1061,7 +1061,7 @@ private:
     {
         if (!player_.ready() || filterId_ < 0) return;
         ParamStore& p = player_.params();
-        // A hand that has never been tracked writes nothing: without hand tracking the controls keep what umb.cfg set.
+        // A hand that has never been tracked writes nothing: without hand tracking the controls keep what tot.cfg set.
         const Hands::Hand& left = hands_.hand(0);
         const Hands::Hand& right = hands_.hand(1);
         if (left.everSeen) {
@@ -1150,32 +1150,29 @@ private:
     }
 
     /**
-     * @brief The logo (Deploy/make_icon.py) in points of light: the corona round a dark centre and a ring with its beads,
-     *        centred at (@p u, @p v) on the panel, @p size across.
+     * @brief The logo (Deploy/make_icon.py) in points of light: the rim round the dark disc and the corona's streamers,
+     *        long along the equator, each a line of points fading outwards; centred at (@p u, @p v), @p size across.
      */
     void addLogo(const Panel& p, float u, float v, float size)
     {
         const float disc = 0.2f * size;
-        for (int k = 0; k < 3; ++k) {
-            const float r = disc * (1.08f + 0.14f * static_cast<float>(k));
-            const int dots = 28 + 6 * k;
-            for (int i = 0; i < dots; ++i) {
-                const float a = 6.2831853f * static_cast<float>(i) / static_cast<float>(dots);
-                scene_.addOn(p, u + r * std::cos(a), v + r * std::sin(a), 0.93f, 0.84f, 0.66f, 0.75f - 0.22f * static_cast<float>(k), 22.0f);
-            }
-        }
-        const float ring = 0.42f * size;
         for (int i = 0; i < 40; ++i) {
             const float a = 6.2831853f * static_cast<float>(i) / 40.0f;
-            scene_.addOn(p, u + ring * std::cos(a), v + ring * std::sin(a), 0.47f, 0.44f, 0.41f, 0.35f, 14.0f);
+            scene_.addOn(p, u + 1.06f * disc * std::cos(a), v + 1.06f * disc * std::sin(a), 0.93f, 0.84f, 0.66f, 0.95f, 26.0f);
         }
-        for (int i = 0; i < 16; i += 3) {
-            const float a = 1.5707963f - 6.2831853f * static_cast<float>(i) / 16.0f;
-            scene_.addOn(p, u + ring * std::cos(a), v + ring * std::sin(a), i == 0 ? 0.84f : 0.93f, i == 0 ? 0.33f : 0.84f,
-                         i == 0 ? 0.25f : 0.66f, 1.0f, 70.0f);
+        for (int i = 0; i < 32; ++i) {
+            const float a = 6.2831853f * static_cast<float>(i) / 32.0f;
+            const float w = 0.55f + 0.45f * std::sin(7.0f * a + 1.3f) * std::sin(3.0f * a);
+            const float e = std::pow(std::abs(std::cos(a)), 3.0f);
+            const float length = disc * (0.18f + 0.95f * e * (0.6f + 0.4f * w) + 0.12f * w);
+            const float bright = 0.45f + 0.5f * std::abs(std::cos(a));
+            const int steps = 1 + static_cast<int>(length / (0.12f * disc));
+            for (int k = 0; k < steps; ++k) {
+                const float t = (static_cast<float>(k) + 0.5f) / static_cast<float>(steps);
+                const float r = disc * 1.14f + length * t;
+                scene_.addOn(p, u + r * std::cos(a), v + r * std::sin(a), 0.93f, 0.84f, 0.66f, bright * (1.0f - 0.6f * t), 18.0f);
+            }
         }
-        // The diamond ring: a bead of light on the rim, upper right.
-        scene_.addOn(p, u + disc * 0.7071f, v + disc * 0.7071f, 1.0f, 0.96f, 0.88f, 1.0f, 60.0f);
     }
 
     /**
@@ -1295,8 +1292,8 @@ private:
         const Panel p = headPanel();
         char line[64];
         if (!player_.ready()) {
-            addLogo(p, 0.08f, 0.10f, 0.12f);
-            scene_.addText(p, 0.0f, 0.0f, kCell * 1.8f, "UMBRA", 0.93f, 0.84f, 0.66f, 1.0f);
+            addLogo(p, 0.178f, 0.10f, 0.12f);         // centred over the name, 0.355 m wide at 1.8 cells
+            scene_.addText(p, 0.0f, 0.0f, kCell * 1.8f, "TOTALITY", 0.93f, 0.84f, 0.66f, 1.0f);
             scene_.addText(p, 0.0f, -0.08f, kCell, "COMPOSING", 0.6f, 0.7f, 0.9f, 0.8f);
             return;
         }
@@ -1309,7 +1306,7 @@ private:
 
         // The title line above the rest: the logo and the name.
         addLogo(p, 0.012f, kRow + 0.006f, 0.034f);
-        scene_.addText(p, 0.036f, kRow, kCell, "UMBRA", 0.93f, 0.84f, 0.66f, 0.85f);
+        scene_.addText(p, 0.036f, kRow, kCell, "TOTALITY", 0.93f, 0.84f, 0.66f, 0.85f);
         float row = 0.0f;
         auto text = [&](const char* t, float r, float g, float b, float a) {
             scene_.addText(p, 0.0f, row, kCell, t, r, g, b, a);

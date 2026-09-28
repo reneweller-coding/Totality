@@ -19,14 +19,14 @@
 /** @brief The Patterns tab. */
 class EclipsePage final : public juce::Component, private juce::Timer {
 public:
-    explicit EclipsePage(UmbraProcessor& p);
+    explicit EclipsePage(TotalityProcessor& p);
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
     /** @brief The onsets of the bar at @p beat: per part, (position in the bar 0..1, velocity). */
     void gather(double beat);
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     int version_ = -1;
     Playing playing_;
     struct Ring { int part; std::vector<std::pair<float, float>> onsets; };

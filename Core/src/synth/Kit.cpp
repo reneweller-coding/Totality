@@ -3,11 +3,11 @@
  * @brief Percussion kit: coefficients, hits, the metal table and rendering.
  * @note Adapted from Phosphene `Core/src/Perc.cpp` at 76f7100 (27.09.2026); see Kit.h for what changed.
  */
-#include "umb/synth/Kit.h"
+#include "tot/synth/Kit.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -385,7 +385,7 @@ void PercKit::processLanesWith(int n)
 }
 
 template void PercKit::processLanesWith<float>(int);
-#if UMB_VEC_PATH != 0
+#if TOT_VEC_PATH != 0
 template void PercKit::processLanesWith<VecF>(int);
 #endif
 
@@ -413,4 +413,4 @@ void PercKit::process(float* L, float* R, int total)
     }
 }
 
-} // namespace umb
+} // namespace tot

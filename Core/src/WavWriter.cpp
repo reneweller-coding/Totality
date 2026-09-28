@@ -7,14 +7,14 @@
  * the data turned out larger than a 32-bit size allows, close() rewrites 'RIFF' as 'RF64' and the
  * 'JUNK' chunk as the 'ds64' chunk that carries the 64-bit sizes (EBU Tech 3306).
  * @note Copied from Phosphene `Core/src/WavWriter.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Core/src/WavWriter.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/WavWriter.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/WavWriter.h"
+#include "tot/WavWriter.h"
 #include <cmath>
 #include <cstring>
 #include <vector>
 
-namespace umb {
+namespace tot {
 
 namespace {
 void le16(uint8_t* p, uint16_t v) { p[0] = uint8_t(v); p[1] = uint8_t(v >> 8); }
@@ -178,4 +178,4 @@ bool WavWriter::close()
     return ok;
 }
 
-} // namespace umb
+} // namespace tot

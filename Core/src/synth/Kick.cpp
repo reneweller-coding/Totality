@@ -3,12 +3,12 @@
  * @brief Kick drum implementation.
  * @note Adapted from Phosphene `Core/src/Kick.cpp` at 76f7100 (27.09.2026); see Kick.h for what is new.
  */
-#include "umb/synth/Kick.h"
-#include "umb/Params.h"
+#include "tot/synth/Kick.h"
+#include "tot/Params.h"
 #include <cmath>
 #include <complex>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr double kPiD = 3.141592653589793;
@@ -421,4 +421,4 @@ void Kick::process(float* out, float* body, int n)
     }
 }
 
-} // namespace umb
+} // namespace tot

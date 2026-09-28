@@ -1,32 +1,32 @@
 /**
  * @file selftest.cpp
- * @brief umb_selftest: every building block measured against an independently derived value.
+ * @brief tot_selftest: every building block measured against an independently derived value.
  *
- * Sections are registered in the table at the bottom; `umb_selftest --list` prints their names (ctest registers one
+ * Sections are registered in the table at the bottom; `tot_selftest --list` prints their names (ctest registers one
  * test per name) and `--only a,b` runs the named ones. Only checks that protect something real belong here (the
  * user's rule for Ephemeris, 24.09.2026).
  */
-#include "umb/Clock.h"
-#include "umb/Cue.h"
-#include "umb/Engine.h"
-#include "umb/Leveler.h"
-#include "umb/Loudness.h"
-#include "umb/Midi.h"
-#include "umb/Params.h"
-#include "umb/Presets.h"
-#include "umb/Score.h"
-#include "umb/SetFile.h"
-#include "umb/compose/Composer.h"
-#include "umb/compose/Set.h"
-#include "umb/compose/Study.h"
-#include "umb/fx/Cloud.h"
-#include "umb/fx/Dub.h"
-#include "umb/pattern/Rack.h"
-#include "umb/synth/Kick.h"
-#include "umb/synth/Kit.h"
-#include "umb/synth/Rumble.h"
-#include "umb/synth/SubBass.h"
-#include "umb/synth/Synth.h"
+#include "tot/Clock.h"
+#include "tot/Cue.h"
+#include "tot/Engine.h"
+#include "tot/Leveler.h"
+#include "tot/Loudness.h"
+#include "tot/Midi.h"
+#include "tot/Params.h"
+#include "tot/Presets.h"
+#include "tot/Score.h"
+#include "tot/SetFile.h"
+#include "tot/compose/Composer.h"
+#include "tot/compose/Set.h"
+#include "tot/compose/Study.h"
+#include "tot/fx/Cloud.h"
+#include "tot/fx/Dub.h"
+#include "tot/pattern/Rack.h"
+#include "tot/synth/Kick.h"
+#include "tot/synth/Kit.h"
+#include "tot/synth/Rumble.h"
+#include "tot/synth/SubBass.h"
+#include "tot/synth/Synth.h"
 #include "TestSupport.h"
 #include <algorithm>
 #include <cmath>
@@ -55,8 +55,8 @@
   #include <unistd.h>
 #endif
 
-using namespace umb;
-using namespace umbtest;
+using namespace tot;
+using namespace tottest;
 
 namespace {
 
@@ -794,8 +794,8 @@ void testCuration()
     for (const NoteEvent& n : l.notes) { if (untied(n.part)) ul.notes.push_back(n); if (static_cast<int>(n.part) == chPart) cl.notes.push_back(n); }
     check(sameNotes(ua, ul) && !sameNotes(ca, cl), "rerolling the offbeat hat changes it and keeps the untied layers",
           fmt("%zu and %zu hat notes", ca.notes.size(), cl.notes.size()));
-    // The .umbset round trip.
-    const std::string path = "umb_selftest.umbset";
+    // The .totset round trip.
+    const std::string path = "tot_selftest.totset";
     SetFile sf;
     sf.seed = 42;
     sf.minutes = 7.0;
@@ -809,7 +809,7 @@ void testCuration()
     std::remove(path.c_str());
     check(saved && loaded && back.seed == 42 && back.curation.count("block4") == 1 && q->get(q->find("chord.level")) == -7.5f
               && q->getInt(q->find("compose.style")) == 1,
-          "a .umbset keeps seed, rerolls and changed knobs", error);
+          "a .totset keeps seed, rerolls and changed knobs", error);
 }
 
 /** The set (PLAN 7.7): deterministic; tracks alternating on two decks without overlapping on one; every swap on a 32-bar
@@ -961,12 +961,12 @@ void testCues()
 {
     section("score cues (OSC)");
     const char* d = "8A";
-    const std::vector<uint8_t> key = oscMessage("/umb/key", "s", nullptr, nullptr, &d);
-    const uint8_t keyWant[20] = { '/', 'u', 'm', 'b', '/', 'k', 'e', 'y', 0, 0, 0, 0, ',', 's', 0, 0, '8', 'A', 0, 0 };
+    const std::vector<uint8_t> key = oscMessage("/tot/key", "s", nullptr, nullptr, &d);
+    const uint8_t keyWant[20] = { '/', 't', 'o', 't', '/', 'k', 'e', 'y', 0, 0, 0, 0, ',', 's', 0, 0, '8', 'A', 0, 0 };
     const int32_t five = 5;
     const float bpm = 132.0f;
-    const std::vector<uint8_t> beat = oscMessage("/umb/beat", "if", &five, &bpm, nullptr);
-    const uint8_t beatWant[24] = { '/', 'u', 'm', 'b', '/', 'b', 'e', 'a', 't', 0, 0, 0, ',', 'i', 'f', 0, 0, 0, 0, 5, 0x43, 0x04, 0, 0 };
+    const std::vector<uint8_t> beat = oscMessage("/tot/beat", "if", &five, &bpm, nullptr);
+    const uint8_t beatWant[24] = { '/', 't', 'o', 't', '/', 'b', 'e', 'a', 't', 0, 0, 0, ',', 'i', 'f', 0, 0, 0, 0, 5, 0x43, 0x04, 0, 0 };
     check(key.size() == 20 && std::memcmp(key.data(), keyWant, 20) == 0 && beat.size() == 24 && std::memcmp(beat.data(), beatWant, 24) == 0,
           "OSC 1.0 byte layout (padding to four bytes, big-endian numbers)", fmt("%zu and %zu bytes", key.size(), beat.size()));
 

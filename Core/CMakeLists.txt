@@ -1,4 +1,4 @@
-add_library(UmbraCore STATIC
+add_library(TotalityCore STATIC
     src/Params.cpp
     src/Clock.cpp
     src/Score.cpp
@@ -36,28 +36,28 @@ add_library(UmbraCore STATIC
     src/Export.cpp
     src/Presets.cpp
 )
-target_include_directories(UmbraCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-option(UMB_PROFILE "Time the engine's stages (Profile.h); umb_render prints them" OFF)
-if(UMB_PROFILE)
-    target_compile_definitions(UmbraCore PUBLIC UMB_PROFILE)
+target_include_directories(TotalityCore PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+option(TOT_PROFILE "Time the engine's stages (Profile.h); tot_render prints them" OFF)
+if(TOT_PROFILE)
+    target_compile_definitions(TotalityCore PUBLIC TOT_PROFILE)
 endif()
 if(WIN32)
-    target_link_libraries(UmbraCore PUBLIC ws2_32)   # the cue sender's UDP socket (Cue.h)
+    target_link_libraries(TotalityCore PUBLIC ws2_32)   # the cue sender's UDP socket (Cue.h)
 endif()
-target_compile_features(UmbraCore PUBLIC cxx_std_20)
+target_compile_features(TotalityCore PUBLIC cxx_std_20)
 if(MSVC)
-    target_compile_options(UmbraCore PRIVATE /W4 /permissive- /utf-8)
-    target_compile_definitions(UmbraCore PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_options(TotalityCore PRIVATE /W4 /permissive- /utf-8)
+    target_compile_definitions(TotalityCore PRIVATE _CRT_SECURE_NO_WARNINGS)
 else()
-    target_compile_options(UmbraCore PRIVATE -Wall -Wextra)
+    target_compile_options(TotalityCore PRIVATE -Wall -Wextra)
 endif()
 
 # AVX2 with FMA for the lane-parallel paths (Vec.h). PUBLIC, so everything that links the core sees the same vector
 # path the core was built with. The arm64 build (Quest) takes NEON on its own.
-if(UMB_AVX2 AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|x64)")
+if(TOT_AVX2 AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64|x64)")
     if(MSVC)
-        target_compile_options(UmbraCore PUBLIC /arch:AVX2)
+        target_compile_options(TotalityCore PUBLIC /arch:AVX2)
     else()
-        target_compile_options(UmbraCore PUBLIC -mavx2 -mfma)
+        target_compile_options(TotalityCore PUBLIC -mavx2 -mfma)
     endif()
 endif()

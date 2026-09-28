@@ -7,12 +7,12 @@
  * theta-function series. Correctness is not taken on trust: Tests/selftest.cpp measures the
  * passband and the image rejection of the designed filters.
  * @note Copied from Phosphene `Core/src/Halfband.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
- * @note Copied from Ephemeris `Core/src/Halfband.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/Halfband.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/Halfband.h"
+#include "tot/Halfband.h"
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -83,4 +83,4 @@ HalfbandDesign designHalfband(double attenuationDb, double transition)
     return out;
 }
 
-} // namespace umb
+} // namespace tot

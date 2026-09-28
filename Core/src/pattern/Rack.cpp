@@ -2,13 +2,13 @@
  * @file Rack.cpp
  * @brief The layer tables of Dok. 8.2 and 8.3, the rolls, the cycles, the ghost chains and the rules.
  */
-#include "umb/pattern/Rack.h"
-#include "umb/compose/Style.h"
-#include "umb/Dsp.h"
+#include "tot/pattern/Rack.h"
+#include "tot/compose/Style.h"
+#include "tot/Dsp.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 const char* const kLayerNames[kNumLayers] = { "kick", "ghost kick", "closed hat", "rolling hat", "open hat", "ride", "clap",
                                               "clap b", "clap ghost", "shaker", "tom/conga", "rim", "bass", "ping", "chord",
@@ -599,4 +599,4 @@ std::string miniNotation(const RackPlan& plan, LayerId id, int bar, const char* 
     return out;
 }
 
-} // namespace umb
+} // namespace tot

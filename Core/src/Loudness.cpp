@@ -1,13 +1,13 @@
 /**
  * @file Loudness.cpp
  * @brief EBU R128 loudness, true peak and the stereo figures, offline.
- * @note Copied from Ephemeris `Core/src/Loudness.cpp` at d047d79 (27.09.2026); namespace umb, prefix UMB_.
+ * @note Copied from Ephemeris `Core/src/Loudness.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
-#include "umb/Loudness.h"
+#include "tot/Loudness.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -173,4 +173,4 @@ LoudnessReport LoudnessMeter::report() const
     return r;
 }
 
-} // namespace umb
+} // namespace tot

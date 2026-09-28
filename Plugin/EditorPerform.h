@@ -13,25 +13,25 @@
 /** @brief A small button that binds the next MIDI controller to a parameter (right click: forget it). */
 class LearnButton final : public juce::TextButton {
 public:
-    LearnButton(UmbraProcessor& p, int id);
+    LearnButton(TotalityProcessor& p, int id);
     void refresh();                                         ///< shows the binding, or that it listens
     void mouseUp(const juce::MouseEvent& e) override;       ///< right click forgets
 
 private:
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     int id_;
 };
 
 /** @brief The Perform tab. */
 class PerformPage final : public juce::Component, private juce::Timer {
 public:
-    explicit PerformPage(UmbraProcessor& p);
+    explicit PerformPage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     juce::OwnedArray<juce::TextButton> mutes_;
     std::vector<std::unique_ptr<juce::ButtonParameterAttachment>> muteAttach_;
     juce::Slider filter_, throw_;
@@ -41,7 +41,7 @@ private:
         juce::TextButton kill[3];
         juce::Slider fader;
     };
-    Strip strips_[umb::kDecks];
+    Strip strips_[tot::kDecks];
     juce::OwnedArray<LearnButton> learn_;
     std::vector<juce::Rectangle<int>> learnFor_;   ///< (layout) where each learn button sits
 };
@@ -49,14 +49,14 @@ private:
 /** @brief The Mixer tab: meters and the mix's, the master's, the motion's and the decks' knobs. */
 class MixerPage final : public juce::Component, private juce::Timer {
 public:
-    explicit MixerPage(UmbraProcessor& p);
+    explicit MixerPage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     ScrollingPage knobs_;
-    float peak_[umb::kDecks] = {}, rms_[umb::kDecks] = {}, out_ = 0.0f, lufs_ = -70.0f;
-    float hold_[umb::kDecks + 1] = {};
+    float peak_[tot::kDecks] = {}, rms_[tot::kDecks] = {}, out_ = 0.0f, lufs_ = -70.0f;
+    float hold_[tot::kDecks + 1] = {};
 };

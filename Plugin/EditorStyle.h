@@ -12,13 +12,13 @@
 /** @brief The Style tab. */
 class StylePage final : public juce::Component, private juce::Timer {
 public:
-    explicit StylePage(UmbraProcessor& p);
+    explicit StylePage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
 
 private:
     void timerCallback() override;
-    UmbraProcessor& proc_;
+    TotalityProcessor& proc_;
     ScrollingPage custom_;
     juce::TextButton take_{ "Take the profile's numbers" };
     juce::String shown_;   ///< the profile's numbers as last drawn

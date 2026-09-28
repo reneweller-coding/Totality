@@ -2,14 +2,14 @@
  * @file Style.cpp
  * @brief The four profiles, their morph and the axes.
  */
-#include "umb/compose/Style.h"
+#include "tot/compose/Style.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <map>
 #include <string>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -323,4 +323,4 @@ StyleProfile profileOf(const ParamStore& p)
     return s;
 }
 
-} // namespace umb
+} // namespace tot

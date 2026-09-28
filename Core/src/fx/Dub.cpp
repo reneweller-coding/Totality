@@ -2,12 +2,12 @@
  * @file Dub.cpp
  * @brief The dub chain and the multiband duck.
  */
-#include "umb/fx/Dub.h"
-#include "umb/Params.h"
+#include "tot/fx/Dub.h"
+#include "tot/Params.h"
 #include <algorithm>
 #include <cmath>
 
-namespace umb {
+namespace tot {
 
 namespace {
 constexpr float kSqrt2 = 1.41421356f;
@@ -138,4 +138,4 @@ void MultibandDucker::apply(Replica& r, const float* gains, float* L, float* R, 
     }
 }
 
-} // namespace umb
+} // namespace tot

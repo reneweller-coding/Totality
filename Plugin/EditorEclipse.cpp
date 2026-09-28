@@ -7,21 +7,21 @@
 #include <algorithm>
 #include <cmath>
 
-using namespace umb;
+using namespace tot;
 
 namespace {
 
 /** @brief A part's colour: the drums the corona, the tones the families. */
 juce::Colour partColour(Part p)
 {
-    using umbui::Family;
+    using totui::Family;
     switch (p) {
-    case Part::Sub: return umbui::familyColour(Family::Space);
-    case Part::Ping: return umbui::familyColour(Family::Motion);
-    case Part::Bass: return umbui::familyColour(Family::Filter);
-    case Part::Acid: return umbui::colour::onset;
-    case Part::Chord: case Part::Drone: case Part::Texture: return umbui::familyColour(Family::Envelope);
-    default: return umbui::colour::amber;
+    case Part::Sub: return totui::familyColour(Family::Space);
+    case Part::Ping: return totui::familyColour(Family::Motion);
+    case Part::Bass: return totui::familyColour(Family::Filter);
+    case Part::Acid: return totui::colour::onset;
+    case Part::Chord: case Part::Drone: case Part::Texture: return totui::familyColour(Family::Envelope);
+    default: return totui::colour::amber;
     }
 }
 
@@ -35,7 +35,7 @@ juce::String partName(const ParamStore& s, int part)
 
 } // namespace
 
-EclipsePage::EclipsePage(UmbraProcessor& p) : proc_(p) { startTimerHz(30); }
+EclipsePage::EclipsePage(TotalityProcessor& p) : proc_(p) { startTimerHz(30); }
 
 void EclipsePage::gather(double beat)
 {
@@ -81,7 +81,7 @@ void EclipsePage::timerCallback()
 
 void EclipsePage::paint(juce::Graphics& g)
 {
-    using namespace umbui::colour;
+    using namespace totui::colour;
     g.fillAll(bg);
     const auto area = getLocalBounds().reduced(12);
     const int side = std::min(area.getHeight(), area.getWidth() * 55 / 100);

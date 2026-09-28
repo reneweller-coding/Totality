@@ -1,14 +1,14 @@
 /**
  * @file Presets.cpp
  * @brief The factory presets: sixteen groups per engine, sixty-four presets per group (Presets.h).
- * @note The builder is Ephemeris' (Core/src/Presets.cpp at d047d79); the groups, their ranges and their styles are Umbra's.
+ * @note The builder is Ephemeris' (Core/src/Presets.cpp at d047d79); the groups, their ranges and their styles are Totality's.
  */
-#include "umb/Presets.h"
+#include "tot/Presets.h"
 #include <algorithm>
 #include <cmath>
 #include <mutex>
 
-namespace umb {
+namespace tot {
 
 namespace {
 
@@ -841,7 +841,7 @@ std::vector<SoundPreset> build(Module m, const Engine& e)
             for (int s = 0; s < 4; ++s) p.styles[s] = grp.styles[s];
             p.roles = grp.roles;
             Rng rng;
-            rng.seed(mixSeed(0x554D42u + 131u * static_cast<uint64_t>(m) + 17u * g, static_cast<uint64_t>(v)));   // "UMB"
+            rng.seed(mixSeed(0x554D42u + 131u * static_cast<uint64_t>(m) + 17u * g, static_cast<uint64_t>(v)));   // "TOT"
             for (const Axis& ax : grp.axes) {
                 // Where on the knob's range: the adjective's row or the noun's column (with a little of its own), or a draw.
                 float t = ax.axis == 'A' ? a / 7.0f : (ax.axis == 'B' ? n / 7.0f : rng.uniform());
@@ -946,4 +946,4 @@ int pickPreset(Module module, const float* styleMix, int role, Rng& rng)
     return static_cast<int>(first) + 8 * row + rng.below(8);
 }
 
-} // namespace umb
+} // namespace tot

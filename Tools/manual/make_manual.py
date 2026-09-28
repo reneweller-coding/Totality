@@ -1,9 +1,9 @@
-"""Umbra -- build the user manual out of the program itself (after Ephemeris' Tools/manual).
+"""Totality -- build the user manual out of the program itself (after Ephemeris' Tools/manual).
 
-    for each tab N:  UMB_SEED=4242 UMB_PLAY=1 UMB_SHOT_AT=402 UMB_TAB=N UMB_SHOT=docs\\screenshots\\tab_NN.png Umbra.exe
-    python Tools/manual/make_manual.py        -> docs/manual/Umbra-Manual.html (and .pdf)
+    for each tab N:  TOT_SEED=4242 TOT_PLAY=1 TOT_SHOT_AT=402 TOT_TAB=N TOT_SHOT=docs\\screenshots\\tab_NN.png Totality.exe
+    python Tools/manual/make_manual.py        -> docs/manual/Totality-Manual.html (and .pdf)
 
-The parameter tables are not written down here: `umb_render --dump-params` writes every entry of the
+The parameter tables are not written down here: `tot_render --dump-params` writes every entry of the
 engine's descriptor tables (key, name, unit, range, default, curve, choices), and this script prints
 them under the chapter whose tab shows them. The only hand-written part is `chapters.txt`, the prose that
 says why a thing is the way it is.
@@ -152,16 +152,16 @@ def find_browser():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--render", default=os.path.join(ROOT, "build", "Tools", "render", "Release", "umb_render.exe"))
-    ap.add_argument("--params", help="a --dump-params JSON instead of running umb_render")
-    ap.add_argument("--out", default=os.path.join(ROOT, "docs", "manual", "Umbra-Manual.html"))
+    ap.add_argument("--render", default=os.path.join(ROOT, "build", "Tools", "render", "Release", "tot_render.exe"))
+    ap.add_argument("--params", help="a --dump-params JSON instead of running tot_render")
+    ap.add_argument("--out", default=os.path.join(ROOT, "docs", "manual", "Totality-Manual.html"))
     ap.add_argument("--no-pdf", action="store_true")
     ap.add_argument("--allow-holes", action="store_true")
     a = ap.parse_args()
 
     path = a.params
     if path is None:
-        path = os.path.join(tempfile.gettempdir(), "umb_params.json")
+        path = os.path.join(tempfile.gettempdir(), "tot_params.json")
         subprocess.run([a.render, "--dump-params", path], check=True)
     with open(path, encoding="utf-8") as f:
         params = json.load(f)
@@ -192,9 +192,9 @@ def main():
     out_dir = os.path.dirname(a.out)
     os.makedirs(out_dir, exist_ok=True)
     shots = os.path.relpath(os.path.join(ROOT, "docs", "screenshots"), out_dir).replace("\\", "/")
-    parts = ["<!DOCTYPE html><html><head><meta charset='utf-8'><title>Umbra Manual</title><style>%s</style></head><body>" % CSS]
-    logo = os.path.relpath(os.path.join(ROOT, "Deploy", "umbra_512.png"), out_dir).replace("\\", "/")
-    parts.append("<div class='cover'><img class='logo' src='%s'><h1>UMBRA</h1><p class='sub'>A generator of hypnotic Berlin techno</p>"
+    parts = ["<!DOCTYPE html><html><head><meta charset='utf-8'><title>Totality Manual</title><style>%s</style></head><body>" % CSS]
+    logo = os.path.relpath(os.path.join(ROOT, "Deploy", "totality_512.png"), out_dir).replace("\\", "/")
+    parts.append("<div class='cover'><img class='logo' src='%s'><h1>TOTALITY</h1><p class='sub'>A generator of hypnotic Berlin techno</p>"
                  "<p class='facts'>Version %s &middot; %d parameters &middot; manual built %s</p>"
                  "<img src='%s/tab_00.png'></div>" % (logo, version(), len(params), time.strftime("%d.%m.%Y"), shots))
     parts.append("<div class='toc'><h2>Contents</h2><ol>%s</ol></div>"
@@ -230,7 +230,7 @@ def main():
         # job to a running browser and returns without a file.
         if os.path.exists(pdf):
             os.remove(pdf)
-        profile = tempfile.mkdtemp(prefix="umb_manual_")
+        profile = tempfile.mkdtemp(prefix="tot_manual_")
         subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--user-data-dir=" + profile,
                         "--print-to-pdf=" + pdf, url], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
         size = -1
