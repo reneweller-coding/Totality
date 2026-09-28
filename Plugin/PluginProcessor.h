@@ -223,6 +223,7 @@ private:
     std::atomic<bool> newer_{ false };               ///< a newer score is asked for: the measuring of the last one stops
     uint64_t composed_ = 0, pendingId_ = 0, playingId_ = 0;   ///< counts the compositions; pending_'s, current_'s (lock_)
     std::vector<float> trims_[tot::kDecks];          ///< the corrections found for the composition trimsFor_ (lock_)
+    std::vector<tot::BalanceDb> bal_[tot::kDecks];   ///< Phase 18: the parts' corrections found with them (lock_)
     uint64_t trimsFor_ = 0;
     bool levelled_ = false;                          ///< current_ carries its corrections (lock_)
     std::atomic<double> position_{ 0.0 }, seekRequest_{ -1.0 };

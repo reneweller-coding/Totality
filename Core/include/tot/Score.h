@@ -22,6 +22,7 @@
  */
 #pragma once
 #include "tot/Clock.h"
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -95,6 +96,19 @@ struct BlockOp {
 extern const char* const kOpNames[];   ///< "add", "remove", "swap", "hold", "kick out", "return", "start", "end"
 
 /**
+ * @brief Phase 18 (28.09.2026): the parts the Leveler sets against the kick, each by its own correction -- the kit's
+ *        twelve lanes (0 .. 11, each by its role) and the tonal voices. Their presets differ by 20 dB and more in what
+ *        they give, and a mix fitted to the references' spectrum had left them 8 to 10 dB under the research's levels
+ *        against the kick (the kick and the rumble filled the mids a stab fills on a record).
+ */
+enum class BalPart : int { Ping = 12, Bass, Acid, Chord, Drone, Texture, Room, Count };   ///< (the room's return: the guard's)
+constexpr int kBalLanes = 12;   ///< the kit's lanes come first
+constexpr int kBalParts = static_cast<int>(BalPart::Count);
+/** @brief A correction per part, dB (0: none). */
+using BalanceDb = std::array<float, kBalParts>;
+extern const char* const kBalPartNames[kBalParts];   ///< "perc1" .. "perc12", "ping", "bass", "acid", "chord", "drone", "texture", "room"
+
+/**
  * @brief Where a track's loudness is set (Leveler.h, after Ephemeris): its start, where its loudest part begins, what that
  *        part should measure, and the correction found for it -- the master gain from the track's start on.
  */
@@ -103,6 +117,8 @@ struct LevelMark {
     double peakBeat = 0.0;      ///< where its loudest part begins
     float targetLufs = -11.0f;  ///< what that part should measure (the style's, PLAN 8.5)
     float trimDb = 0.0f;        ///< the correction (levelScore); 0 until measured
+    BalanceDb balDb{};          ///< Phase 18: the parts' corrections against the kick (levelScore); 0 until measured
+    std::array<float, 4> styleMix{};   ///< the track's styles (StyleProfile::styleMix), for the parts' windows; 0: Hypnotic's
 };
 
 /**
@@ -151,6 +167,8 @@ struct Score {
     float knobAt(int param, double beat) const;
     /** @brief The loudness correction at @p beat in dB: the latest mark's (0 before the first). */
     float trimAt(double beat) const;
+    /** @brief The parts' corrections at @p beat, dB: the latest mark's (none before the first). */
+    BalanceDb balanceAt(double beat) const;
     /** @brief Sorts every list by beat (stable, so equal beats keep the order they were written in). */
     void sort();
     /** @brief Empties the score and resets the tempo to @p bpm. */

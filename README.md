@@ -23,7 +23,9 @@ The sound: the kick (three engines, a 909 top layer), the rumble that continues 
 sub bass locked to the kick, a twelve-lane kit with the 909's metal oscillators, the ping (FM through a low-pass gate),
 a bass synth and a 303 line through ten circuit-modelled filters, the dub chord with its chain (tape echo, springs,
 plate), drone, texture and a granular cloud; multiband ducking, a track bus with tilt and parallel glue, a DJ mixer, a
-master with clipper and true-peak limiter, and a leveler that brings every track's loudest part to its style's level.
+master with clipper and true-peak limiter, and a leveler that sets every part against the kick -- each kit lane and
+tonal voice in a window around the research's fader levels, the room taken back where the mids would stand over the
+references' -- and brings every track's loudest part to its style's level.
 Every synth has 1024 factory presets in sixteen groups; the composer chooses one per synth and per kit lane for every
 track, by its style, and the knobs show them while the track plays.
 Balance, width and loudness are fitted to 30 reference recordings (`Tools/analyze_ref.py`; only statistics are kept).
@@ -58,7 +60,8 @@ build/Tools/render/Release/tot_render --seed 7 --reroll block4 --reroll rack.ch 
 ```
 
 A track's tempo, key, scale and low end are drawn from its style (`compose.auto`); `--bpm`, `--low` and `--form` fix
-them. Before it renders, `tot_render` measures the loudest part of every track and sets its level to the style's target;
+them. Before it renders, `tot_render` measures every track -- its parts against the kick (printed as `balance`), its
+loudest part's level against the style's target;
 `--bench` skips that and the loudness meter (`--quality quest`: the headset's level), `--plan` renders nothing. The WAV
 carries cue markers (bass in, kick-outs, returns, outro; in a set every track, swap and loop), also written beside it as
 JSON. `--loops dir` writes seamless 4- and 8-bar loops of the loudest block with kick, hats and perc alone; `--stems dir`

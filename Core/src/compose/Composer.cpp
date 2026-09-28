@@ -432,21 +432,36 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
     if (subOwns) { pool.push_back(LayerId::Bass); keep.push_back(10.0f); }
     // Phase 8: the figure, the voice the track is remembered by -- since Phase 13 the archetype's: the chord's stabs (Stab,
-    // Dub Chord), the 303 (Acid), the ping (Bleep), a bass riff for half the Tools where the sub owns the low end, none for
-    // the Roller and the Tribal track, whose identity is their percussion (a monotonic track has no melodic figure). It is
-    // in the pool whatever the pool drew, and stays when it must shrink. The voice is the layers' choice; its motif is the
+    // Dub Chord), the 303 (Acid), the ping (Bleep), a bass riff for half the Tools where the sub owns the low end. Phase 18
+    // (28.09.2026, the user on a set and a track of the 19:54 build: "zum überwiegenden Teil nur aus Kick und Hi Hats"):
+    // every track has one. The Roller rolls a bass riff where the sub owns the low end; the Roller over the rumble, the
+    // Tribal track and the other Tools take the style's lead -- of ping, chord and 303 the one its pool likes best
+    // (Hypnotic the ping, Ostgut and Dub the chord, Raw the 303). A monotonic track keeps its one tone: its figure plays
+    // the root and its octave, a chord's stab goes to the ping. It is in the pool whatever the pool drew, and stays when it
+    // must shrink. The voice is the layers' choice; its motif is the
     // stream "figure"'s (makeFigure), so a reroll of the figure draws another motif for the same voice.
     LayerId figure = LayerId::Count;
     {
         const float u = lr.uniform();
+        const auto lead = [&prof]() {
+            LayerId best = LayerId::Ping;
+            float most = -1.0f;
+            for (const LayerChance& c : prof.pool)
+                if ((c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Acid) && c.chance > most) {
+                    most = c.chance;
+                    best = c.layer;
+                }
+            return best;
+        };
         switch (arch) {
-        case Archetype::Tool: figure = subOwns && u < 0.5f ? LayerId::Bass : LayerId::Count; break;
+        case Archetype::Tool: figure = subOwns && u < 0.5f ? LayerId::Bass : lead(); break;
+        case Archetype::Roller: figure = subOwns ? LayerId::Bass : lead(); break;
         case Archetype::Stab: case Archetype::DubChord: figure = LayerId::Chord; break;
         case Archetype::Acid: figure = LayerId::Acid; break;
         case Archetype::Bleep: figure = LayerId::Ping; break;
-        default: figure = LayerId::Count; break;
+        default: figure = lead(); break;   // the Tribal track
         }
-        if (monotonic && figure != LayerId::Bass) figure = LayerId::Count;
+        if (monotonic && figure == LayerId::Chord) figure = LayerId::Ping;
         if (figure != LayerId::Count) {
             const auto it = std::find(pool.begin(), pool.end(), figure);
             if (it == pool.end()) { pool.push_back(figure); keep.push_back(10.0f); }
@@ -503,6 +518,30 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     std::vector<LayerId> order = pool;
     for (int i = static_cast<int>(order.size()) - 1; i > 0; --i) std::swap(order[static_cast<size_t>(i)], order[static_cast<size_t>(lr.below(i + 1))]);
     std::stable_sort(order.begin(), order.end(), [](LayerId a, LayerId b) { return groupOf(a) < groupOf(b); });
+    // Phase 18: the hats' group and the percussion's interleaved, each its likeliest first (the pool's chances, scattered):
+    // every other entry of the build is a percussion voice. By group, Ostgut's clap (0.9) waited behind the open hat, the
+    // ride and the ghost kick until after bar 137.
+    {
+        std::vector<std::pair<float, LayerId>> hats, percs;
+        for (size_t i = 0; i < pool.size(); ++i) {
+            if (groupOf(pool[i]) == 1) hats.emplace_back(keep[i], pool[i]);
+            else if (groupOf(pool[i]) == 2) percs.emplace_back(keep[i], pool[i]);
+        }
+        const auto likeliest = [](const auto& a, const auto& b) { return a.first > b.first; };
+        std::stable_sort(hats.begin(), hats.end(), likeliest);
+        std::stable_sort(percs.begin(), percs.end(), likeliest);
+        std::vector<LayerId> woven;
+        for (size_t i = 0; i < std::max(hats.size(), percs.size()); ++i) {
+            if (i < percs.size()) woven.push_back(percs[i].second);
+            if (i < hats.size()) woven.push_back(hats[i].second);
+        }
+        std::vector<LayerId> rest;
+        for (LayerId id : order) if (groupOf(id) != 1 && groupOf(id) != 2) rest.push_back(id);
+        order.clear();
+        for (LayerId id : rest) if (groupOf(id) == 0) order.push_back(id);
+        order.insert(order.end(), woven.begin(), woven.end());
+        for (LayerId id : rest) if (groupOf(id) != 0) order.push_back(id);
+    }
     // The intro's one perc: the first of the clap-and-perc group that is no ghost.
     LayerId introPerc = LayerId::Count;
     for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick) { introPerc = id; break; }
@@ -532,6 +571,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // The bass at most two tones (limitHarmony's first rule) before the bass's figure reads its second.
     if (plan.bassSize > 2) { plan.bassSize = 2; plan.bassSet[0] = 0; plan.bassSet[1] = 7; }
     makeFigure(plan, figure, streamSeed(tseed, cur, unit, "figure"));
+    if (monotonic) for (int8_t& fp : plan.figPitch) fp = fp == 12 ? static_cast<int8_t>(12) : static_cast<int8_t>(0);   // (its one tone)
     limitHarmony(plan, pool, subOwns);
     int bands[kNumParts];
     partBands(plan, bands);
@@ -915,15 +955,17 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                 std::vector<size_t> can;
                 const auto bass = std::find(q.begin(), q.end(), LayerId::Bass);
                 const bool bassNow = bass != q.end() && subOwns;
-                // Phase 8: the figure on its block, before whatever else waits.
+                // Phase 8: the figure on its block, before whatever else waits. (Phase 18: also where the pool is small --
+                // the rule that keeps the last two layers for the second half held the figure back to bar 129 of 224.)
                 const auto fig = std::find(q.begin(), q.end(), figure);
-                // (Where the pool is small it keeps the last two layers for the second half, as everything does.)
-                const bool figureNow = !bassNow && figure != LayerId::Count && fig != q.end() && figureBlock >= 0 && b >= figureBlock
-                                    && (q.size() > 2 || first >= half);
+                const bool figureNow = !bassNow && figure != LayerId::Count && fig != q.end() && figureBlock >= 0 && b >= figureBlock;
+                // (The layers kept for the second half: two of those waiting beside the figure.)
+                const size_t waiting = q.size() - (fig != q.end() ? 1u : 0u);
                 if (bassNow) can.push_back(static_cast<size_t>(bass - q.begin()));
                 else if (figureNow) can.push_back(static_cast<size_t>(fig - q.begin()));
                 for (size_t i = 0; !bassNow && !figureNow && i < q.size() && can.size() < 2; ++i) {
-                    if (q.size() <= 2 && first < half) break;
+                    if (waiting <= 2 && first < half) break;
+                    if (q[i] == figure) continue;
                     if (!can.empty() && groupOf(q[i]) != groupOf(q[can[0]])) break;
                     can.push_back(i);
                 }
@@ -949,7 +991,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     for (int line = 1; room > 0 && line <= 3; ++line) {
                         if (8 * line == off) continue;
                         const int at = first + 8 * line;
-                        if (q.size() <= 2 && first < half) break;
+                        if (q.size() - (std::find(q.begin(), q.end(), figure) != q.end() ? 1u : 0u) <= 2 && first < half) break;
                         const auto next = std::find_if(q.begin(), q.end(), [](LayerId id) {
                             return (groupOf(id) == 1 || groupOf(id) == 2) && id != LayerId::RollingHat;
                         });
@@ -1327,7 +1369,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         for (int b = bodyFirst; b < bodyEnd; ++b)
             if (targetCount(b) >= most && !(redLen > 0 && b * 32 <= redStart && redStart < b * 32 + 32)) { most = targetCount(b); peakBlock = b; }
     }
-    sc.levels.push_back(LevelMark{ 0.0, static_cast<double>(peakBlock) * 32.0 * kBar, prof.peakLufs, 0.0f });
+    {
+        LevelMark lm{ 0.0, static_cast<double>(peakBlock) * 32.0 * kBar, prof.peakLufs, 0.0f };
+        for (int sm = 0; sm < 4; ++sm) lm.styleMix[static_cast<size_t>(sm)] = prof.styleMix[sm];   // (the parts' windows, Leveler.h)
+        sc.levels.push_back(lm);
+    }
     sc.lengthBeats = static_cast<double>(bars) * kBar;
     sc.sort();
 

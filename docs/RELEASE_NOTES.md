@@ -29,7 +29,10 @@ swells, mid dips, filter builds, echo throws; DJ Hand); breaks from the mixer's 
 a sub locked to the kick; twelve kit lanes with the 909's metal oscillators; the ping; a bass synth and a 303 through ten
 circuit-modelled filters; the dub chord with tape echo, springs and plate; drone, texture, a grain cloud. Multiband
 ducking, a track bus with tilt and parallel glue, a DJ mixer, a master with a 4x clipper and a true-peak limiter at
--1 dBTP, and a leveler that brings each track's loudest part to its style's loudness (-9.4 to -11.5 LUFS).
+-1 dBTP, and a leveler that sets every part against the kick -- each lane of the kit and every tonal voice in a window
+around the fader levels of the research, one or two voices up front and the rest behind them, the room taken back
+where the mids would stand over the reference records' -- and brings each track's loudest part to its style's
+loudness (-9.4 to -11.5 LUFS). Every track has a tonal voice it is remembered by, in by the body's second block.
 
 **Presets.** 1024 factory presets for each synth -- kick, rumble, sub, a kit lane, ping, bass, 303, dub chord, drone
 and texture -- in sixteen named groups each. The composer chooses one per synth and per kit lane for every track, by how

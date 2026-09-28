@@ -825,15 +825,17 @@ void testFigure()
                 if (info.landings.size() >= 2) ++wavy;
                 else if (first.empty()) first = who + fmt(": %zu landings", info.landings.size());
             }
-            // Phase 13: the archetypes with a melodic figure have one (the Roller, the Tribal track and most Tools
-            // are their percussion).
-            const Archetype arch = static_cast<Archetype>(info.archetype);
+            // Phase 18: every track has its figure, a monotonic one too (Phase 13 had left the Roller, the Tribal track and
+            // most Tools without); it enters with the body's second block at the latest, the bass's with the body.
             kinds.insert(info.archetype);
-            const bool wants = !info.monotonic && (arch == Archetype::Stab || arch == Archetype::DubChord || arch == Archetype::Acid
-                                                   || arch == Archetype::Bleep);
+            const bool wants = true;
             wanting += wants ? 1 : 0;
             if (info.figure < 0) {
                 if (wants && first.empty()) first = who + fmt(": no figure in a %s track", kArchetypeNames[info.archetype]);
+                continue;
+            }
+            if (info.form != FormType::Endless && info.figureBar > info.bassBar + 32) {
+                if (first.empty()) first = who + fmt(": the figure only from bar %d (the body from %d)", info.figureBar + 1, info.bassBar + 1);
                 continue;
             }
             figures += wants ? 1 : 0;
@@ -852,7 +854,7 @@ void testFigure()
             else if (first.empty()) first = who + fmt(": the %s's motif repeats in %d of %d bars", kLayerNames[info.figure], same, compared);
         }
     }
-    check(figures == wanting && kinds.size() >= 5, "a signature voice in every track whose archetype has one; five archetypes or more",
+    check(figures == wanting && kinds.size() >= 5, "a signature voice in every track, by the body's second block; five archetypes or more",
           fmt("%d of %d, %zu archetypes in %d tracks", figures, wanting, kinds.size(), tracks));
     check(steady == motifs, "the figure plays its motif, the same in its bars", steady == motifs ? fmt("%d motifs", motifs) : first);
     check(wavy == bodies && moving == tracks, "the body runs in waves, something moves between the operations",
@@ -1453,6 +1455,72 @@ void testLeveler()
     }
 }
 
+/** Phase 18: the balance -- every part the Leveler hears lands in its window (or at its largest correction), the score
+ *  played again with the corrections measures what the Leveler meant, and every track has a lead voice to be heard. */
+void testBalance()
+{
+    section("the balance");
+    std::string first;
+    int tracks = 0, withLead = 0, parts = 0, placed = 0, again = 0, agreed = 0;
+    for (int style = 0; style < 4; ++style) {
+        for (const uint64_t seed : { 3ull, 8ull }) {
+            auto p = std::make_unique<ParamStore>();
+            p->set(p->find("compose.style"), static_cast<float>(style));
+            p->set(p->find("compose.minutes"), 5.0f);
+            Score s = composeTrack(*p, seed);
+            const std::vector<LevelReading> r = levelScore(s, *p);
+            if (r.size() != 1) { check(false, "one reading per track", fmt("%zu", r.size())); continue; }
+            ++tracks;
+            const std::string who = fmt("%s seed %d", kStyleNames[style], static_cast<int>(seed));
+            // Played again with the corrections: the loudest samples in the Leveler's three places.
+            auto e = std::make_unique<Engine>();
+            e->params().copyValuesFrom(*p);
+            e->prepare(48000.0, 512);
+            e->load(s);
+            const LevelMark& m = s.levels[0];
+            std::vector<float> L(512), R(512);
+            BalanceDb heard;
+            heard.fill(-200.0f);
+            for (const double back : { 0.0, 64.0, 160.0 }) {
+                const double at = m.peakBeat - back;
+                if (back > 0.0 && at < m.beat + 128.0) continue;
+                e->seek(s.tempo.beatAt(s.tempo.secondsAt(at) - 2.0));
+                for (int done = 0; done < 2 * 48000; done += 512) e->process(L.data(), R.data(), 512);
+                e->watchPeaks(true);
+                for (int done = 0; done < 12 * 48000; done += 512) e->process(L.data(), R.data(), 512);
+                e->watchPeaks(false);
+                const Deck& d = e->deck(0);
+                for (int q = 0; q < kBalParts; ++q)
+                    if (d.kickPeak() > 1e-4f && d.partPeak(q) > 0.0f)
+                        heard[static_cast<size_t>(q)] = std::max(heard[static_cast<size_t>(q)], 20.0f * std::log10(d.partPeak(q) / d.kickPeak()));
+            }
+            bool lead = false;
+            for (int q = 0; q < kBalParts; ++q) {
+                const float f = r[0].found[static_cast<size_t>(q)], b = r[0].bal[static_cast<size_t>(q)];
+                if (std::isnan(f)) continue;
+                if (q == static_cast<int>(BalPart::Ping) || q == static_cast<int>(BalPart::Bass) || q == static_cast<int>(BalPart::Acid)
+                    || q == static_cast<int>(BalPart::Chord)) lead = true;
+                // In its window (ranked), or at the largest correction; where the guard took boosts back, not over it.
+                const float lo = r[0].lo[static_cast<size_t>(q)], hi = r[0].hi[static_cast<size_t>(q)];
+                ++parts;
+                const bool atMost = b >= 14.99f || b <= -7.99f;
+                if (atMost || (f + b <= hi + 0.05f && (r[0].guarded || f + b >= lo - 0.05f))) ++placed;
+                else if (first.empty()) first = who + fmt(": %s at %.1f + %.1f outside %.0f .. %.0f", kBalPartNames[q], f, b, lo, hi);
+                ++again;
+                if (std::fabs(heard[static_cast<size_t>(q)] - (f + b)) <= 1.5f) ++agreed;
+                else if (first.empty()) first = who + fmt(": %s meant %.1f, heard %.1f", kBalPartNames[q], f + b, heard[static_cast<size_t>(q)]);
+            }
+            withLead += lead ? 1 : 0;
+            if (!lead && first.empty()) first = who + ": no lead voice heard (ping, bass, 303 or chord)";
+        }
+    }
+    check(tracks == 8 && withLead == tracks, "a lead voice heard in every track", first.empty() ? fmt("%d of %d", withLead, tracks) : first);
+    check(parts > 30 && placed == parts, "every part heard in its ranked window against the kick (or at its largest correction; not over it where the guard acted)",
+          first.empty() ? fmt("%d of %d parts", placed, parts) : first);
+    check(again == parts && agreed == again, "played again, every part as loud as the Leveler meant (1.5 dB)",
+          first.empty() ? fmt("%d of %d", agreed, again) : first);
+}
+
 /** Eight bars with every layer and both low owners' voices at once, a throw on the echo. */
 std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems = nullptr)
 {
@@ -1836,8 +1904,13 @@ void testPerform()
     const Score score = composeTrack(*p, 9);
     const double from = 128.0;
     const auto energy = [](const std::vector<float>& x) { double s = 0.0; for (float v : x) s += static_cast<double>(v) * v; return s; };
-    // High-band energy: the first difference.
-    const auto highs = [](const std::vector<float>& x) { double s = 0.0; for (size_t i = 2; i < x.size(); ++i) { const double d = x[i] - x[i - 2]; s += d * d; } return s; };
+    // High-band energy: the third difference per channel (+18 dB an octave; the first, +6, counted the mids, which a
+    // track with its tonal voice -- Phase 18 -- has more of, and the filter at 312 Hz takes only in part).
+    const auto highs = [](const std::vector<float>& x) {
+        double s = 0.0;
+        for (size_t i = 6; i < x.size(); ++i) { const double d = x[i] - 3.0 * x[i - 2] + 3.0 * x[i - 4] - x[i - 6]; s += d * d; }
+        return s;
+    };
     const auto plain = renderLive(score, false, "", from, 6.0);
     const auto ignored = renderLive(score, false, "perform.mute_kick=1; perform.filter=-0.6; perform.throw=1", from, 6.0);
     check(plain.first == ignored.first, "without live play the perform module does nothing (renders and exports)");
@@ -2064,6 +2137,7 @@ const TestSection kSections[] = {
     { "testHarmony", testHarmony },
     { "testDub", testDub },
     { "testLeveler", testLeveler },
+    { "testBalance", testBalance },
     { "testComposer", testComposer },
     { "testFigure", testFigure },
     { "testGroove", testGroove },

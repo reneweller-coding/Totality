@@ -36,8 +36,10 @@ corona swells with every beat.
 
 The standalone plays by itself: press Play. Compose writes a new track with the knobs as they stand, New seed draws a
 fresh one. The status line tells what plays: its style and form, its tempo, its key with the Camelot label a DJ mixes
-by, and its length. While a track begins to play, Totality measures its loudest part in the background and brings it to
-its style's loudness; the status says "levelling" until the correction has glided in.
+by, and its length. While a track begins to play, Totality measures its loudest part in the background, sets every
+part against the kick -- each lane of the kit, the figure and the other tonal voices, one or two up front and the rest
+behind them, the room taken back where the mids would stand over the records' -- and brings the track to its style's
+loudness; the status says "levelling" until the corrections have glided in.
 
 For a set, move Set min above zero: Totality then writes a set of that many minutes -- a dramaturgy of tempo and energy,
 tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line, loops of the last track

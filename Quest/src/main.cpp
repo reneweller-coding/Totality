@@ -310,7 +310,10 @@ public:
             return;
         }
         if (trimsReady_.load(std::memory_order_acquire)) {   // the loudness corrections, measured while it plays
-            for (int d = 0; d < kDecks; ++d) if (!trimsIn_[d].empty()) engine_.setLevelTrims(d, trimsIn_[d]);
+            for (int d = 0; d < kDecks; ++d) {
+                if (!trimsIn_[d].empty()) engine_.setLevelTrims(d, trimsIn_[d]);
+                if (!balIn_[d].empty()) engine_.setLevelBalance(d, balIn_[d]);
+            }
             trimsReady_.store(false, std::memory_order_release);
         }
         const float target = playing_.load(std::memory_order_relaxed) ? 1.0f : 0.0f;
@@ -424,7 +427,8 @@ private:
         if (!done || trimsReady_.load(std::memory_order_acquire)) return;
         for (int d = 0; d < kDecks; ++d) {
             trimsIn_[d].clear();
-            for (const LevelMark& m : s.decks[d].levels) trimsIn_[d].push_back(m.trimDb);
+            balIn_[d].clear();
+            for (const LevelMark& m : s.decks[d].levels) { trimsIn_[d].push_back(m.trimDb); balIn_[d].push_back(m.balDb); }
         }
         trimsReady_.store(true, std::memory_order_release);
         LOGI("%d: loudness corrected", number());
@@ -472,6 +476,7 @@ private:
     std::atomic<bool> ready_{ false }, playing_{ false }, nextRequest_{ false }, quit_{ false };
     bool levelDue_ = false;                      ///< what plays is still to be measured (composer thread)
     std::vector<float> trimsIn_[kDecks];         ///< its corrections, for the audio thread once trimsReady_ says so
+    std::vector<BalanceDb> balIn_[kDecks];       ///< Phase 18: the parts' corrections found with them
     std::atomic<bool> trimsReady_{ false };
     std::atomic<int> number_{ 1 };
     std::atomic<double> beat_{ 0.0 }, seconds_{ 0.0 };

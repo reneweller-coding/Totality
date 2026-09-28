@@ -182,7 +182,9 @@ Score composeStudy(const ParamStore& p, uint64_t seed)
     // The loudness mark: the track's loudest part is the block after the reduction (the densest), else the body's last.
     {
         const int peakBlock = reductionBlock + 1 <= bodyLast ? reductionBlock + 1 : bodyLast;
-        sc.levels.push_back(LevelMark{ 0.0, beatOf(peakBlock * 32), styleTargetLufs(static_cast<int>(style)), 0.0f });
+        LevelMark lm{ 0.0, beatOf(peakBlock * 32), styleTargetLufs(static_cast<int>(style)), 0.0f };
+        lm.styleMix[static_cast<size_t>(std::clamp(static_cast<int>(style), 0, 3))] = 1.0f;
+        sc.levels.push_back(lm);
     }
 
     const float throwChance = style == Style::Dub ? 0.6f : 0.3f;

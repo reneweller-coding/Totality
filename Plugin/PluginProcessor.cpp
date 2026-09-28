@@ -270,7 +270,8 @@ void TotalityProcessor::run()
     std::lock_guard<std::mutex> g(lock_);
     for (int d = 0; d < kDecks; ++d) {
         trims_[d].clear();
-        for (const LevelMark& m : p.set.decks[d].levels) trims_[d].push_back(m.trimDb);
+        bal_[d].clear();
+        for (const LevelMark& m : p.set.decks[d].levels) { trims_[d].push_back(m.trimDb); bal_[d].push_back(m.balDb); }
     }
     trimsFor_ = id;
 }
@@ -278,6 +279,7 @@ void TotalityProcessor::run()
 void TotalityProcessor::takeTrims()
 {
     std::vector<float> trims[kDecks];
+    std::vector<BalanceDb> bal[kDecks];
     {
         std::lock_guard<std::mutex> g(lock_);
         if (trimsFor_ == 0 || trimsFor_ > playingId_) return;   // (none, or for a score not yet loaded)
@@ -286,14 +288,20 @@ void TotalityProcessor::takeTrims()
         if (!mine) return;
         for (int d = 0; d < kDecks; ++d) {
             trims[d].swap(trims_[d]);
+            bal[d].swap(bal_[d]);
             for (size_t i = 0; i < current_.set.decks[d].levels.size() && i < trims[d].size(); ++i)
                 current_.set.decks[d].levels[i].trimDb = trims[d][i];
+            for (size_t i = 0; i < current_.set.decks[d].levels.size() && i < bal[d].size(); ++i)
+                current_.set.decks[d].levels[i].balDb = bal[d][i];
         }
         levelled_ = true;
     }
     // A few numbers: the audio thread waits for them instead of losing a block (suspendProcessing would silence one).
     const juce::ScopedLock sl(getCallbackLock());
-    for (int d = 0; d < kDecks; ++d) if (!trims[d].empty()) engine_.setLevelTrims(d, trims[d]);
+    for (int d = 0; d < kDecks; ++d) {
+        if (!trims[d].empty()) engine_.setLevelTrims(d, trims[d]);
+        if (!bal[d].empty()) engine_.setLevelBalance(d, bal[d]);
+    }
 }
 
 SetScore TotalityProcessor::forPlayback(const Playing& p) const
@@ -315,8 +323,10 @@ void TotalityProcessor::loadEngine(const Playing& p)
     if (levelled_)   // the corrections already found go with the score (a reload at a new host tempo)
         for (int d = 0; d < kDecks; ++d) {
             std::vector<float> t;
-            for (const LevelMark& m : p.set.decks[d].levels) t.push_back(m.trimDb);
+            std::vector<BalanceDb> b;
+            for (const LevelMark& m : p.set.decks[d].levels) { t.push_back(m.trimDb); b.push_back(m.balDb); }
             if (!t.empty()) engine_.setLevelTrims(d, t);
+            if (!b.empty()) engine_.setLevelBalance(d, b);
         }
 }
 

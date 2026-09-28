@@ -46,6 +46,7 @@ void Deck::prepare(const ParamStore* params, double sampleRate, int index)
     const float fs = static_cast<float>(sampleRate);
     tiltCoef_ = 1.0f - std::exp(-2.0f * kPi * 1000.0f / fs);
     trimCoef_ = 1.0f - std::exp(-1.0f / (1.0f * fs));   // a correction glides in over about a second
+    for (int p = 0; p < kBalParts; ++p) balGain_[p] = balTarget_[p] = 1.0f;
     const size_t n = static_cast<size_t>(kRaster);
     for (std::vector<float>* b : { &kickBuf_, &bodyBuf_, &rumbleBuf_, &subBuf_, &pingL_, &pingR_, &bassL_, &bassR_, &acidL_,
                                    &acidR_, &chordL_, &chordR_, &droneL_, &droneR_, &texL_, &texR_, &roomInL_, &roomInR_,
@@ -65,6 +66,7 @@ void Deck::clear()
     mixerSteps_.clear();
     plays_.clear();
     lateTrims_.clear();
+    lateBal_.clear();
     base_.assign(static_cast<size_t>(params_ != nullptr ? params_->count() : 0), std::numeric_limits<float>::quiet_NaN());
     knobCursor_ = 0;
     knobGroup_ = -1.0;
@@ -79,6 +81,7 @@ void Deck::load(const Score& score)
     score_ = score;
     score_.sort();
     lateTrims_.reserve(score_.levels.size());
+    lateBal_.reserve(score_.levels.size());
     // Events on the sample grid: the first sample at or after the ideal time, and how late that is.
     int id = 0;
     for (const NoteEvent& note : score_.notes) {
@@ -175,6 +178,8 @@ void Deck::seek(int64_t sample)
     // The loudness correction at the new place, at once.
     const double b = score_.tempo.beatAt(static_cast<double>(sample) / sampleRate_);
     trimGain_ = trimTarget_ = dbToGain(score_.trimAt(b));
+    const BalanceDb bal = score_.balanceAt(b);
+    for (int p = 0; p < kBalParts; ++p) balGain_[p] = balTarget_[p] = dbToGain(bal[static_cast<size_t>(p)]);
 }
 
 float Deck::played(int id) const
@@ -362,6 +367,22 @@ void Deck::updateCell(int64_t sample)
         if (k < lateTrims_.size()) trim = lateTrims_[k];
     }
     trimTarget_ = dbToGain(trim);
+    // Phase 18: the parts' corrections, the same way.
+    BalanceDb bal = score_.balanceAt(beat);
+    if (!lateBal_.empty()) {
+        size_t k = 0;
+        for (size_t i = 0; i < score_.levels.size(); ++i) if (score_.levels[i].beat <= beat) k = i;
+        if (k < lateBal_.size()) bal = lateBal_[k];
+    }
+    for (int p = 0; p < kBalParts; ++p) balTarget_[p] = dbToGain(bal[static_cast<size_t>(p)]);
+}
+
+void Deck::watchPeaks(bool on)
+{
+    watch_ = on;
+    if (!on) return;
+    kickPeak_ = 0.0f;
+    for (float& p : partPeak_) p = 0.0f;
 }
 
 void Deck::dispatchUntil(int64_t sample)
@@ -479,19 +500,47 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
     const float* lr = kit_.laneR();
     float busH[2][kRaster], busP[2][kRaster];
     for (int i = 0; i < n; ++i) {
+        // Phase 18: the parts' gains against the kick, at the sources -- every lane of the kit, every tonal voice (the sends
+        // follow them, as after a fader).
+        for (int p = 0; p < kBalParts; ++p) balGain_[p] += (balTarget_[p] - balGain_[p]) * trimCoef_;
+        {
+            const size_t k = static_cast<size_t>(i);
+            const float gp = balGain_[static_cast<int>(BalPart::Ping)], gb = balGain_[static_cast<int>(BalPart::Bass)];
+            const float ga = balGain_[static_cast<int>(BalPart::Acid)], gd = balGain_[static_cast<int>(BalPart::Drone)];
+            const float gt = balGain_[static_cast<int>(BalPart::Texture)];
+            pingL_[k] *= gp; pingR_[k] *= gp;
+            bassL_[k] *= gb; bassR_[k] *= gb;
+            acidL_[k] *= ga; acidR_[k] *= ga;
+            droneL_[k] *= gd; droneR_[k] *= gd;
+            texL_[k] *= gt; texR_[k] *= gt;
+            if (watch_) {
+                const auto most = [](float& m, float a, float b) { m = std::max(m, std::max(std::fabs(a), std::fabs(b))); };
+                most(kickPeak_, kickBuf_[k], kickBuf_[k]);
+                most(partPeak_[static_cast<int>(BalPart::Ping)], pingL_[k], pingR_[k]);
+                most(partPeak_[static_cast<int>(BalPart::Bass)], bassL_[k], bassR_[k]);
+                most(partPeak_[static_cast<int>(BalPart::Acid)], acidL_[k], acidR_[k]);
+                most(partPeak_[static_cast<int>(BalPart::Chord)], chordL_[k] * chordLevel_ * balGain_[static_cast<int>(BalPart::Chord)],
+                     chordR_[k] * chordLevel_ * balGain_[static_cast<int>(BalPart::Chord)]);
+                most(partPeak_[static_cast<int>(BalPart::Drone)], droneL_[k], droneR_[k]);
+                most(partPeak_[static_cast<int>(BalPart::Texture)], texL_[k], texR_[k]);
+            }
+        }
         float hl = 0.0f, hr = 0.0f, pl = 0.0f, pr = 0.0f;
         for (int l = 0; l < kPercLanes; ++l) {
             const size_t k = static_cast<size_t>(i * PercKit::kStride + l);
-            if (laneIsHat_[l]) { hl += ll[k]; hr += lr[k]; }
-            else { pl += ll[k]; pr += lr[k]; }
+            const float a = ll[k] * balGain_[l], b = lr[k] * balGain_[l];
+            if (laneIsHat_[l]) { hl += a; hr += b; }
+            else { pl += a; pr += b; }
+            if (watch_) partPeak_[l] = std::max(partPeak_[l], std::max(std::fabs(a), std::fabs(b)) * (laneIsHat_[l] ? hatsGain_ : percGain_));
         }
         busH[0][i] = hatsLp_[0].lp(hl) * hatsGain_;
         busH[1][i] = hatsLp_[1].lp(hr) * hatsGain_;
         busP[0][i] = percLp_[0].lp(pl) * percGain_;
         busP[1][i] = percLp_[1].lp(pr) * percGain_;
         const size_t k = static_cast<size_t>(i);
-        chordL_[k] *= chordLevel_;
-        chordR_[k] *= chordLevel_;
+        const float gChord = chordLevel_ * balGain_[static_cast<int>(BalPart::Chord)];
+        chordL_[k] *= gChord;
+        chordR_[k] *= gChord;
         roomInL_[k] = busH[0][i] * hatsSend_ + busP[0][i] * percSend_ + pingL_[k] * pingSend_ + bassL_[k] * bassSends_.room
                     + acidL_[k] * acidSends_.room + droneL_[k] * droneSends_.room;
         roomInR_[k] = busH[1][i] * hatsSend_ + busP[1][i] * percSend_ + pingR_[k] * pingSend_ + bassR_[k] * bassSends_.room
@@ -549,7 +598,8 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
             const size_t k = static_cast<size_t>(i);
             stemL[kStemChord][i] = chordL_[k]; stemR[kStemChord][i] = chordR_[k];
             stemL[kStemDrone][i] = droneL_[k]; stemR[kStemDrone][i] = droneR_[k];
-            stemL[kStemRoom][i] = roomL_[k] * roomReturn_; stemR[kStemRoom][i] = roomR_[k] * roomReturn_;
+            const float gRoom = roomReturn_ * balGain_[static_cast<int>(BalPart::Room)];
+            stemL[kStemRoom][i] = roomL_[k] * gRoom; stemR[kStemRoom][i] = roomR_[k] * gRoom;
             stemL[kStemDub][i] = dubL_[k]; stemR[kStemDub][i] = dubR_[k];
             stemL[kStemCloud][i] = cloudL_[k]; stemR[kStemCloud][i] = cloudR_[k];
         }
@@ -559,8 +609,9 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         const size_t k = static_cast<size_t>(i);
         chordL_[k] += droneL_[k];
         chordR_[k] += droneR_[k];
-        roomL_[k] = roomL_[k] * roomReturn_ + dubL_[k] + cloudL_[k];
-        roomR_[k] = roomR_[k] * roomReturn_ + dubR_[k] + cloudR_[k];
+        const float gRoom = roomReturn_ * balGain_[static_cast<int>(BalPart::Room)];   // (Phase 18: the guard's)
+        roomL_[k] = roomL_[k] * gRoom + dubL_[k] + cloudL_[k];
+        roomR_[k] = roomR_[k] * gRoom + dubR_[k] + cloudR_[k];
     }
     TOT_PROF_BEGIN(Ducks);
     padsDuck_.process(chordL_.data(), chordR_.data(), n, stems ? padsGains_ : nullptr);

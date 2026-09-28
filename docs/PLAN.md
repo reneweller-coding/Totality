@@ -22,6 +22,44 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Nacht: Phase 18, das Gleichgewicht.** Der Nutzer über Track und Set des Builds von 19:54: "Die bestehen
+zum überwiegenden Teil nur aus Kick und Hi Hats (und vielleicht ein wenig Ride)".
+
+- **Befund, an den Stems gemessen** (das lauteste Sample jeder Stimme gegen das der Kick, Median über 28 Tracks: vier
+  Stile mal sieben Archetypen): Hats -14, Percussion -21, tonale Stimme -19 dB. Die Recherche (Analyse 2026-09-27, nach
+  Attack): Closed Hat -8, Open Hat -10, Conga -15, FX -10 dB. In 9 von 28 Tracks gar keine tonale Stimme: ein
+  monotoner Track verbot Ping, Chord, Drone und 303, Roller, Tribal und die Hälfte der Tools hatten keine Figur. Die
+  Kalibrierung zeigte das nicht: Spektrum und harmonisch-perkussive Anteile lagen im Band der Referenzen -- die Mitten
+  füllten der Klick der Kick, das verzerrte Rumble und der Raum. Raws `space.level` +10 dB las in 250-1000 Hz -5,8 dB,
+  lauter als jedes Instrument: die Rezepte (Phase 13.5) waren am Spektrum gefittet und hatten den Raum statt der
+  Instrumente hochgezogen. Die Dichte der Partitur (Phase 10) stimmte; es fehlte, was man hört.
+- **Jeder Track hat seine Figur** (`Composer.cpp`): der Roller einen Bass-Riff, wo der Sub den Bass trägt, sonst wie der
+  Tribal-Track und die Tools ohne Riff die Leitstimme seines Stils (die wahrscheinlichste von Ping, Chord, 303: Hypnotic
+  der Ping, Ostgut und Dub der Chord, Raw die 303); ein monotoner Track spielt sie auf Grundton und Oktave. Sie kommt mit
+  dem zweiten Block des Body (die Regel "die letzten zwei Stimmen für die zweite Hälfte" hielt sie in kleinen Pools bis
+  Takt 129 zurück). Hats und Percussion ziehen abwechselnd ein, jede Gruppe ihre wahrscheinlichste zuerst (Ostgut: die
+  Clap im Intro statt nach Takt 137). Streuung und Jitter der ungebundenen Stimmen hängen nicht mehr am Kandidaten des
+  Blocks (sonst verschob ein neu gewürfelter Hat den Ping um Millisekunden).
+- **Die Balance im Leveler** (`Leveler.h`, `LevelMark::balDb`): vor der Lautheit liest er an drei Stellen (der lauteste
+  Teil, 16 und 40 Takte davor; eine Stelle allein erwischte die Figur beim Ausatmen) das lauteste Sample jeder der zwölf
+  Kit-Spuren und jeder tonalen Stimme gegen die lauteste Kick, und rückt, was außerhalb seines Fensters liegt, an den
+  Rand (-8 bis +15 dB; im Deck an der Quelle, vor den Sends, wie ein Fader). Die Fenster nach Rolle, um die Werte der
+  Recherche [I]: Closed Hat -14 bis -8, Clap und Snare -12 bis -7, Rim -14 bis -9, Tom -15 bis -10, Conga -17 bis -12,
+  Shaker -18 bis -12, Leitstimmen -11 bis -8, Drone -18 bis -12, Textur -22 bis -16; Dub: Hats 6 dB tiefer,
+  Percussion 3. Ein Rang je Art: zwei Stimmen vorn, die dritte 3 dB, die weiteren 6 dB tiefer; von den Leitstimmen
+  eine vorn, die anderen 4 dB tiefer. Dann ein Wächter: 250-1000 Hz und 1-5 kHz gegen 40-140 Hz an denselben Stellen;
+  über dem 90. Perzentil der Referenzen (dieselben Filter, Hypnotic -2,6/-4,8, Ostgut -9,9/-6,9, Dub -9,4/-18,2, Raw
+  -9,2/-11,5) nimmt er erst den Raum-Return zurück (bis -12 dB), dann die Anhebungen. Plugin und Quest reichen die
+  Korrekturen wie die Lautheit nach; sie gleiten ein.
+- **Ergebnis (28 Tracks):** Percussion -21,4 → -12,9 dB, tonale Stimme -18,9 → -11,9 dB gegen die Kick (Median), zu
+  hören in 58 bzw. 75 % der 8-Takt-Fenster des Body (vorher je 5 %); die Hats unverändert bei -13 (die
+  harmonisch-perkussive Messung zeigte sie schon im Band, Hypnotics sogar darüber). Die Bänder aller zwölf Prüftracks im
+  10.-90. Perzentil der Referenzen (Raw 4242 0,7 dB darüber, aus seiner Komposition). Stimmen je Takt in der Partitur
+  5,27 → 5,36. `testBalance` (jede Stimme im Fenster, erneut gespielt auf 1,5 dB wie gemeint, eine Leitstimme in jedem
+  Track), `testFigure` (die Figur in jedem Track bis zum zweiten Body-Block), 185/185. Komponieren und Pegeln eines
+  Tracks dauert 5 bis 9 s statt 3.
+- **Offen:** Hören. Die Fenster sind abgeleitet [I]; der Wächter hält das Spektrum, nicht den Geschmack.
+
 **28.09.2026, Abend: Phasen 12 bis 17**, derselbe Auftrag ("alles, was ohne mein Feedback geht").
 
 - **Phase 12, Dichte gegen die Referenzen** (`analyze_ref.py`, `offq_*`): das Onset-Profil eines Bandes im Mittel neben

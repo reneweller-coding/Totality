@@ -112,6 +112,16 @@ public:
     /** @brief The loudness corrections of its tracks (a trim per LevelMark), found after they began; they glide in. No
      *         allocation for as many trims as the score has marks (reserved at load): the Quest sets them on its audio thread. */
     void setLevelTrims(const std::vector<float>& trims) { lateTrims_.assign(trims.begin(), trims.end()); }
+    /** @brief Phase 18: the parts' corrections of its tracks (one per LevelMark), found after they began; as the trims. */
+    void setLevelBalance(const std::vector<BalanceDb>& bal) { lateBal_.assign(bal.begin(), bal.end()); }
+    /** @brief Phase 18: from now on keeps the loudest sample of the kick and of every part (after its correction and its
+     *         bus's level, before the buses' saturation and the sends) -- the Leveler's reading; switched on, it starts
+     *         from nothing. */
+    void watchPeaks(bool on);
+    /** @brief The kick's loudest sample since watchPeaks(true). */
+    float kickPeak() const { return kickPeak_; }
+    /** @brief Part @p p's (BalPart, a lane 0 .. 11 first) loudest sample since watchPeaks(true). */
+    float partPeak(int p) const { return partPeak_[p]; }
     /** @brief The kick (for the tests). */
     const Kick& kick() const { return kick_; }
 
@@ -204,6 +214,13 @@ private:
     BusCompressor glue_;
     float trimGain_ = 1.0f, trimTarget_ = 1.0f, trimCoef_ = 0.0f;
     std::vector<float> lateTrims_;   ///< setLevelTrims: the corrections found while playing
+    // Phase 18: the parts' gains against the kick (LevelMark::balDb), gliding like the trim; applied at the sources, before
+    // the sends, as a fader would.
+    float balGain_[kBalParts] = {};     ///< (1 from prepare() on)
+    float balTarget_[kBalParts] = {};
+    bool watch_ = false;
+    float kickPeak_ = 0.0f, partPeak_[kBalParts] = {};
+    std::vector<BalanceDb> lateBal_;   ///< setLevelBalance: the parts' corrections found while playing
 
     std::vector<float> kickBuf_, bodyBuf_, rumbleBuf_, subBuf_;
     std::vector<float> pingL_, pingR_, bassL_, bassR_, acidL_, acidR_, chordL_, chordR_, droneL_, droneR_, texL_, texR_;

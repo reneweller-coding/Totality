@@ -115,6 +115,25 @@ bool writeScoreJson(const std::string& path, const Score& notes, const std::vect
 
 } // namespace
 
+/** @brief Phase 18: a reading's balance -- every part heard, its loudest sample against the kick's and its correction. */
+std::string balanceText(const LevelReading& r)
+{
+    std::string t;
+    char buf[64];
+    for (int p = 0; p < kBalParts; ++p) {
+        const float f = r.found[static_cast<size_t>(p)];
+        if (std::isnan(f)) continue;
+        std::snprintf(buf, sizeof buf, " %s %.0f (%+.0f)", kBalPartNames[p], f, r.bal[static_cast<size_t>(p)]);
+        t += buf;
+    }
+    const float room = r.bal[static_cast<size_t>(BalPart::Room)];
+    if (room != 0.0f) {
+        std::snprintf(buf, sizeof buf, "; the room's return %+.0f", room);
+        t += buf;
+    }
+    return t.empty() ? std::string(" none measured") : t;
+}
+
 int main(int argc, char** argv)
 {
     uint64_t seed = 1;
@@ -286,9 +305,11 @@ int main(int argc, char** argv)
             std::printf("corridor over the body: bar similarity %.3f, micro-change %.2f dB, %.1f onsets a bar\n", info.similarity,
                         info.micro, info.density);
         }
-        for (const LevelReading& r : levels)
+        for (const LevelReading& r : levels) {
             std::printf("level: the loudest part (bar %.0f) measured %.1f LUFS, target %.1f, trim %+.1f dB (%.1f after the first)\n",
                         score.levels.empty() ? 0.0 : score.levels[0].peakBeat / 4.0 + 1.0, r.measured, r.target, r.trim, r.after);
+            std::printf("balance against the kick (loudest sample, dB; correction):%s\n", balanceText(r).c_str());
+        }
         for (const BlockOp& o : score.ops) {
             std::printf("  bar %4.0f  %-8s %s\n", o.beat / 4.0 + 1.0, kOpNames[static_cast<int>(o.kind)],
                         o.layer >= 0 ? kLayerNames[o.layer] : "");
@@ -403,7 +424,8 @@ int main(int argc, char** argv)
         }
         size_t k = 0;
         for (const LevelReading& r : levels)
-            std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB\n", ++k, r.measured, r.target, r.trim);
+            std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB; balance%s\n", ++k, r.measured, r.target, r.trim,
+                        balanceText(r).c_str());
         if (!midi.empty()) {
             if (!writeMidiFile(flattenSet(setScore), midi.c_str(), "Totality", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
             std::printf("MIDI: %s\n", midi.c_str());

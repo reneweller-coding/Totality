@@ -661,12 +661,18 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
         const LayerDef& d = kLayers[static_cast<int>(table)];
         const bool kickLike = id == LayerId::Kick || id == LayerId::GhostKick;
         const bool pattern = isCyclic(plan, i) || plan.euclid[i] != 0;
+        // Phase 18: the layers no rule ties to the kit (kick, bass, ping, chord, 303, drone) draw their spread and jitter
+        // apart from the block's candidate, so a kit layer drawn again leaves them bit for bit (it may pick another
+        // candidate). Every track has such a voice now.
+        const bool untied = id == LayerId::Kick || id == LayerId::Bass || id == LayerId::Ping || id == LayerId::Chord
+                         || id == LayerId::Acid || id == LayerId::Drone;
+        const uint32_t variant = untied ? 0u : spec.variant;
         for (int s = 0; s < kSteps; ++s) {
             if (!on[i][s]) continue;
             NoteEvent n;
             // Velocity: the step's (a cyclic or Euclidean layer: its loudest step's), a random spread, the collision dip.
             const float base = pattern || d.vel[s] <= 0.0f ? baseVelocity(d) : d.vel[s];
-            float vel = base + d.velRandom * (2.0f * roll(seedOf(plan, i, spec.variant), i, kVel, static_cast<uint64_t>(spec.bar) * 16 + s) - 1.0f);
+            float vel = base + d.velRandom * (2.0f * roll(seedOf(plan, i, variant), i, kVel, static_cast<uint64_t>(spec.bar) * 16 + s) - 1.0f);
             double offMs = plan.offsetMs[i];
             const bool kickHere = on[L(LayerId::Kick)][s] || on[L(LayerId::GhostKick)][s];
             const bool hatHere = on[L(LayerId::ClosedHat)][s] || on[L(LayerId::RollingHat)][s] || on[L(LayerId::OpenHat)][s];
@@ -681,8 +687,8 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
             if ((s & 1) == 1) beat += swingBeats * d.swing;
             if (!kickLike && plan.humanizeMs > 0.0f) {
                 // Half-normal from two uniforms (Box-Muller's radius), never early.
-                const double u1 = std::max(1.0e-9, static_cast<double>(roll(seedOf(plan, i, spec.variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + s)));
-                const double u2 = roll(seedOf(plan, i, spec.variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + 16 + s);
+                const double u1 = std::max(1.0e-9, static_cast<double>(roll(seedOf(plan, i, variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + s)));
+                const double u2 = roll(seedOf(plan, i, variant), i, kJitter, static_cast<uint64_t>(spec.bar) * 32 + 16 + s);
                 const double g = std::sqrt(-2.0 * std::log(u1)) * std::cos(6.283185307179586 * u2);
                 offMs += std::min(10.0, std::fabs(g) * plan.humanizeMs);
             }

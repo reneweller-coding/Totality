@@ -58,6 +58,20 @@ float Score::knobAt(int param, double beat) const
     return v;
 }
 
+const char* const kBalPartNames[kBalParts] = { "perc1", "perc2", "perc3", "perc4", "perc5", "perc6", "perc7", "perc8", "perc9",
+                                               "perc10", "perc11", "perc12", "ping", "bass", "acid", "chord", "drone", "texture",
+                                               "room" };
+
+BalanceDb Score::balanceAt(double beat) const
+{
+    BalanceDb b{};
+    for (const LevelMark& m : levels) {
+        if (m.beat > beat) break;
+        b = m.balDb;
+    }
+    return b;
+}
+
 float Score::trimAt(double beat) const
 {
     float t = 0.0f;
