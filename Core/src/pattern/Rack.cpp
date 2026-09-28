@@ -470,7 +470,8 @@ void makeFigure(RackPlan& plan, LayerId voice, uint64_t seed)
         // The octave on one or two places, the alphabet's second tone on the motif's last onset.
         for (int k = 0; k < 2; ++k)
             if (rng.uniform() < 0.3f) plan.figPitch[onsets[static_cast<size_t>(rng.below(static_cast<int>(onsets.size())))]] = 12;
-        if (plan.bassSize > 1) plan.figPitch[onsets.back()] = static_cast<int8_t>(plan.bassSet[1]);
+        // (The alphabet's b2 and b5 only where the scale has them; else the fifth.)
+        if (plan.bassSize > 1) plan.figPitch[onsets.back()] = static_cast<int8_t>(inKey(plan.bassSet[1]) ? plan.bassSet[1] : 7);
         for (int pos : onsets) if (pos % kSteps == 2 || pos % kSteps == 3) set(plan.figAccent, pos, true);
         break;
     }
@@ -726,6 +727,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
                 if (plan.bassSize > 1 && s >= 14) {
                     const int k = 1 + static_cast<int>(roll(seedOf(plan, i, spec.variant), i, kBase, 1000 + static_cast<uint64_t>(spec.bar) * 2 + (s - 14)) * static_cast<float>(plan.bassSize - 1));
                     interval = plan.bassSet[std::min(k, plan.bassSize - 1)];
+                    if (!inScale(plan.scale, interval % 12)) interval = 7;   // (b2, b5 only in a scale that has them)
                 }
                 n.pitch = plan.bassRoot + interval;
             } else if (id == LayerId::Ping) {

@@ -13,7 +13,7 @@
 
 namespace tot {
 
-const char* const kDramaturgyNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat" };
+const char* const kDramaturgyNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat", "Cruise", "Marathon" };
 const char* const kLoopKindNames[] = { "carry", "tease", "layer" };
 const char* const kMoveNames[] = { "low kill", "high swell", "mid dip", "filter build", "echo throw" };
 
@@ -112,6 +112,16 @@ float setEnergy(Dramaturgy d, float t)
     case Dramaturgy::Closing: return 0.8f - 0.5f * t;
     case Dramaturgy::Sunday: return 0.45f + 0.1f * static_cast<float>(std::sin(2.0 * 3.141592653589793 * 2.0 * t));
     case Dramaturgy::Flat: return 0.6f;
+    case Dramaturgy::Cruise:
+        // Klock (Mix-Dok. 6): hard from the start, easing into the cruise within a tenth, building in the last quarter.
+        if (t < 0.1f) return 0.85f - 1.5f * t;
+        if (t < 0.75f) return 0.7f + 0.05f * static_cast<float>(std::sin(2.0 * 3.141592653589793 * 3.0 * (t - 0.1f) / 0.65f));
+        return 0.7f + 0.3f * (t - 0.75f) / 0.25f;
+    case Dramaturgy::Marathon:
+        // A night of many hours: a warm-up to a fifth, two peaks with a valley between, a long closing.
+        if (t < 0.2f) return 0.35f + 1.0f * t;
+        if (t < 0.8f) return 0.75f + 0.2f * static_cast<float>(std::sin(2.0 * 3.141592653589793 * 2.0 * (t - 0.2f) / 0.6f - 1.5707963));
+        return 0.55f - 0.2f * (t - 0.8f) / 0.2f;
     default: return t < 0.7f ? 0.5f + 0.5f * t / 0.7f : 1.0f - 0.3f * (t - 0.7f) / 0.3f;   // Peak
     }
 }
@@ -124,6 +134,8 @@ float setTempo(Dramaturgy d, float t)
     case Dramaturgy::Closing: return 132.0f - 5.0f * t;
     case Dramaturgy::Sunday: return 126.0f + 2.0f * t;
     case Dramaturgy::Flat: return 130.0f;
+    case Dramaturgy::Cruise: return t < 0.75f ? 129.0f + 2.0f * t : 130.5f + 2.5f * (t - 0.75f) / 0.25f;
+    case Dramaturgy::Marathon: return t < 0.6f ? 126.0f + 8.0f * t / 0.6f : 134.0f - 6.0f * (t - 0.6f) / 0.4f;   // Nodge's climb, a glide down
     default: return 128.0f + 6.0f * t;   // Peak (Dok. 6: Berghain 06 climbs to 134)
     }
 }
@@ -175,6 +187,7 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         req.blocks = blocks;
         req.energy = e;
         req.mixable = true;
+        req.quickStart = i == 0;   // (Phase 11: nothing lies under the first one's intro)
         SetTrack st;
         st.energy = e;
         st.seed = trackSeed;

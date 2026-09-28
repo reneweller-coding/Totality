@@ -226,12 +226,15 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                    TrackInfo* info)
 {
     const StyleProfile prof = req.profile != nullptr ? *req.profile : profileOf(p);
+    // Phase 11: every stream of a track is the seed's in its style -- one seed in two styles gave two tracks with the same
+    // form, the same landings and the same breaks at the same bars (28.09.2026).
+    const uint64_t tseed = mixSeed(seed, hashName(prof.name));
     const auto pid = [&](Module m, int i, int k) { return p.id(m, i, k); };
     const bool autoOn = p.getInt(pid(Module::Compose, 0, compose::Auto)) != 0;
     const float energy = req.energy;
 
     // ---------------------------------------------------------------- harmony: tempo, key, scale, the low end's owner
-    Rng hr = streamOf(seed, cur, unit, "harmony");
+    Rng hr = streamOf(tseed, cur, unit, "harmony");
     const float uBpm = hr.uniform(), uScale = hr.uniform(), uMono = hr.uniform(), uLow = hr.uniform();
     const int uKey = hr.below(12);
     float bpm = req.bpm > 0.0f ? req.bpm
@@ -252,7 +255,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                                 : p.getInt(pid(Module::Compose, 0, compose::LowOwner)) == static_cast<int>(LowOwner::Sub);
 
     // ---------------------------------------------------------------- form
-    Rng fr = streamOf(seed, cur, unit, "form");
+    Rng fr = streamOf(tseed, cur, unit, "form");
     const float uForm = fr.uniform(), uIntro = fr.uniform(), uRed = fr.uniform(), uRedLen = fr.uniform(), uRedPos = fr.uniform();
     const float uRumble = fr.uniform(), uEdges = fr.uniform();
     FormType form = req.form;
@@ -312,7 +315,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
 
     // ---------------------------------------------------------------- layers: the pool and the order of entry
-    Rng lr = streamOf(seed, cur, unit, "layers");
+    Rng lr = streamOf(tseed, cur, unit, "layers");
     std::vector<LayerId> pool;
     std::vector<float> keep;   // how firmly a layer stays when the pool must shrink: its chance, scattered
     for (const LayerChance& c : prof.pool) {
@@ -407,7 +410,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick) { introPerc = id; break; }
 
     // ---------------------------------------------------------------- rack
-    Rng rr = streamOf(seed, cur, unit, "rack");
+    Rng rr = streamOf(tseed, cur, unit, "rack");
     RackSettings rs;
     rs.keyRoot = key;
     rs.scale = scale;
@@ -418,7 +421,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     rs.reroll = prof.reroll;
     rs.polymeterChance = prof.polymeterChance;
     rs.fillChance = prof.fillChance;
-    RackPlan plan = makeRackPlan(rs, streamSeed(seed, cur, unit, "rack"));
+    RackPlan plan = makeRackPlan(rs, streamSeed(tseed, cur, unit, "rack"));
     for (int l = 0; l < kNumLayers; ++l) {
         const int n = cur != nullptr ? cur->count(unit + "rack." + kLayerUnit[l]) : 0;
         if (n > 0) plan.layerSeed[l] = mixSeed(mixSeed(plan.seed, 0x4C41594552ull + static_cast<uint64_t>(l)), static_cast<uint64_t>(n));
@@ -427,7 +430,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     if (monotonic) plan.bassSize = 1;
     // The bass at most two tones (limitHarmony's first rule) before the bass's figure reads its second.
     if (plan.bassSize > 2) { plan.bassSize = 2; plan.bassSet[0] = 0; plan.bassSet[1] = 7; }
-    makeFigure(plan, figure, streamSeed(seed, cur, unit, "figure"));
+    makeFigure(plan, figure, streamSeed(tseed, cur, unit, "figure"));
     limitHarmony(plan, pool, subOwns);
     int bands[kNumParts];
     partBands(plan, bands);
@@ -437,7 +440,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // among the presets made for its role -- then the style's mix (its recipe), then its ranges: a knob a preset sets is
     // held inside the style's range, a knob no preset sets is drawn in it. Every knob the composer manages is set, at the
     // track's start, as an absolute value (Score::knobs): the knobs show them while the track plays (Engine.h).
-    Rng sr = streamOf(seed, cur, unit, "sounds");
+    Rng sr = streamOf(tseed, cur, unit, "sounds");
     TrackKnobs knobs{ p, {} };
     std::vector<SoundPick> picks;
     const bool pickSounds = p.getBool(pid(Module::Compose, 0, compose::PickSounds));
@@ -497,7 +500,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     sc.sounds = picks;
 
     // ---------------------------------------------------------------- events on the body's 8-bar lines
-    Rng er = streamOf(seed, cur, unit, "events");
+    Rng er = streamOf(tseed, cur, unit, "events");
     std::vector<BarMods> mods(static_cast<size_t>(bars));
     struct Throw { int bar; };
     std::vector<Throw> throws;
@@ -660,7 +663,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
 
     // ---------------------------------------------------------------- blocks, their operation and their candidates
-    const uint64_t blocksSeed = streamSeed(seed, cur, unit, "blocks");
+    const uint64_t blocksSeed = streamSeed(tseed, cur, unit, "blocks");
     LayerState st;
     st.active[L(LayerId::Kick)] = true;
     std::vector<LayerId> queue;   // what may still enter, in order
@@ -860,9 +863,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             for (int bar = first; bar < first + 32; ++bar) {
                 const int in = bar - first;
                 if (b == 0 && form != FormType::Endless) {
-                    if (bar == 8) enter(bar, LayerId::ClosedHat, true);
-                    if (bar == 16) { s.active[L(LayerId::RollingHat)] = true; s.density[L(LayerId::RollingHat)] = 0.5f; eb[L(LayerId::RollingHat)] = bar; op(bar, OpKind::Add, LayerId::RollingHat); }
-                    if (bar == 24 && introPerc != LayerId::Count) enter(bar, introPerc, true);
+                    // (Phase 11: a set's first track brings them at bars 5, 9 and 13.)
+                    const int step = req.quickStart ? 4 : 8;
+                    if (bar == step) enter(bar, LayerId::ClosedHat, true);
+                    if (bar == 2 * step) { s.active[L(LayerId::RollingHat)] = true; s.density[L(LayerId::RollingHat)] = 0.5f; eb[L(LayerId::RollingHat)] = bar; op(bar, OpKind::Add, LayerId::RollingHat); }
+                    if (bar == 3 * step && introPerc != LayerId::Count) enter(bar, introPerc, true);
                 }
                 if (outro && b < blocks - 1 && in % 8 == 0) {
                     LayerId gone = LayerId::Count;
@@ -1001,7 +1006,8 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     const double introEnd = static_cast<double>(bodyFirst) * 32.0 * kBar, outroStart = static_cast<double>(bodyEnd) * 32.0 * kBar;
     // Intro: the hats' bus opens from 1.5 kHz (Dok. 8.5: "Perc-Bus LP 800 Hz -> offen"); outro: it closes in the last 16 bars.
     if (form != FormType::Endless) {
-        sc.gestures.push_back(knobs.ramp(hatsCut, 8.0 * kBar, introEnd - 8.0 * kBar, 1500.0f, knobs.get(hatsCut), GestureShape::Linear, 0));
+        const double open = req.quickStart ? 4.0 * kBar : 8.0 * kBar, over = req.quickStart ? 8.0 * kBar : introEnd - 8.0 * kBar;
+        sc.gestures.push_back(knobs.ramp(hatsCut, open, over, 1500.0f, knobs.get(hatsCut), GestureShape::Linear, 0));
         sc.gestures.push_back(knobs.ramp(hatsCut, static_cast<double>(bars - 16) * kBar, 16.0 * kBar, knobs.get(hatsCut), 2500.0f, GestureShape::Linear, 0));
     }
     // The rumble with the body (p 0.7; PLAN 7.2's intro is "Kick (+Rumble)"): out in the intro and the outro, in on the
@@ -1023,7 +1029,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
     // Micro: the rolling hat's decay moves a few per cent every 16 bars of the body; the open hat's grows from 100 to
     // 400 ms over the 16 bars after it enters; a chord enters 9 dB under its level and steps up every four bars.
-    Rng mr = streamOf(seed, cur, unit, "hands");
+    Rng mr = streamOf(tseed, cur, unit, "hands");
     {
         const int rollDecay = pid(Module::Perc, 1, perc::NoiseDecay), ohDecay = pid(Module::Perc, 2, perc::NoiseDecay);
         const float d0 = knobs.get(rollDecay);

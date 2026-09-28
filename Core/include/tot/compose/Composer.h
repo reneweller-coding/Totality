@@ -66,6 +66,9 @@ struct TrackRequest {
     int blocks = 0;                          ///< 0: from compose.minutes
     float energy = -1.0f;                    ///< the set's energy here, 0..1: towards the Peak and a higher density
     bool mixable = false;                    ///< a set's track: never Endless
+    /** Phase 11: a set's first track -- nothing under its intro -- brings its hats, its rolling hat and its perc at bars
+     *  3, 5 and 9 instead of 9, 17 and 25, and opens the hats' bus over eight bars: the set is under way in 16 bars. */
+    bool quickStart = false;
 };
 
 /** @brief What a track tells the set, the cues and the displays. */

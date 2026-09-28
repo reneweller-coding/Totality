@@ -2,9 +2,12 @@
  * @file Set.h
  * @brief The set composer (PLAN 7.1, 7.7): hours of tracks on two decks, mixed as a Berlin DJ mixes them.
  *
- * **Dramaturgy.** A set follows one of five arcs of energy and tempo: Warm-up (125 -> 130 BPM, rising), Peak
- * (128 -> 134, highest at 70 %), Closing (132 -> 127, falling), Sunday (126 -> 128, a slow wave) and Flat (130). The tempo
- * moves monotonically, at most 1 BPM a track, and ramps inside the blend. With set.journey the styles wander with the
+ * **Dramaturgy.** A set follows one of seven arcs of energy and tempo: Warm-up (125 -> 130 BPM, rising), Peak
+ * (128 -> 134, highest at 70 %), Closing (132 -> 127, falling), Sunday (126 -> 128, a slow wave), Flat (130), and since
+ * Phase 11 Cruise (Klock: hard from the start, easing into a long cruise within a tenth, building in the last quarter;
+ * 129 -> 133) and Marathon (a night of many hours -- set.minutes goes to twelve hours --: a warm-up, two peaks with a
+ * valley between, a long closing; 126 -> 134 at 60 %, gliding to 128). The tempo moves at most 1 BPM a track and ramps
+ * inside the blend. The first track, with nothing under its intro, is under way in 16 bars (TrackRequest::quickStart). With set.journey the styles wander with the
  * energy along Dub, Hypnotic, Ostgut, Raw (morphed between neighbours), centred on the knobs' style (energy 0.5 is it,
  * the extremes a rung and a fifth away); else the knobs' style plays throughout.
  *

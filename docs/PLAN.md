@@ -22,6 +22,20 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Abend: Phase 11, Kleinigkeiten mit Wirkung.** Auf "Bitte baue alles ein, was du direkt ohne mein Feedback
+machen kannst" (nach meiner Liste von Ideen):
+
+- **Ein Seed, zwei Stile, zwei Tracks:** alle Ströme eines Tracks mischen den Namen seines Stils ein (vorher gab ein
+  Seed in Hypnotic und Ostgut dieselbe Form, dieselben Landungen und Pausen an denselben Takten).
+- **Das Set kommt schneller in Fahrt:** der erste Track eines Sets, unter dessen Intro nichts liegt, bringt Hats,
+  rollende Hat und Perc bei Takt 5, 9 und 13 statt 9, 17 und 25 und öffnet den Hat-Bus über acht Takte
+  (`TrackRequest::quickStart`).
+- **Zwei Dramaturgien mehr:** Cruise (Klock, Mix-Dok. 6: "starts hard, then in 15 minutes eases into a supercruise",
+  baut in der letzten halben Stunde wieder auf; 129 → 133 BPM) und Marathon (Warm-up, zwei Höhepunkte mit einem Tal,
+  langes Closing; 126 → 134 bei 60 %, zurück auf 128). Ein Set darf jetzt zwölf Stunden lang sein.
+- **Kein Basston außerhalb der Skala:** das Bass-Alphabet kennt b2 und b5; der Riff der Figur und die Basslinie nehmen
+  sie nur, wo die Skala sie hat, sonst die Quinte (von der Stil-Mischung aufgedeckt: Dub Seed 5 und 6).
+
 **28.09.2026, Nachmittag: Phase 10, der Groove.** Nach dem Hören von `out/p9/set30_nachher.wav`: "In den ersten 3
 Minuten passiert praktisch überhaupt nichts ausser Kick und Hi-Hat ... Das kann doch so niemals der Standard im Berliner
 Techno sein. Ausserdem gibt es praktisch gar keine Percussion mehr." Die Partitur gab ihm recht: der erste Track spielte

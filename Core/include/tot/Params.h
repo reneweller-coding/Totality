@@ -205,7 +205,10 @@ enum : int { Use, BpmLow, BpmHigh, ArcWeight, PeakWeight, EndlessWeight, SubChan
              Count };
 }
 /** @brief The set's dramaturgies (PLAN 7.1). */
-enum class Dramaturgy : int { WarmUp = 0, Peak, Closing, Sunday, Flat, Count };
+enum class Dramaturgy : int { WarmUp = 0, Peak, Closing, Sunday, Flat,
+                              /** Phase 11: Klock's arc ("starts hard, then in 15 minutes eases into a supercruise",
+                               *  building again in the last half hour) and a night of many hours. */
+                              Cruise, Marathon, Count };
 /** @brief Parameters of the granular cloud (PLAN 5.7, Cloud.h). */
 namespace cloud {
 enum : int { Level, Density, Size, Pitch, Spray, PingSend, ChordSend, PlateSend, Count };

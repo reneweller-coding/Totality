@@ -1576,6 +1576,29 @@ void testMix()
     composeSet(*p, 11, 40.0, nullptr, &b);
     check(!a.moves.empty() && clear && b.moves.empty(), "the DJ's hand moves between the blends, clear of the tracks' own moments",
           fmt("%zu moves", a.moves.size()));
+    // Phase 11: Klock's cruise starts hard and eases, and builds at its end; a marathon rises, peaks and closes; neither
+    // goes over 136 BPM; the first track of a set is under way in 16 bars.
+    const auto arc = [&](const char* dram, double minutes, std::vector<float>& energy, float& topBpm) {
+        auto q = std::make_unique<ParamStore>();
+        q->parseText(std::string("set.dramaturgy=") + dram);
+        SetInfo c;
+        composeSet(*q, 3, minutes, nullptr, &c);
+        topBpm = 0.0f;
+        for (const SetTrack& t : c.tracks) { energy.push_back(t.energy); topBpm = std::max(topBpm, t.info.bpm); }
+        return c;
+    };
+    std::vector<float> cruise, marathon;
+    float cruiseTop = 0.0f, marathonTop = 0.0f;
+    const SetInfo c = arc("Cruise", 90.0, cruise, cruiseTop);
+    arc("Marathon", 180.0, marathon, marathonTop);
+    const float cruiseMid = cruise[cruise.size() / 2], marathonTop3 = *std::max_element(marathon.begin(), marathon.end());
+    const bool cruiseOk = cruise.front() > cruiseMid && cruise.back() > cruiseMid && cruiseTop <= 136.0f;
+    const bool marathonOk = marathon.front() < marathonTop3 && marathon.back() < marathonTop3 && marathonTop <= 136.0f;
+    bool quick = false;
+    for (const BlockOp& o : s.decks[0].ops) quick = quick || (o.kind == OpKind::Add && o.beat == 48.0);   // the first perc at bar 13
+    check(cruiseOk && marathonOk && quick, "Cruise and Marathon keep their arcs under 136 BPM; the first track under way in 16 bars",
+          fmt("cruise %.2f / %.2f / %.2f, marathon %.2f .. %.2f .. %.2f, %zu tracks", cruise.front(), cruiseMid, cruise.back(),
+              marathon.front(), marathonTop3, marathon.back(), c.tracks.size()));
 }
 
 /** Blocks of 1, 37 and 512 samples give the same bits (the raster and the event splits, Engine.h). */
