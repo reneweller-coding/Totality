@@ -14,6 +14,11 @@ set(TOT_THIRDPARTY "${TOT_ROOT}/ThirdParty" CACHE PATH "OpenXR loader and Oboe (
 # FMA, and the scalar reference stops matching the NEON lanes (Vec.h, Tests/vectest.cpp).
 add_compile_options(-ffp-contract=off)
 
+# The version from the root project() line, as the desktop build has it (the rekordbox export writes it, Export.cpp).
+file(STRINGS "${TOT_ROOT}/CMakeLists.txt" TOT_PROJECT_LINE REGEX "^project\\(Totality VERSION")
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" TOT_VERSION_STRING "${TOT_PROJECT_LINE}")
+add_compile_definitions(TOT_VERSION="${TOT_VERSION_STRING}")
+
 # The engine, unchanged; TOT_AVX2 means nothing on arm64 (Core/CMakeLists.txt guards it on the processor).
 set(TOT_AVX2 OFF CACHE BOOL "" FORCE)
 add_subdirectory("${TOT_ROOT}/Core" Core)
