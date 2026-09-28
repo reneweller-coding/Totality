@@ -309,15 +309,24 @@ std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, dou
         for (int round = 0; round < 4; ++round) {
             e->load(s);
             // In the balance's three places, the largest excess (the loudest part had the figure breathing out, and
-            // the mids were full where it played: 28.09.2026, -4.3 dB against a ceiling of -9.8).
+            // the mids were full where it played: 28.09.2026, -4.3 dB against a ceiling of -9.8) -- of the places
+            // where the kick band stands (within 10 dB of the fullest): in a set, 40 bars before the loudest part can
+            // lie before the bass swap, its kick band empty and its mids read 30 dB over it.
             float excess = -100.0f;
+            double read[3][3] = {};
+            int places = 0;
+            double fullest = 0.0;
             for (const double back : { 0.0, 64.0, 160.0 }) {
                 const double at = m.peakBeat - back;
                 if (back > 0.0 && at < m.beat + 128.0) continue;
                 PartPeaks unused;
-                double bands[3] = {};
-                if (!readParts(*e, s, at, kBalSeconds, unused, bands, stop)) return {};
-                if (bands[0] <= 1e-12) continue;
+                if (!readParts(*e, s, at, kBalSeconds, unused, read[places], stop)) return {};
+                fullest = std::max(fullest, read[places][0]);
+                ++places;
+            }
+            for (int k = 0; k < places; ++k) {
+                const double* bands = read[k];
+                if (bands[0] <= 1e-12 || bands[0] < 0.1 * fullest) continue;
                 const float mid = static_cast<float>(10.0 * std::log10(std::max(bands[1], 1e-30) / bands[0]));
                 const float high = static_cast<float>(10.0 * std::log10(std::max(bands[2], 1e-30) / bands[0]));
                 excess = std::max(excess, std::max(mid - ceilMid, high - ceilHigh));
