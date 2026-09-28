@@ -675,12 +675,22 @@ void testComposer()
             const std::string who = fmt("%s seed %d (%s)", kStyleNames[style], static_cast<int>(seed), kFormNames[static_cast<int>(info.form)]);
             const int blocks = info.bars / 32;
             const bool endless = info.form == FormType::Endless;
-            // One staircase operation at every block boundary.
+            // One staircase operation at every block boundary -- or, since Phase 8, a hat's or a perc's entry on the
+            // block's 8- or 16-bar line in its place (Dok. "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase").
+            const auto small = [](int layer) {
+                const LayerId id = static_cast<LayerId>(layer);
+                return id == LayerId::OpenHat || id == LayerId::Ride || id == LayerId::RollingHat || id == LayerId::ClapA
+                    || id == LayerId::Shaker || id == LayerId::TomConga || id == LayerId::Rim || id == LayerId::GhostKick;
+            };
             for (int b = 0; b < blocks; ++b) {
-                int n = 0;
-                for (const BlockOp& o : s.ops)
-                    if (std::fabs(o.beat - 128.0 * b) < 1e-9 && o.kind != OpKind::KickOut && o.kind != OpKind::Return) ++n;
-                if (n != 1) { fail(badOps, who + fmt(": %d operations at block %d", n, b + 1)); break; }
+                int n = 0, inside = 0;
+                for (const BlockOp& o : s.ops) {
+                    if (o.kind == OpKind::KickOut || o.kind == OpKind::Return) continue;
+                    if (std::fabs(o.beat - 128.0 * b) < 1e-9) ++n;
+                    else if ((std::fabs(o.beat - 128.0 * b - 32.0) < 1e-9 || std::fabs(o.beat - 128.0 * b - 64.0) < 1e-9)
+                             && o.kind == OpKind::Add && small(o.layer)) ++inside;
+                }
+                if (!(n == 1 || (n == 0 && inside == 1))) { fail(badOps, who + fmt(": %d operations at block %d, %d inside it", n, b + 1, inside)); break; }
             }
             for (const BlockOp& o : s.ops) {
                 if (std::fabs(std::fmod(o.beat, 16.0)) > 1e-9) fail(badLines, who + fmt(": an operation at beat %.2f", o.beat));
@@ -718,7 +728,8 @@ void testComposer()
                 fail(badLevel, who + ": the loudness mark");
         }
     }
-    check(badOps == 0, "exactly one operation at every block boundary", badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
+    check(badOps == 0, "exactly one operation a block, on its first bar (a hat or a perc may enter on its 8- or 16-bar line)",
+          badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
     first.clear();
     check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
     check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted)", first);
@@ -728,6 +739,88 @@ void testComposer()
     check(badLate == 0, "at least two layers enter in the second half", first);
     check(badPool == 0, "at least four layers beside the kick", first);
     check(badLevel == 0, "a loudness mark in the body", first);
+}
+
+/** Phase 8: a signature voice that plays its motif, waves in the body, a reroll of the figure that keeps the rest. */
+void testFigure()
+{
+    section("the figure and the waves (Phase 8)");
+    int tracks = 0, figures = 0, steady = 0, motifs = 0, bodies = 0, wavy = 0, moving = 0;
+    std::string first;
+    const auto partOf = [](int layer) {
+        switch (static_cast<LayerId>(layer)) {
+        case LayerId::Chord: return Part::Chord;
+        case LayerId::Acid: return Part::Acid;
+        case LayerId::Bass: return Part::Bass;
+        default: return Part::Ping;
+        }
+    };
+    // The onsets of a part per bar, as sixteen bits (the feel, swing and jitter are far under half a sixteenth).
+    const auto masks = [](const Score& s, Part part) {
+        std::map<int, uint32_t> m;
+        for (const NoteEvent& n : s.notes) {
+            if (n.part != part) continue;
+            const int step = static_cast<int>(std::floor(n.beat * 4.0 + 0.5));
+            m[step / 16] |= 1u << (step % 16);
+        }
+        return m;
+    };
+    for (int style = 0; style < 4; ++style) {
+        for (uint64_t seed = 1; seed <= 6; ++seed) {
+            auto p = std::make_unique<ParamStore>();
+            p->set(p->find("compose.style"), static_cast<float>(style));
+            TrackInfo info;
+            const Score s = composeTrack(*p, seed, TrackRequest{}, nullptr, std::string(), &info);
+            ++tracks;
+            const std::string who = fmt("%s seed %d", kStyleNames[style], static_cast<int>(seed));
+            if (!info.moments.empty()) ++moving;
+            else if (first.empty()) first = who + ": nothing moves between the operations";
+            if (info.form != FormType::Endless && info.outroBar - info.bassBar >= 128) {
+                ++bodies;
+                if (info.landings.size() >= 2) ++wavy;
+                else if (first.empty()) first = who + fmt(": %zu landings", info.landings.size());
+            }
+            if (info.figure < 0) {
+                if (!info.monotonic && first.empty()) first = who + ": no figure";
+                continue;
+            }
+            ++figures;
+            if (static_cast<LayerId>(info.figure) == LayerId::Ping) continue;   // a cycle against the bar
+            // The motif: a bar's onsets equal those of the bar a motif before, in most bars where both play.
+            ++motifs;
+            const std::map<int, uint32_t> m = masks(s, partOf(info.figure));
+            int same = 0, compared = 0;
+            for (const auto& [bar, mask] : m) {
+                const auto before = m.find(bar - info.figureBars);
+                if (bar < info.figureBar + info.figureBars || bar >= info.outroBar || before == m.end()) continue;
+                ++compared;
+                same += mask == before->second ? 1 : 0;
+            }
+            if (compared > 16 && same >= compared * 8 / 10) ++steady;
+            else if (first.empty()) first = who + fmt(": the %s's motif repeats in %d of %d bars", kLayerNames[info.figure], same, compared);
+        }
+    }
+    check(figures >= tracks * 9 / 10, "a signature voice in (almost) every track", fmt("%d of %d", figures, tracks));
+    check(steady == motifs, "the figure plays its motif, the same in its bars", steady == motifs ? fmt("%d motifs", motifs) : first);
+    check(wavy == bodies && moving == tracks, "the body runs in waves, something moves between the operations",
+          wavy == bodies && moving == tracks ? fmt("%d bodies", bodies) : first);
+    // The figure drawn again: another motif for the same voice; the kick stays.
+    auto p = std::make_unique<ParamStore>();
+    p->set(p->find("compose.style"), 1.0f);
+    TrackInfo ia, ib;
+    const Score a = composeTrack(*p, 42, TrackRequest{}, nullptr, std::string(), &ia);
+    Curation fig;
+    fig.reroll("figure");
+    const Score b = composeTrack(*p, 42, TrackRequest{}, &fig, std::string(), &ib);
+    const auto notesOf = [](const Score& s, Part part) {
+        std::vector<std::pair<double, int>> v;
+        for (const NoteEvent& n : s.notes) if (n.part == part) v.emplace_back(n.beat, n.pitch);
+        return v;
+    };
+    const bool sameVoice = ia.figure == ib.figure && ia.figure >= 0;
+    const bool otherMotif = sameVoice && notesOf(a, partOf(ia.figure)) != notesOf(b, partOf(ib.figure));
+    check(sameVoice && otherMotif && notesOf(a, Part::Kick) == notesOf(b, Part::Kick), "rerolling the figure draws another motif and keeps the kick",
+          fmt("the %s", ia.figure >= 0 ? kLayerNames[ia.figure] : "none"));
 }
 
 /** Curation: the same seed gives the same track; rerolling one unit changes it and leaves the others bit for bit. */
@@ -1762,6 +1855,7 @@ const TestSection kSections[] = {
     { "testDub", testDub },
     { "testLeveler", testLeveler },
     { "testComposer", testComposer },
+    { "testFigure", testFigure },
     { "testCuration", testCuration },
     { "testSet", testSet },
     { "testBlockSizes", testBlockSizes },

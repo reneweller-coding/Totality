@@ -10,8 +10,11 @@ Peak (a long kick-out and the densest block after it), the Endless (full from th
 from four style profiles, Hypnotic, Ostgut, Dub and Raw Peak, which morph into each other and move along a Dub and a
 Hypnotic axis; or a style of your own (the Style page). One operation per 32-bar block, events on the 8-bar lines,
 automation by two hands, eight candidates per block chosen against a corridor of bar similarity fitted to thirty
-reference tracks. Every part on its own seed stream: form, harmony, rack, layers, blocks, events, hands, sounds can be
-rerolled alone.
+reference tracks. Every track has a figure, the voice it is remembered by -- a ping motif, a dub stab, a bass riff or a
+303 line --, and its body runs in waves: the figure's filters and the hats open towards a landing, something drops away
+just before it (the centre, the kick and the claps, the figure), and an element breathes out between two landings and
+comes back with a throw. Every part on its own seed stream: form, harmony, rack, layers, blocks, events, hands, sounds,
+figure can be rerolled alone.
 
 **Sets.** Up to four hours on two decks and a third for loops: five dramaturgies of tempo and energy, tracks in
 neighbouring Camelot keys, blends of 16 or 32 bars with the bass swapped on a 32-bar line through the isolator, loops of

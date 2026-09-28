@@ -26,6 +26,9 @@ For every recording of Tools/ref_sets.txt (fetched by Tools/fetch_refs.py) and f
               correlation of the bars' continuous onset profiles (3 bands x 16 steps) at the best of those lags (the
               binary states flip where a quiet sixteenth sits near the threshold, 27.09.2026); and the micro-change rate, the
               median change of the band energies from one bar to the next, in dB
+  meso        the ups and downs of the phrase level (28.09.2026): low, mid and high band energies smoothed over eight
+              bars, their range over the body (10th to 90th percentile) and the brightness's, and the moves -- where some
+              band's eight-bar level differs by 2 dB from the eight bars before -- per 64 bars (meso_movement)
 
 Only statistics leave this tool: Tools/ref_stats.json holds a row per recording and the medians per profile.
 
@@ -270,6 +273,7 @@ def measure(path, bpm_hint=None, balance_start=None):
     # bands, the median over the body.
     dbs = 10 * np.log10(per_bar[body] + 1e-20)
     micro = float(np.median(np.abs(np.diff(dbs, axis=0)).mean(axis=1))) if dbs.shape[0] > 2 else float("nan")
+    meso = meso_movement(per_bar, bars)
 
     # Bar similarity without a threshold: every bar's flux in the three bands on the sixteen steps (48 values, each band
     # divided by its median over the body), and the median correlation of a bar with the bar 1, 2 or 4 before -- the best
@@ -359,7 +363,40 @@ def measure(path, bpm_hint=None, balance_start=None):
         "loop_entropy": round(loop_h, 3), "bars_repeated": round(same, 3), "loop_repeated": round(loop_rep, 3),
         "bar_similarity": round(sim, 3),
         "micro_change_db": round(micro, 2),
+        **meso,
     }
+
+
+def meso_movement(per_bar, bars):
+    """The ups and downs of the phrase level (28.09.2026): what moves over eight bars, not from one bar to the next.
+
+    Three groups of the per-bar band energies -- low (20-250 Hz), mid (250 Hz-5 kHz, where stabs, pings and 303s live),
+    high (5-10.5 kHz) -- each smoothed over eight bars (the mean power of a sliding window), over the body (the middle
+    three fifths). Per group the range of the smoothed level (10th to 90th percentile, dB) and the brightness (high over
+    low) likewise; and the moves: the places where some group's eight-bar level differs from the eight bars before by at
+    least 2 dB, counted once per eight bars, per 64 bars of body. A plateau that never changes reads 0 moves; a track
+    that breathes, builds and lands reads several.
+    """
+    out = {"meso_low_db": float("nan"), "meso_mid_db": float("nan"), "meso_high_db": float("nan"),
+           "meso_bright_db": float("nan"), "meso_moves_64": float("nan")}
+    b0, b1 = bars // 5, bars - bars // 5
+    if b1 - b0 < 32:
+        return out
+    groups = [per_bar[:, 0:2].sum(axis=1), per_bar[:, 2:4].sum(axis=1), per_bar[:, 4]]
+    kern = np.ones(8) / 8.0
+    smooth = [10 * np.log10(np.convolve(g, kern, mode="valid") + 1e-20) for g in groups]   # index i: bars i .. i+7
+    lo, hi = b0, b1 - 8
+    rng = lambda v: float(np.percentile(v[lo:hi], 90) - np.percentile(v[lo:hi], 10))
+    out["meso_low_db"], out["meso_mid_db"], out["meso_high_db"] = (round(rng(s), 2) for s in smooth)
+    out["meso_bright_db"] = round(rng(smooth[2] - smooth[0]), 2)
+    moves, last = 0, -99
+    for i in range(max(lo, 8), hi):
+        if i - last < 8:
+            continue
+        if max(abs(s[i] - s[i - 8]) for s in smooth) >= 2.0:
+            moves, last = moves + 1, i
+    out["meso_moves_64"] = round(moves * 64.0 / (hi - max(lo, 8)), 2)
+    return out
 
 
 # ------------------------------------------------------------------------------------------------ output
@@ -369,7 +406,8 @@ PRINT = [("bpm", "BPM", "{:6.2f}"), ("kick_hz", "kick", "{:5.1f}"), ("sub_share"
          ("lufs", "LUFS", "{:5.1f}"), ("loud20", "L20", "{:5.1f}"), ("lra", "LRA", "{:4.1f}"), ("entropy_rate", "h", "{:4.2f}"), ("pir", "PIR", "{:4.2f}"),
          ("loop_entropy", "hloop", "{:5.2f}"), ("bars_repeated", "rep", "{:4.2f}"), ("loop_repeated", "lrep", "{:4.2f}"),
          ("bar_similarity", "sim", "{:4.2f}"),
-         ("micro_change_db", "micro", "{:4.2f}")]
+         ("micro_change_db", "micro", "{:4.2f}"), ("meso_mid_db", "mMid", "{:4.1f}"), ("meso_bright_db", "mBri", "{:4.1f}"),
+         ("meso_moves_64", "moves", "{:4.1f}")]
 
 
 def row_text(name, r):
@@ -385,7 +423,7 @@ def row_text(name, r):
 
 
 def header():
-    widths = [6, 5, 5, 6, 5, 5, 5, 4, 4, 4, 5, 4, 4, 4, 4]
+    widths = [6, 5, 5, 6, 5, 5, 5, 4, 4, 4, 5, 4, 4, 4, 4, 4, 4, 5]
     return f"{'':44s} " + " ".join(f"{h:>{w}s}" for (_, h, _), w in zip(PRINT, widths))
 
 
@@ -427,7 +465,7 @@ def main():
     keys = ["bpm", "kick_hz", "sub_share", "low_share", "high_share", "centroid", "width_db", "low_side_db", "correlation",
             "lufs", "loud20", "lra", "true_peak", "entropy_rate", "pir", "loop_entropy", "bars_repeated", "loop_repeated", "bar_similarity",
             "micro_change_db",
-            "boundary_spacing_on_8"]
+            "boundary_spacing_on_8", "meso_low_db", "meso_mid_db", "meso_high_db", "meso_bright_db", "meso_moves_64"]
     profiles = {}
     for prof in sorted({r["profile"] for r in rows}) + ["all"]:
         sub = [r for r in rows if prof == "all" or r["profile"] == prof]

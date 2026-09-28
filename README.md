@@ -9,7 +9,9 @@ Quest. The sibling of [Noctuary](../AmbientSynth) (ambient), Phosphene (psytranc
 **Version 1.0.0 (28.09.2026).** A composer writes tracks in three forms (Arc, Peak, Endless) from four style profiles
 (Hypnotic, Ostgut, Dub, Raw Peak) that morph into each other: one operation per 32-bar block, events on the 8-bar
 lines, automation by two "hands", harmony by the research document's rules, eight candidates per block judged against a
-hypnosis corridor. A set composer mixes them on two decks as a Berlin DJ would -- five dramaturgies, the tempo drifting
+hypnosis corridor. Every track has a figure -- a ping motif, a stab, a bass riff or a 303 line it is remembered by --
+and its body runs in waves of 32 or 64 bars that build towards a landing, drop something away just before it and
+breathe in between, as often as the reference records change (`Tools/analyze_ref.py`, meso). A set composer mixes them on two decks as a Berlin DJ would -- five dramaturgies, the tempo drifting
 by at most 1 BPM a track, blends of 16 or 32 bars with a hard bass swap on a 32-bar line through the isolator, live
 loops of the last track on a third deck, breaks from the mixer's effects. Every part is drawn on its own seed stream and
 can be rerolled alone (`.totset`).
@@ -59,7 +61,7 @@ carries cue markers (bass in, kick-outs, returns, outro; in a set every track, s
 JSON. `--loops dir` writes seamless 4- and 8-bar loops of the loudest block with kick, hats and perc alone; `--stems dir`
 a WAV per element, their sum the mix before the master; `--decks dir` a set's decks after their channels;
 `--score-json` the score for the evaluation. `--reroll unit` draws one part again (`form`, `harmony`, `rack`,
-`rack.<layer>`, `layers`, `blocks`, `block<n>`, `events`, `hands`, `sounds`; in a set `track<n>` and
+`rack.<layer>`, `layers`, `blocks`, `block<n>`, `events`, `hands`, `sounds`, `figure`; in a set `track<n>` and
 `track<n>.<unit>`), leaving everything else as it was; `--save-set` and `--load-set` keep it.
 
 `--list` prints every parameter, `--dump-params f.json` describes them; `--set "key=value; ..."` changes them;

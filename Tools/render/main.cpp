@@ -259,6 +259,16 @@ int main(int argc, char** argv)
             std::string layers;
             for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
             std::printf("layers in order: %s\n", layers.c_str());
+            // Phase 8: the figure, the waves' landings and what moves between the operations.
+            if (info.figure >= 0)
+                std::printf("figure: the %s, a motif of %d bar%s, from bar %d\n", kLayerNames[info.figure], info.figureBars,
+                            info.figureBars == 1 ? "" : "s", info.figureBar + 1);
+            if (!info.landings.empty()) {
+                std::string lands;
+                for (int l : info.landings) lands += (lands.empty() ? "" : ", ") + std::to_string(l + 1);
+                std::printf("waves land on bars %s\n", lands.c_str());
+            }
+            for (const auto& [bar, what] : info.moments) std::printf("  bar %4d  %s\n", bar + 1, what.c_str());
             // The composer's presets (Presets.h): per synth, and per lane of the kit.
             std::string sounds;
             for (const SoundPick& k : score.sounds) {

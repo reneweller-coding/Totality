@@ -43,6 +43,7 @@
 #include "tot/compose/Style.h"
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace tot {
@@ -84,6 +85,12 @@ struct TrackInfo {
     float similarity = 0.0f;     ///< the corridor over the body: bar similarity
     float micro = 0.0f;          ///< micro-change, dB
     float density = 0.0f;        ///< onsets per bar
+    int figure = -1;             ///< Phase 8: the signature voice (LayerId), -1: none
+    int figureBar = -1;          ///< where it enters
+    int figureBars = 1;          ///< its motif's length in bars
+    std::vector<int> landings;   ///< Phase 8: the bars where a wave lands
+    /** @brief Phase 8: what moves between the operations -- the waves' downs and breaths -- as (bar, text). */
+    std::vector<std::pair<int, std::string>> moments;
 };
 
 /**
@@ -99,7 +106,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req =
                    const std::string& unit = std::string(), TrackInfo* info = nullptr);
 
 /** @brief The names of a track's units, in stream order. */
-extern const char* const kUnitNames[8];
+extern const char* const kUnitNames[9];
 
 /** @brief The Camelot label of a minor key on pitch class @p key ("8A" for A). */
 std::string camelotOf(int key);

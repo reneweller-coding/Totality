@@ -22,6 +22,58 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Vormittag: Phase 8, Figur und Spannung.** Nach dem ersten Hören ("es gab eben keine richtigen Ups und
+Downs, es plätscherte eben einfach so vor sich hin in einem starren 32-Takt-Raster") und mit dem zweiten
+Recherchedokument des Nutzers (`Berlin Techno: Arrangement und DJ-Mixing im Club`, 28.09.2026; im Folgenden **Mix-Dok.**).
+Befund vorher, gemessen: Im Body änderte sich einmal je 32 Takte etwas, meist Hats oder Percussion; die Dichte stieg
+einmal treppenförmig auf "voll" und blieb dort; tonal spielten Hypnotic-Tracks oft nur den Ping (Seed 7: in 39 % der
+Takte) und eine Drone (2 %). Ein neues Maß in `Tools/analyze_ref.py` (`meso_*`): die Bandenergien tief, mittel und hoch
+über acht Takte geglättet, ihre Spanne über den Body und die **Wechsel**, Stellen, an denen ein Band über acht Takte um
+mindestens 2 dB anders liegt als in den acht davor, je 64 Takte. Die 30 Referenzen: Median **4,2** Wechsel (10.–90.
+Perzentil 1,5–6,6), die Höhen (5–10 kHz) bewegen sich um 5,9 dB. Neun der Kalibriertracks von 1.0.0: Median **1,5**,
+einer 0, einer 0,5, die Höhen im Median um 1,3 dB.
+
+- **Die Figur** (`RackPlan::figure`, `makeFigure`, Mix-Dok. 2: das A-Moll-Motiv von "The Bells", die Bassline von "Energy
+  Flash", die Dub-Chords von "Dawning"): jeder Track hat eine Stimme, an der man ihn wiedererkennt, nach dem Stil gewählt
+  (Hypnotic vor allem der Ping, Ostgut Stab und Bass, Dub der Akkord, Raw die 303; der Bass nur, wo der Sub den Bass
+  besitzt; monoton: keine). Sie spielt ein Motiv von ein oder zwei Takten, vom Einsatz bis zum Ende gleich (Myloops'
+  Anker), und bewegt sich nur über ihre Filter: die 303 eine Linie mit Akzenten und Slides, deren zweiter Takt antwortet;
+  der Akkord einen Stab-Rhythmus des Dub-Idioms (Offbeat-Achtel, Dok.-8.2-Stab, 3-3-2, ein langer Akkord je Takt,
+  Frage und Antwort über zwei Takte, E(5,16)); der Bass ein Riff neben den Vierteln; der Ping einen Zyklus bis drei
+  Töne. Sie setzt im zweiten Body-Block ein (Mix-Dok.: "+Stab bei 65"), der Bass mit dem Body; sie ist immer im Pool und
+  gibt bei der Harmonieregel ihre Töne zuletzt ab. Eigener Strom `figure`: ein Reroll zieht ein anderes Motiv für
+  dieselbe Stimme. Ihr Akkord ist um 70 % dessen leiser, was er länger klingt als die alten Stabs (sonst wurden die
+  Dub-Tracks um 4 dB breiter).
+- **Wellen** (Mix-Dok. 4 und 5, "Automation auf drei Zeitskalen"): vom Einsatz der Figur bis zum Outro läuft der Body in
+  Wellen von 32 oder 64 Takten; die Filter der Figur und der Hat-Bus (Tiefpass bis 2,9 kHz, Pegel bis 5 dB) öffnen
+  zur Landung hin und fallen danach zurück -- ein Kriechen bis zur Landung, ein Bogen über die Mitte oder ein schnelles
+  Öffnen, das langsam schließt. Zwei bis vier Takte vor einer Landung fällt etwas weg, damit sie landet: die Mitte (The
+  Acid Mind: "removing the center"), Kick und Claps (Mills), die Figur, oder die Kick für einen Takt; vor der
+  Hauptlandung (nahe 60 % des Bodys) die Mitte oder die Figur, dazu mit einer Stil-Chance ein Noise-Swell über acht Takte.
+  In der Mitte einer Welle atmet ein Element 8 oder 16 Takte aus und kommt mit einem Delay-Throw zurück (The Acid
+  Minds 64-Takt-Zelle): die Figur, der Bass oder das Rumble, die Percussion, die Tops (Open Hat, Ride, rollende Hat).
+  Die Anteile je Stil sind an der Referenzbewegung gemessen: Hypnotic bewegt sich unten und oben, kaum in der Mitte;
+  Raw oben, bei flacher Lautheit; Ostgut und Dub überall.
+- **Das Raster weicher:** Eine Hat oder Percussion setzt auf Takt 1, 9 oder 17 ihres Blocks ein (0,5 / 0,3 / 0,2; Mix-
+  Dok.: "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase"), Bass, Figur und große Wechsel bleiben auf der 32. Die
+  Grammatik heißt jetzt: eine Operation je Block, auf seinem ersten Takt oder als solcher Einsatz auf seiner 8- oder
+  16-Takt-Linie (`testComposer`); mindestens zwei Einsätze in der zweiten Hälfte, auch wenn die Figur früh kam.
+- **Anzeige:** `tot_render --plan` nennt die Figur, die Landungen und die Momente dazwischen; die Arrange-Seite Figur und
+  Landungen; neuer Reroll-Knopf "figure".
+
+Gemessen an denselben zwölf Tracks (`out/p8/phase8d`, `docs/eval/kalibrierung-phase8.md`): Wechsel je 64 Takte im
+Median **3,8** (Referenzen 4,2): Hypnotic 4,0 (4,5), Ostgut 5,0 (4,6), Dub 3,0 (3,7), Raw 3,5 (3,3); die Höhen bewegen
+sich um 6,3–7,1 dB (5,9). Die ganze Kalibrierung: 12 von 96 Werten außerhalb des 10.–90. Perzentils der Referenzen
+(vorher 14); die Taktähnlichkeit hält den Korridor (1 außerhalb, vorher 3). Offen: Hypnotics Mitten bewegen sich mehr
+als die Referenzen (4,6 dB gegen 2,6; schon vor Phase 8 so), Raws Lautheit bleibt etwas breiter (LRA 2,4 gegen 1,3).
+`selftest` 172/172 mit dem neuen `testFigure`; `ctest` 32 von 32 ohne pluginval.
+
+**Weiter (Mix-Dok. 6--8, vom Nutzer als Ziel genannt: "ein langer Mix, der automatisiert generiert wird"):** Schritt 2,
+die Mix-Engine als Live-Rekomposition -- drei Decks durchgehend, von jedem Track vor allem die Kernblöcke hörbar
+(etwa drei Minuten, die Hälfte überlagert), Elemente geborgt (die Hat von hier, der Perc-Loop von dort), eine DJ-Hand
+an EQ, Filter und Effekten auf drei Zeitskalen, der Set-Bogen nach Klock und Nodge. Schritt 3, die Kalibrierung an
+Mixen (Tracklists von Berghain 04 und 06: Tracks je Stunde, Überlagerung, Tempodrift) und Hörrunden.
+
 **28.09.2026, morgens: Totality.** Der Nutzer hat den Generator umbenannt, weil "Umbra" als Audio-Software vergeben
 ist (Risiko 7). Alles heißt jetzt so: Plugin, Standalone und Installer (`Totality.vst3`, `Totality.exe`, neue AppId,
 damit er nicht in den alten Ordner installiert), der Kern `TotalityCore`, Namensraum `tot::`, Präfix `TOT_` (auch die

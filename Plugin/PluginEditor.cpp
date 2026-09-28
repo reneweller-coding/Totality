@@ -478,6 +478,7 @@ ArrangePage::ArrangePage(TotalityProcessor& p) : proc_(p), view_(p, true)
 {
     addAndMakeVisible(view_);
     which_.setColour(juce::Label::textColourId, kInk);
+    which_.setMinimumHorizontalScale(0.6f);
     addAndMakeVisible(which_);
     sounds_.setColour(juce::Label::textColourId, kDim);
     sounds_.setMinimumHorizontalScale(0.7f);
@@ -508,6 +509,13 @@ void ArrangePage::timerCallback()
              << juce::String(i.style) << ", " << kFormNames[static_cast<int>(i.form)] << ", " << juce::String(i.bpm, 1) << " BPM, "
              << kKeyNames[i.key] << " " << kScaleNames[i.scale] << " (" << juce::String(i.camelot) << "), " << i.bars << " bars, "
              << (i.subOwns ? "the sub owns the low end" : "the rumble owns the low end") << ", bar similarity " << juce::String(i.similarity, 2);
+        // Phase 8: the figure and where the waves land.
+        if (i.figure >= 0)
+            text << "; figure: the " << kLayerNames[i.figure] << " from bar " << (i.figureBar + 1);
+        if (!i.landings.empty()) {
+            text << ", waves land on";
+            for (int l : i.landings) text << " " << (l + 1);
+        }
     }
     which_.setText(text, juce::dontSendNotification);
     // The composer's presets of the track whose sounds the knobs show.
@@ -531,10 +539,11 @@ void ArrangePage::resized()
     sounds_.setBounds(r.removeFromTop(20));
     r.removeFromTop(4);
     auto row = r.removeFromTop(28);
-    for (auto* b : rerolls_) b->setBounds(row.removeFromLeft(104).reduced(2));
-    row.removeFromLeft(12);
-    track_.setBounds(row.removeFromLeft(170).reduced(2));
-    set_.setBounds(row.removeFromLeft(160).reduced(2));
+    // Nine units and the two larger ones in a row of the window's usual width (1180).
+    for (auto* b : rerolls_) b->setBounds(row.removeFromLeft(94).reduced(2));
+    row.removeFromLeft(8);
+    track_.setBounds(row.removeFromLeft(152).reduced(2));
+    set_.setBounds(row.removeFromLeft(140).reduced(2));
     r.removeFromTop(8);
     view_.setBounds(r);
 }

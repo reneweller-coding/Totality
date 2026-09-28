@@ -6,7 +6,9 @@
 #include "tot/compose/Style.h"
 #include "tot/Dsp.h"
 #include <algorithm>
+#include <bit>
 #include <cmath>
+#include <vector>
 
 namespace tot {
 
@@ -354,6 +356,155 @@ RackPlan makeRackPlan(const RackSettings& st, uint64_t seed)
     return plan;
 }
 
+void makeFigure(RackPlan& plan, LayerId voice, uint64_t seed)
+{
+    plan.figure = voice;
+    plan.figBars = 1;
+    plan.figOn = plan.figAccent = plan.figSlide = 0;
+    plan.figLength = 0.5;
+    for (int8_t& p : plan.figPitch) p = 0;
+    if (voice == LayerId::Count) return;
+    Rng rng;
+    rng.seed(mixSeed(seed, 0x464947555245ull));   // "FIGURE"
+    const auto weighted = [&](const float* w, int n) {
+        float sum = 0.0f;
+        for (int i = 0; i < n; ++i) sum += w[i];
+        float u = rng.uniform() * sum;
+        for (int i = 0; i < n; ++i) { if (u < w[i]) return i; u -= w[i]; }
+        return n - 1;
+    };
+    const auto set = [](uint32_t& mask, int pos, bool on) { if (on) mask |= 1u << pos; else mask &= ~(1u << pos); };
+    const auto has = [](uint32_t mask, int pos) { return ((mask >> pos) & 1u) != 0; };
+    const auto inKey = [&](int iv) { return inScale(plan.scale, ((iv % 12) + 12) % 12); };
+
+    switch (voice) {
+    case LayerId::Acid: {
+        // A 303 line on the off-quarter sixteenths (the quarters are the kick's): its alphabet, accents, slides.
+        plan.figBars = rng.uniform() < 0.45f ? 1 : 2;
+        const float density = 0.5f + 0.25f * rng.uniform();
+        const auto pitch = [&]() {
+            const float u = rng.uniform();
+            const int iv = u < 0.45f ? 0 : u < 0.65f ? 12 : u < 0.75f ? 7 : u < 0.85f ? 10 : u < 0.95f ? 3 : 5;
+            return inKey(iv) ? iv : 0;
+        };
+        const auto rollPlace = [&](int pos) {
+            set(plan.figOn, pos, rng.uniform() < density);
+            plan.figPitch[pos] = static_cast<int8_t>(pitch());
+            set(plan.figAccent, pos, rng.uniform() < 0.3f);
+        };
+        for (int s = 0; s < kSteps; ++s) if (s % 4 != 0) rollPlace(s);
+        for (int tries = 0; std::popcount(plan.figOn & 0xFFFFu) < 5 && tries < 64; ++tries) {
+            const int s = 1 + rng.below(15);
+            if (s % 4 != 0) set(plan.figOn, s, true);
+        }
+        if (plan.figBars == 2) {
+            // The answer: the first bar again, two to four places rolled anew.
+            for (int s = 0; s < kSteps; ++s) {
+                set(plan.figOn, 16 + s, has(plan.figOn, s));
+                set(plan.figAccent, 16 + s, has(plan.figAccent, s));
+                plan.figPitch[16 + s] = plan.figPitch[s];
+            }
+            const int changes = 2 + rng.below(3);
+            for (int c = 0; c < changes; ++c) {
+                int s = 1 + rng.below(15);
+                if (s % 4 == 0) ++s;
+                rollPlace(16 + s);
+            }
+        }
+        // The line starts from the root, wherever its first sixteenth falls.
+        for (int pos = 0; pos < 16; ++pos) if (has(plan.figOn, pos)) { plan.figPitch[pos] = 0; break; }
+        // Slides into a sounding sixteenth (the gate holds over).
+        const int places = plan.figBars * kSteps;
+        for (int pos = 0; pos < places; ++pos) {
+            const int next = (pos + 1) % places;
+            if (has(plan.figOn, pos) && has(plan.figOn, next)) set(plan.figSlide, pos, rng.uniform() < 0.2f);
+        }
+        break;
+    }
+    case LayerId::Chord: {
+        // The stab's rhythm (the steps of one or two bars) and its length in beats.
+        struct Rhythm { float w; int bars; uint32_t on; double length; };
+        static const Rhythm kRhythms[] = {
+            { 0.20f, 1, (1u << 2) | (1u << 6) | (1u << 10) | (1u << 14), 0.5 },                                  // the offbeat eighths
+            { 0.15f, 1, (1u << 0) | (1u << 10), 0.5 },                                                             // Dok. 8.2's stab
+            { 0.15f, 1, (1u << 0) | (1u << 3) | (1u << 6) | (1u << 8) | (1u << 11) | (1u << 14), 0.4 },           // 3-3-2 twice
+            { 0.10f, 1, (1u << 3) | (1u << 10), 0.5 },                                                             // a late pair
+            { 0.15f, 1, (1u << 0), 3.0 },                                                                          // one long chord
+            { 0.15f, 2, (1u << 0) | (1u << 6) | (1u << 10) | (1u << 19) | (1u << 26), 0.5 },                       // call, answer
+            { 0.10f, 1, 0, 0.4 },                                                                                  // E(5,16)
+        };
+        float w[7];
+        for (int i = 0; i < 7; ++i) w[i] = kRhythms[i].w;
+        const Rhythm& r = kRhythms[weighted(w, 7)];
+        plan.figBars = r.bars;
+        plan.figLength = r.length;
+        plan.figOn = r.on;
+        if (plan.figOn == 0) {
+            // E(5,16) rotated off the downbeat, from a random start.
+            const uint64_t e = euclidMask(5, 16);
+            const int start = 1 + rng.below(15);
+            for (int k = 0; k < 16 && plan.figOn == 0; ++k) {
+                const uint64_t m = rotateMask(e, 16, start + k);
+                if ((m & 1u) == 0) plan.figOn = static_cast<uint32_t>(m);
+            }
+        }
+        for (int pos = 0; pos < plan.figBars * kSteps; ++pos) if (has(plan.figOn, pos)) { set(plan.figAccent, pos, true); break; }
+        break;
+    }
+    case LayerId::Bass: {
+        struct Riff { float w; uint32_t on; };
+        static const Riff kRiffs[] = {
+            { 0.30f, (1u << 2) | (1u << 6) | (1u << 10) | (1u << 14) },                                                      // offbeat
+            { 0.20f, (1u << 2) | (1u << 3) | (1u << 6) | (1u << 7) | (1u << 10) | (1u << 11) | (1u << 14) | (1u << 15) },   // gallop
+            { 0.20f, 0xEEEEu },                                                                                             // rolling
+            { 0.15f, (1u << 3) | (1u << 6) | (1u << 10) | (1u << 13) },                                                     // syncopated
+            { 0.15f, (1u << 2) | (1u << 7) | (1u << 10) },                                                                  // sparse
+        };
+        float w[5];
+        for (int i = 0; i < 5; ++i) w[i] = kRiffs[i].w;
+        const uint32_t riff = kRiffs[weighted(w, 5)].on;
+        plan.figBars = rng.uniform() < 0.3f ? 2 : 1;
+        plan.figOn = riff | (plan.figBars == 2 ? riff << 16 : 0u);
+        std::vector<int> onsets;
+        for (int pos = 0; pos < plan.figBars * kSteps; ++pos) if (has(plan.figOn, pos)) onsets.push_back(pos);
+        // The octave on one or two places, the alphabet's second tone on the motif's last onset.
+        for (int k = 0; k < 2; ++k)
+            if (rng.uniform() < 0.3f) plan.figPitch[onsets[static_cast<size_t>(rng.below(static_cast<int>(onsets.size())))]] = 12;
+        if (plan.bassSize > 1) plan.figPitch[onsets.back()] = static_cast<int8_t>(plan.bassSet[1]);
+        for (int pos : onsets) if (pos % kSteps == 2 || pos % kSteps == 3) set(plan.figAccent, pos, true);
+        break;
+    }
+    case LayerId::Ping: {
+        const int li = static_cast<int>(LayerId::Ping);
+        const float u = rng.uniform();
+        const int period = u < 0.35f ? 16 : u < 0.55f ? 12 : u < 0.8f ? 7 : 5;
+        const int k = period == 16 ? 5 + rng.below(3) : period == 12 ? 4 + rng.below(2) : period == 7 ? 3 : 2;
+        plan.period[li] = period;
+        plan.resetBars[li] = 16;
+        plan.cycle[li] = rotateMask(euclidMask(k, period), period, rng.below(period));
+        static const int kSecond[] = { 7, 10, 12, 3, 5 };
+        static const float kSecondW[] = { 0.35f, 0.25f, 0.20f, 0.10f, 0.10f };
+        int second = kSecond[weighted(kSecondW, 5)];
+        if (!inKey(second)) second = 7;
+        static const int kThird[] = { 3, 5, 7, 10, 12, 15 };
+        int third = kThird[rng.below(6)];
+        if (third == second || !inKey(third)) third = second == 12 ? 7 : 12;
+        bool first = true;
+        for (int pos = 0; pos < period; ++pos) {
+            const float v = rng.uniform();
+            const bool onset = ((plan.cycle[li] >> pos) & 1u) != 0;
+            const int iv = (onset && first) ? 0 : v < 0.45f ? 0 : v < 0.8f ? second : third;
+            if (onset) first = false;
+            plan.pingNote[pos] = plan.pingRoot + iv;
+        }
+        break;
+    }
+    default:
+        plan.figure = LayerId::Count;
+        break;
+    }
+}
+
 BarSpec emptyBar(int bar, double beat, double bpm)
 {
     BarSpec s;
@@ -374,6 +525,12 @@ void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float densi
     for (int s = 0; s < kSteps; ++s) on[s] = false;
     if (density <= 0.0f) return;
 
+    // Phase 8: the figure plays its motif, the same in every pass (the ping's figure is its cycle, below).
+    if (id == plan.figure && id != LayerId::Ping && plan.figOn != 0) {
+        const int base = (bar % std::max(1, plan.figBars)) * kSteps;
+        for (int s = 0; s < kSteps; ++s) on[s] = ((plan.figOn >> (base + s)) & 1u) != 0;
+        return;
+    }
     if (isCyclic(plan, li)) {
         // The cycle runs against the bar from its last reset; density thins it the same way in every pass.
         for (int s = 0; s < kSteps; ++s) {
@@ -522,8 +679,35 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
             if (!kickLike) beat += offMs * msToBeats;
             n.beat = beat;
             n.length = d.length;
+            // Phase 8: the figure's place in its motif; its accents lift the velocity.
+            const bool figure = id == plan.figure && id != LayerId::Ping && plan.figOn != 0;
+            const int fig = (spec.bar % std::max(1, plan.figBars)) * kSteps + s;
+            if (figure) vel = baseVelocity(d) * (((plan.figAccent >> fig) & 1u) ? 1.12f : 0.9f)
+                            + 0.5f * d.velRandom * (2.0f * roll(seedOf(plan, i, 0), i, kVel, static_cast<uint64_t>(spec.bar) * 16 + s) - 1.0f);
             n.velocity = clampv(vel, 0.05f, 1.0f);
-            if (kickLike) {
+            if (figure && id == LayerId::Bass) {
+                n.part = Part::Bass;
+                n.pitch = plan.bassRoot + plan.figPitch[fig];
+            } else if (figure && id == LayerId::Acid) {
+                n.part = Part::Acid;
+                int iv = plan.figPitch[fig];
+                if (!inScale(plan.scale, iv % 12) || !(plan.acidMask & (1u << (iv % 12)))) iv = iv >= 12 ? 12 : 0;
+                n.pitch = plan.acidRoot + iv;
+                n.accent = ((plan.figAccent >> fig) & 1u) != 0;
+                n.slide = ((plan.figSlide >> fig) & 1u) != 0;
+                if (n.slide) n.length = 0.3;
+            } else if (figure && id == LayerId::Chord) {
+                const bool other = plan.shuttleBars > 0 && (spec.bar % plan.shuttleBars) == plan.shuttleBars - 1;
+                const int nt = other ? 3 : plan.nChordTones;
+                for (int t = 0; t < nt; ++t) {
+                    NoteEvent c = n;
+                    c.part = Part::Chord;
+                    c.length = plan.figLength;
+                    c.pitch = plan.chordRoot + (other ? plan.shuttleTones[t] : plan.chordTones[t]);
+                    out.push_back(c);
+                }
+                continue;
+            } else if (kickLike) {
                 n.part = Part::Kick;
                 n.pitch = 36;
             } else if (id == LayerId::Bass) {

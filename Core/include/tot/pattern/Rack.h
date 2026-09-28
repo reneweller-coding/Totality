@@ -142,6 +142,21 @@ struct RackPlan {
      *        draws one layer anew by giving it another, so a layer is locked while the rest is rerolled and back.
      */
     uint64_t layerSeed[kNumLayers] = {};
+    /**
+     * @name Phase 8: the figure (28.09.2026)
+     * The track's signature voice (Composer.h) -- what the canon's tracks are remembered by: the motif of "The Bells",
+     * the bassline of "Energy Flash", the dub chords of "Dawning". The 303, the chord's stabs or the bass play a motif of
+     * one or two bars that stays the same from its entry to the track's end (Myloops' anchor: "identical every bar") and
+     * moves only by its knobs, in the composer's waves; the ping's figure is its cycle, made richer (makeFigure).
+     * @{ */
+    LayerId figure = LayerId::Count;    ///< the signature voice (Count: none)
+    int figBars = 1;                    ///< the motif's length: 1 or 2 bars
+    uint32_t figOn = 0;                 ///< its onsets, bit bar * 16 + step
+    int8_t figPitch[32] = {};           ///< semitones above the voice's root at each place
+    uint32_t figAccent = 0;             ///< accented places
+    uint32_t figSlide = 0;              ///< places that glide into the next one (the 303)
+    double figLength = 0.5;             ///< a stab's length in beats
+    /** @} */
 };
 
 /** @brief What a track decides about its rack before the rack draws its plan (Phase 4: from the style's profile). */
@@ -166,6 +181,24 @@ RackSettings rackSettings(const ParamStore& p);
 RackPlan makeRackPlan(const RackSettings& s, uint64_t seed);
 /** @brief makeRackPlan(rackSettings(p), seed). */
 RackPlan makeRackPlan(const ParamStore& p, uint64_t seed);
+/**
+ * @brief Phase 8: makes @p voice the plan's figure and writes its motif (RackPlan::figure).
+ *
+ * - **The 303**: a line of one bar (p 0.45) or two, 50 to 75 % of the off-quarter sixteenths sounding, pitches from
+ *   its alphabet (root 0.45, octave 0.2, fifth, flat seventh and minor third 0.1 each, fourth 0.05, in the scale),
+ *   accents 0.3, slides 0.2 into a sounding sixteenth; the second bar answers the first with two to four places changed.
+ * - **The chord's stabs**: a rhythm of the dub-techno idiom -- the offbeat eighths (Basic Channel), the downbeat and the
+ *   third beat's offbeat (Dok. 8.2's stab), the tresillo 3-3-2, a late pair, one long chord a bar ("Dawning"), a call of
+ *   three and an answer of two over two bars, E(5,16) off the downbeat.
+ * - **The bass**: a riff off the quarters -- the offbeat bass, the gallop, a rolling line, a syncopated or a sparse
+ *   one; the octave on one or two places (p 0.3 each), the alphabet's second tone at the end of the motif.
+ * - **The ping**: a cycle of 16 (0.35), 12 (0.2), 7 (0.25) or 5 (0.2) sixteenths, Euclidean and rotated, of up to three
+ *   tones -- the root on its first onset, the others root 0.45, a second tone 0.35 (fifth, flat seventh, octave, minor
+ *   third, fourth), a third 0.2.
+ *
+ * LayerId::Count clears the figure. The motif comes from @p seed alone (the composer's stream "figure").
+ */
+void makeFigure(RackPlan& plan, LayerId voice, uint64_t seed);
 
 /** @brief What the form asks of the rack in one bar. */
 struct BarSpec {

@@ -16,7 +16,7 @@
 namespace tot {
 
 const char* const kFormNames[] = { "Arc", "Peak", "Endless" };
-const char* const kUnitNames[8] = { "form", "harmony", "rack", "layers", "blocks", "events", "hands", "sounds" };
+const char* const kUnitNames[9] = { "form", "harmony", "rack", "layers", "blocks", "events", "hands", "sounds", "figure" };
 
 std::string camelotOf(int key)
 {
@@ -138,7 +138,26 @@ struct BarMods {
     int muteStep = -1;        ///< a step where only the kick plays
     bool dropout = false;     ///< the kick (and ghost, bass, 303) out for the bar
     float ghostBoost = 1.0f;  ///< a ghost more
+    uint32_t muteLayers = 0;  ///< Phase 8: whole layers out for the bar (bit LayerId): Mills' mutes, a breath, the centre out
 };
+
+uint32_t bitOf(LayerId id) { return 1u << static_cast<int>(id); }
+std::string fmtBars(int n) { return " for " + std::to_string(n) + (n == 1 ? " bar" : " bars"); }
+/** @brief The centre (The Acid Mind's "removing the center"): everything but the kick and the hats. */
+constexpr uint32_t kCentre = (1u << static_cast<int>(LayerId::ClapA)) | (1u << static_cast<int>(LayerId::ClapB))
+                           | (1u << static_cast<int>(LayerId::ClapGhost)) | (1u << static_cast<int>(LayerId::Shaker))
+                           | (1u << static_cast<int>(LayerId::TomConga)) | (1u << static_cast<int>(LayerId::Rim))
+                           | (1u << static_cast<int>(LayerId::Bass)) | (1u << static_cast<int>(LayerId::Ping))
+                           | (1u << static_cast<int>(LayerId::Chord)) | (1u << static_cast<int>(LayerId::Acid))
+                           | (1u << static_cast<int>(LayerId::GhostKick));
+/** @brief The kick and the claps (Mills' "Kick + Claps kurz gemutet"). */
+constexpr uint32_t kKickClap = (1u << static_cast<int>(LayerId::Kick)) | (1u << static_cast<int>(LayerId::GhostKick))
+                             | (1u << static_cast<int>(LayerId::ClapA)) | (1u << static_cast<int>(LayerId::ClapB))
+                             | (1u << static_cast<int>(LayerId::ClapGhost));
+/** @brief The clap-and-perc group but the ghosts. */
+constexpr uint32_t kPercs = (1u << static_cast<int>(LayerId::ClapA)) | (1u << static_cast<int>(LayerId::ClapB))
+                          | (1u << static_cast<int>(LayerId::Shaker)) | (1u << static_cast<int>(LayerId::TomConga))
+                          | (1u << static_cast<int>(LayerId::Rim));
 
 /** @brief Dok. 8.9's harmony check as a filter: at most four pitch classes over what plays, the bass at most two. */
 void limitHarmony(RackPlan& plan, const std::vector<LayerId>& pool, bool subOwns)
@@ -162,22 +181,43 @@ void limitHarmony(RackPlan& plan, const std::vector<LayerId>& pool, bool subOwns
     // The 303's alphabet (root, octave, fifth, flat seventh, minor third, fourth) is its own: narrowed to the pitch
     // classes the rest already plays, else to root and fifth.
     if (has(LayerId::Acid)) plan.acidMask = static_cast<uint16_t>((1u << 0) | (1u << 7) | (1u << 10) | (1u << 3) | (1u << 5));
-    if (pcs().size() <= 4) return;
-    plan.shuttleBars = 0;                                              // the second chord first
-    if (pcs().size() <= 4) return;
-    for (int k = 0; k < 64; ++k) plan.pingNote[k] = plan.pingRoot;    // then the ping's second tone
-    if (pcs().size() <= 4) return;
-    if (has(LayerId::Acid)) {                                          // then the 303's alphabet
+    const auto narrowAcid = [&] {
         uint16_t mask = (1u << 0) | (1u << 7);
         std::set<int> others = { 0, 7 };
         if (has(LayerId::Chord)) for (int t = 0; t < plan.nChordTones; ++t) others.insert(((plan.chordTones[t] % 12) + 12) % 12);
         if (subOwns) for (int t = 0; t < plan.bassSize; ++t) others.insert(plan.bassSet[t] % 12);
         for (int k : others) if (inScale(plan.scale, k)) mask = static_cast<uint16_t>(mask | (1u << k));
         plan.acidMask = mask;
-    }
+    };
+    // The figure (Phase 8) gives way last: what the track is remembered by keeps its tones longest.
+    const LayerId fig = plan.figure;
     if (pcs().size() <= 4) return;
-    plan.nChordTones = 3;                                              // at last the chord a triad
+    plan.shuttleBars = 0;                                              // the second chord first
+    if (pcs().size() <= 4) return;
+    if (fig != LayerId::Ping) {                                        // then the ping's second tone
+        for (int k = 0; k < 64; ++k) plan.pingNote[k] = plan.pingRoot;
+        if (pcs().size() <= 4) return;
+    }
+    if (has(LayerId::Acid) && fig != LayerId::Acid) {                  // then the 303's alphabet
+        narrowAcid();
+        if (pcs().size() <= 4) return;
+    }
+    plan.nChordTones = 3;                                              // the chord a triad
     plan.chordTones[0] = 0; plan.chordTones[1] = 3; plan.chordTones[2] = 7;
+    if (pcs().size() <= 4) return;
+    if (has(LayerId::Acid) && fig == LayerId::Acid) {                  // at last the figure: the 303's alphabet,
+        narrowAcid();
+        if (pcs().size() <= 4) return;
+    }
+    if (fig == LayerId::Ping) {                                        // the ping's third tone, then its second
+        std::map<int, int> count;
+        for (int k = 0; k < std::max(1, plan.period[L(LayerId::Ping)]); ++k) ++count[plan.pingNote[k] - plan.pingRoot];
+        int rarest = 0, n = 1 << 30;
+        for (const auto& [iv, c] : count) if (iv != 0 && c < n) { n = c; rarest = iv; }
+        for (int k = 0; k < 64; ++k) if (plan.pingNote[k] - plan.pingRoot == rarest) plan.pingNote[k] = plan.pingRoot;
+        if (pcs().size() <= 4) return;
+        for (int k = 0; k < 64; ++k) plan.pingNote[k] = plan.pingRoot;
+    }
 }
 
 } // namespace
@@ -279,6 +319,35 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         keep.push_back(c.chance + 0.25f * v);
     }
     if (subOwns) { pool.push_back(LayerId::Bass); keep.push_back(10.0f); }
+    // Phase 8: the figure, the voice the track is remembered by, by the style's mix -- the ping for Hypnotic, the stab and
+    // the bass for Ostgut, the chord for Dub, the 303 for Raw (the bass only where the sub owns the low end; a
+    // monotonic track has no melodic figure). It is in the pool whatever the pool drew, and stays when it must shrink.
+    // The voice is the layers' choice; its motif is the stream "figure"'s (makeFigure), so a reroll of the figure draws
+    // another motif for the same voice.
+    LayerId figure = LayerId::Count;
+    {
+        static const float kFigure[4][4] = { { 0.55f, 0.20f, 0.10f, 0.15f },    // Hypnotic: ping, chord, 303, bass
+                                             { 0.15f, 0.45f, 0.20f, 0.20f },    // Ostgut
+                                             { 0.10f, 0.85f, 0.00f, 0.05f },    // Dub
+                                             { 0.25f, 0.10f, 0.45f, 0.20f } };  // Raw
+        static const LayerId kVoices[4] = { LayerId::Ping, LayerId::Chord, LayerId::Acid, LayerId::Bass };
+        float w[4] = {};
+        for (int s = 0; s < 4; ++s) for (int v = 0; v < 4; ++v) w[v] += prof.styleMix[s] * kFigure[s][v];
+        if (!subOwns) w[3] = 0.0f;
+        if (monotonic) w[0] = w[1] = w[2] = 0.0f;
+        float u = lr.uniform() * (w[0] + w[1] + w[2] + w[3]);
+        for (int v = 0; v < 4; ++v) {
+            if (w[v] <= 0.0f) continue;
+            figure = kVoices[v];
+            if (u < w[v]) break;
+            u -= w[v];
+        }
+        if (figure != LayerId::Count) {
+            const auto it = std::find(pool.begin(), pool.end(), figure);
+            if (it == pool.end()) { pool.push_back(figure); keep.push_back(10.0f); }
+            else keep[static_cast<size_t>(it - pool.begin())] = 10.0f;
+        }
+    }
     // One operation a block: the pool is as large as there are blocks to bring it in -- the intro's perc (and hat), one a
     // block of the body; the Endless starts with its tops and brings the rest one a block. The likeliest layers (a
     // style's signature) stay.
@@ -321,6 +390,9 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
     if (cur != nullptr && cur->count(unit + "rack.clap") > 0) plan.layerSeed[L(LayerId::ClapB)] = plan.layerSeed[L(LayerId::ClapA)];
     if (monotonic) plan.bassSize = 1;
+    // The bass at most two tones (limitHarmony's first rule) before the bass's figure reads its second.
+    if (plan.bassSize > 2) { plan.bassSize = 2; plan.bassSet[0] = 0; plan.bassSet[1] = 7; }
+    makeFigure(plan, figure, streamSeed(seed, cur, unit, "figure"));
     limitHarmony(plan, pool, subOwns);
     int bands[kNumParts];
     partBands(plan, bands);
@@ -365,6 +437,17 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // Every knob any style sets, set by every track -- its own value or the knob as it stands -- so no track on a deck
     // plays on with the last one's, and the knobs always show the whole of what plays.
     for (const int id : managedKnobs(p)) knobs.value.emplace(id, p.get(id));
+    // Phase 8: the chord as the figure sounds for longer than the old stabs (1.3 an eighth long a bar, 0.65 beats): its
+    // level comes down by 70 % of the difference, so the widest voice of the mix does not widen and fill it (28.09.2026:
+    // the Dub tracks measured -2 to -3 dB S/M against the references' -8).
+    if (figure == LayerId::Chord) {
+        double sounding = 0.0;
+        for (int pos = 0; pos < plan.figBars * kSteps; ++pos)
+            if ((plan.figOn >> pos) & 1u) sounding += std::min(plan.figLength, 1.5);
+        sounding /= plan.figBars;
+        const int cl = pid(Module::Chord, 0, chord::Level);
+        if (sounding > 0.65) knobs.value[cl] = knobs.get(cl) - static_cast<float>(0.7 * 10.0 * std::log10(sounding / 0.65));
+    }
 
     Score sc;
     sc.clear(bpm);
@@ -407,6 +490,140 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     const bool redCut = form == FormType::Peak && er.uniform() < 0.5f;
     if (redReturn >= 0 && !redCut) mods[static_cast<size_t>(redReturn - 1)].muteStep = 14;
 
+    // ---------------------------------------------------------------- Phase 8: the waves
+    // The body's ups and downs between the operations (28.09.2026, the user: "keine richtigen Ups und Downs ... ein starres
+    // 32-Takt-Raster"; the references change something audible 4.2 times in 64 bars, the tracks did 1.5). From the
+    // figure's entry to the outro the body runs in waves of 32 or 64 bars. The figure's knobs and the hats' bus build
+    // towards a wave's last bar and resolve on its line, the landing (the automation below); two to four bars before a
+    // landing something drops away so that it lands -- the centre, the kick and the claps, the figure, or the kick for a
+    // bar (Dok. "Spannungsmittel ohne Drop"); in the middle of a wave one element breathes out for 8 or 16 bars and comes
+    // back with a throw (The Acid Mind's 64-bar cell: "remove one low element ... return the missing voice").
+    int figureBlock = -1;
+    if (figure != LayerId::Count) {
+        // The body's second block (Dok. 8.5's template: +Bass at 33, +Stab at 65); the bass with the body; the Endless's from
+        // its first bar.
+        if (form == FormType::Endless) figureBlock = 0;
+        else if (figure == LayerId::Bass) figureBlock = bodyFirst;
+        else figureBlock = std::min(bodyFirst + 1, bodyEnd - 1);
+    }
+    struct Wave { int start = 0, land = 0, shape = 0; float depth = 1.0f; };
+    std::vector<Wave> waves;
+    std::vector<std::pair<int, std::string>> moments;
+    int mainLanding = -1;
+    const int rumbleLevel = pid(Module::Rumble, 0, rumble::Level);
+    // The styles' shares, fitted to the references' movement over eight bars (analyze_ref.py, meso_*: 28.09.2026) --
+    // Hypnotic moves in the low end and the highs and least in the mids, Raw in the highs with its loudness flat, Ostgut
+    // and Dub in all three. Per style (Hypnotic, Ostgut, Dub, Raw): a wave of 64 bars rather than 32, a breath in a
+    // wave, the depth of the figure's waves and of the hats', the down before a landing (the centre, the kick and the
+    // claps, the figure, the kick for a bar, none) and what breathes (the figure, the low end, the percussion, the tops).
+    static const float kLong[4] = { 0.4f, 0.5f, 0.7f, 0.3f }, kBreath[4] = { 0.7f, 0.5f, 0.6f, 0.5f };
+    static const float kFigDepth[4] = { 0.6f, 1.0f, 1.0f, 0.5f }, kHatDepth[4] = { 1.4f, 1.0f, 1.0f, 1.7f };
+    static const float kDown[4][5] = { { 0.30f, 0.15f, 0.25f, 0.15f, 0.15f }, { 0.30f, 0.20f, 0.20f, 0.15f, 0.15f },
+                                       { 0.35f, 0.10f, 0.30f, 0.10f, 0.15f }, { 0.10f, 0.35f, 0.15f, 0.25f, 0.15f } };
+    static const float kBreathOf[4][4] = { { 0.20f, 0.40f, 0.10f, 0.30f }, { 0.30f, 0.30f, 0.25f, 0.15f },
+                                           { 0.35f, 0.35f, 0.20f, 0.10f }, { 0.15f, 0.15f, 0.20f, 0.50f } };
+    const auto mixOf = [&](const float* table) {
+        float v = 0.0f;
+        for (int s = 0; s < 4; ++s) v += prof.styleMix[s] * table[s];
+        return v;
+    };
+    const float figDepth = mixOf(kFigDepth), hatDepth = mixOf(kHatDepth);
+    {
+        const float p64 = mixOf(kLong), pBreath = mixOf(kBreath);
+        float downW[5] = {}, breathW[4] = {};
+        for (int s = 0; s < 4; ++s) {
+            for (int k = 0; k < 5; ++k) downW[k] += prof.styleMix[s] * kDown[s][k];
+            for (int k = 0; k < 4; ++k) breathW[k] += prof.styleMix[s] * kBreathOf[s][k];
+        }
+        const auto pick = [](const float* w, int n, float u) {
+            float sum = 0.0f;
+            for (int k = 0; k < n; ++k) sum += w[k];
+            u *= sum;
+            for (int k = 0; k < n; ++k) { if (u < w[k]) return k; u -= w[k]; }
+            return n - 1;
+        };
+        const int from = form == FormType::Endless ? 32 : (figureBlock >= 0 ? figureBlock * 32 : bodyFirst * 32);
+        const int to = bodyEnd * 32;
+        for (int a = from; to - a >= 32;) {
+            Wave w;
+            w.start = a;
+            int len = (to - a >= 64 && er.uniform() < p64) ? 64 : 32;
+            const int rest = to - (a + len);
+            if (rest > 0 && rest < 32) len = to - a <= 64 ? to - a : to - a - 32;      // no stub of a wave before the outro
+            w.land = a + len;
+            if (redLen > 0 && redReturn > a && redStart < w.land) w.land = redReturn;   // the reduction's return is its landing
+            if (to - w.land > 0 && to - w.land < 16) w.land = to;
+            const float u = er.uniform();
+            w.shape = u < 0.5f ? 0 : (u < 0.8f ? 1 : 2);                               // creep, arch, open and close
+            w.depth = 0.6f + 0.3f * er.uniform();
+            waves.push_back(w);
+            a = w.land;
+        }
+        // The main landing: the one nearest 60 % of the body that is neither a return nor the outro's first bar.
+        const double aim = bodyFirst * 32 + 0.6 * bodyBars;
+        const auto plain = [&](int land) { return land != redReturn && land != redStart && land < to; };
+        for (Wave& w : waves)
+            if (plain(w.land) && (mainLanding < 0 || std::fabs(w.land - aim) < std::fabs(mainLanding - aim))) mainLanding = w.land;
+        for (Wave& w : waves) if (w.land == mainLanding) w.depth = 1.0f;
+        const auto mute = [&](int from, int n, uint32_t mask) {
+            for (int bar = std::max(0, from); bar < std::min(bars, from + n); ++bar) mods[static_cast<size_t>(bar)].muteLayers |= mask;
+        };
+        const auto figureAt = [&](int bar) { return figureBlock >= 0 && bar >= figureBlock * 32 + 8 && figure != LayerId::Bass; };
+        for (const Wave& w : waves) {
+            // The down before the landing (not before a kick-out or a return, which have their own, nor into the outro).
+            if (plain(w.land)) {
+                // The main landing: the centre (0.6) or the figure out before it; the others by the style.
+                const bool main = w.land == mainLanding;
+                const float u = er.uniform(), v = er.uniform();
+                static const float kMain[5] = { 0.6f, 0.0f, 0.4f, 0.0f, 0.0f };
+                int kind = pick(main ? kMain : downW, 5, u);
+                if (kind == 2 && !figureAt(w.land - 4)) kind = main ? 0 : 4;
+                int n = 0;
+                std::string what;
+                if (kind == 0) {
+                    n = v < 0.5f ? 2 : 4;
+                    mute(w.land - n, n, kCentre);
+                    what = "the centre out";
+                } else if (kind == 1) {
+                    n = v < 0.5f ? 1 : 2;
+                    mute(w.land - n, n, kKickClap);
+                    what = "kick and claps out";
+                } else if (kind == 2) {
+                    n = 4;
+                    mute(w.land - n, n, bitOf(figure));
+                    what = "the figure out";
+                } else if (kind == 3) {
+                    n = 1;
+                    mods[static_cast<size_t>(w.land - 1)].dropout = true;
+                    what = "the kick out";
+                }
+                if (n > 0) moments.emplace_back(w.land - n, what + fmtBars(n));
+            }
+            // The breath in the middle of the wave.
+            const int len = w.land - w.start;
+            if (len >= 32 && er.uniform() < pBreath) {
+                const int span = len >= 64 ? 16 : 8;
+                const int at = w.start + len / 2;
+                int kind = pick(breathW, 4, er.uniform());
+                if (kind == 0 && !figureAt(at)) kind = 1;
+                const bool clash = redLen > 0 && at < redReturn && at + span > redStart;
+                if (!clash) {
+                    std::string what;
+                    if (kind == 0) { mute(at, span, bitOf(figure)); what = "the figure"; }
+                    else if (kind == 1 && subOwns) { mute(at, span, bitOf(LayerId::Bass) | bitOf(LayerId::Acid)); what = "the bass"; }
+                    else if (kind == 1) {
+                        sc.gestures.push_back(knobs.step(rumbleLevel, static_cast<double>(at) * kBar, -60.0f));
+                        sc.gestures.push_back(knobs.home(rumbleLevel, static_cast<double>(at + span) * kBar));
+                        what = "the rumble";
+                    } else if (kind == 2) { mute(at, span, kPercs); what = "the percussion"; }
+                    else { mute(at, span, bitOf(LayerId::OpenHat) | bitOf(LayerId::Ride) | bitOf(LayerId::RollingHat)); what = "the tops"; }
+                    throws.push_back({ at + span - 1 });
+                    moments.emplace_back(at, "breath: " + what + " out" + fmtBars(span));
+                }
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- blocks, their operation and their candidates
     const uint64_t blocksSeed = streamSeed(seed, cur, unit, "blocks");
     LayerState st;
@@ -420,12 +637,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         // Kick, bass and tops from bar 1 (Erg. 8).
         for (LayerId id : { LayerId::ClosedHat, LayerId::RollingHat }) { st.active[L(id)] = true; entryBar[L(id)] = 0; entered.push_back(id); }
         int tops = 0;
-        // With the style's signature: the tonal layer it is likeliest to have (Dub's chord, Hypnotic's ping).
-        LayerId signature = LayerId::Count;
+        // With the track's signature: its figure (Phase 8), else the tonal layer the style is likeliest to have.
+        LayerId signature = figure;
         float most = 0.0f;
-        for (const LayerChance& c : prof.pool)
-            if ((c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Acid || c.layer == LayerId::Drone) && c.chance > most
-                && std::find(queue.begin(), queue.end(), c.layer) != queue.end()) { most = c.chance; signature = c.layer; }
+        if (signature == LayerId::Count)
+            for (const LayerChance& c : prof.pool)
+                if ((c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Acid || c.layer == LayerId::Drone) && c.chance > most
+                    && std::find(queue.begin(), queue.end(), c.layer) != queue.end()) { most = c.chance; signature = c.layer; }
         for (auto it = queue.begin(); it != queue.end();) {
             const int g = groupOf(*it);
             const bool take = *it == LayerId::RollingHat || g == 0 || (g == 1 && *it == LayerId::OpenHat) || (g == 2 && tops < 2 && *it != LayerId::GhostKick)
@@ -446,7 +664,15 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // bars only, never what enters later.
     std::vector<size_t> opChoice(static_cast<size_t>(blocks));
     std::vector<bool> swapChoice(static_cast<size_t>(blocks));
-    for (int b = 0; b < blocks; ++b) { opChoice[static_cast<size_t>(b)] = static_cast<size_t>(lr.below(2)); swapChoice[static_cast<size_t>(b)] = lr.uniform() < 0.5f; }
+    // Phase 8: a hat or a perc comes in on its block's first bar (0.5), on its 8-bar line (0.3) or its 16-bar line (0.2)
+    // -- Dok. "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase"; the bass, the figure and the big changes keep the 32.
+    std::vector<int> entryOffset(static_cast<size_t>(blocks));
+    for (int b = 0; b < blocks; ++b) {
+        opChoice[static_cast<size_t>(b)] = static_cast<size_t>(lr.below(2));
+        swapChoice[static_cast<size_t>(b)] = lr.uniform() < 0.5f;
+        const float u = lr.uniform();
+        entryOffset[static_cast<size_t>(b)] = u < 0.5f ? 0 : (u < 0.8f ? 8 : 16);
+    }
 
     // Removes the latest-entered active layer that @p pick accepts (never kick, offbeat hat, rolling hat).
     const auto removeLatest = [&](LayerState& s, std::vector<LayerId>& ent, bool tonalOnly, LayerId* out) {
@@ -498,8 +724,10 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                 ent.push_back(id);
                 if (logOp) op(bar, OpKind::Add, id);
             };
-            // --- the block's operation, at its first bar ---
+            // --- the block's operation, at its first bar (a hat's or a perc's entry on its 8- or 16-bar line) ---
             const int first = b * 32;
+            LayerId pending = LayerId::Count;
+            int pendingBar = -1;
             if (b == 0) {
                 op(first, OpKind::Start, LayerId::Kick);
             } else if (intro) {
@@ -529,17 +757,30 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                 std::vector<size_t> can;
                 const auto bass = std::find(q.begin(), q.end(), LayerId::Bass);
                 const bool bassNow = bass != q.end() && subOwns;
+                // Phase 8: the figure on its block, before whatever else waits.
+                const auto fig = std::find(q.begin(), q.end(), figure);
+                // (Where the pool is small it keeps the last two layers for the second half, as everything does.)
+                const bool figureNow = !bassNow && figure != LayerId::Count && fig != q.end() && figureBlock >= 0 && b >= figureBlock
+                                    && (q.size() > 2 || first >= half);
                 if (bassNow) can.push_back(static_cast<size_t>(bass - q.begin()));
-                for (size_t i = 0; !bassNow && i < q.size() && can.size() < 2; ++i) {
+                else if (figureNow) can.push_back(static_cast<size_t>(fig - q.begin()));
+                for (size_t i = 0; !bassNow && !figureNow && i < q.size() && can.size() < 2; ++i) {
                     if (q.size() <= 2 && first < half) break;
                     if (!can.empty() && groupOf(q[i]) != groupOf(q[can[0]])) break;
                     can.push_back(i);
                 }
-                if ((now < want || bassNow) && !can.empty()) {
+                // Two layers enter in the second half, whatever the density says (Phase 8: the figure's early entry
+                // took a late one's place), while the cap allows.
+                int late = 0;
+                for (int l = 1; l < kNumLayers; ++l) if (eb[static_cast<size_t>(l)] >= half) ++late;
+                const bool lateNeeded = first >= half && late < 2 && now < prof.densityCap;
+                if ((now < want || bassNow || figureNow || lateNeeded) && !can.empty()) {
                     const size_t pick = can[opChoice[static_cast<size_t>(b)] % can.size()];
                     const LayerId add = q[pick];
                     q.erase(q.begin() + static_cast<long>(pick));
-                    enter(first, add, true);
+                    const int off = (groupOf(add) == 1 || groupOf(add) == 2) ? entryOffset[static_cast<size_t>(b)] : 0;
+                    if (off == 0) enter(first, add, true);
+                    else { pending = add; pendingBar = first + off; }
                 } else if (now > want) {
                     LayerId gone = LayerId::Count;
                     if (removeLatest(s, ent, false, &gone)) op(first, OpKind::Remove, gone);
@@ -578,6 +819,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     else if (in == 0) op(bar, OpKind::Hold, LayerId::Count);
                 }
                 if (form != FormType::Endless && bar == bars - 16) { s.active[L(LayerId::RollingHat)] = false; op(bar, OpKind::Remove, LayerId::RollingHat); }
+                if (bar == pendingBar) enter(bar, pending, true);
                 BarSpec spec = emptyBar(bar, static_cast<double>(bar) * kBar, bpm);
                 for (int i = 0; i < kNumLayers; ++i) { spec.active[i] = s.active[i]; spec.density[i] = s.density[i]; }
                 spec.variant = k.variant;
@@ -595,6 +837,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                         for (float& d : spec.density) d *= 0.6f;
                     }
                 }
+                for (int i = 0; m.muteLayers != 0 && i < kNumLayers; ++i) if ((m.muteLayers >> i) & 1u) spec.active[i] = false;
                 if (redReturn >= 0 && redCut && bar == redReturn - 1) for (bool& a : spec.active) a = false;
                 if (inReduction(bar)) spec.fills = false;
                 realizeBar(plan, spec, notes);
@@ -669,6 +912,29 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             sc.gestures.push_back(knobs.ramp(cloudLevel, static_cast<double>(redStart) * kBar, static_cast<double>(redLen) * kBar, -60.0f, -3.0f, GestureShape::EaseIn, 0));
             sc.gestures.push_back(knobs.ramp(cloudLevel, static_cast<double>(redReturn) * kBar, 32.0, -3.0f, -60.0f, GestureShape::EaseOut, 0));
             sc.gestures.push_back(knobs.home(cloudLevel, static_cast<double>(redReturn + 8) * kBar));
+        }
+    }
+    // Phase 8: a swell of noise over the eight bars into the main landing (Raw 0.6, Ostgut 0.45, Hypnotic 0.35, Dub 0.25).
+    if (mainLanding > 0) {
+        float pSwell = 0.0f;
+        static const float kSwell[4] = { 0.35f, 0.45f, 0.25f, 0.6f };
+        for (int s = 0; s < 4; ++s) pSwell += prof.styleMix[s] * kSwell[s];
+        if (er.uniform() < pSwell) {
+            const int from = mainLanding - 8;
+            for (int bar = from; bar < mainLanding; ++bar) {
+                NoteEvent n;
+                n.beat = static_cast<double>(bar) * kBar;
+                n.length = 4.0;
+                n.part = percPart(11);
+                n.pitch = 49;
+                n.velocity = 0.9f;
+                sc.notes.push_back(n);
+            }
+            sc.gestures.push_back(knobs.ramp(noiseLevel, static_cast<double>(from) * kBar, 7.0 * kBar, -36.0f, -14.0f, GestureShape::EaseIn, 0));
+            sc.gestures.push_back(knobs.ramp(noiseCut, static_cast<double>(from) * kBar, 7.0 * kBar, 600.0f, 6000.0f, GestureShape::EaseIn, 1));
+            sc.gestures.push_back(knobs.home(noiseLevel, static_cast<double>(mainLanding) * kBar));
+            sc.gestures.push_back(knobs.home(noiseCut, static_cast<double>(mainLanding) * kBar));
+            moments.emplace_back(from, "a swell into the landing" + fmtBars(8));
         }
     }
     for (int b = 0; b < blocks; ++b) {
@@ -751,6 +1017,71 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         sc.gestures.push_back(knobs.ramp(lowCut, static_cast<double>(line - 8) * kBar, 8.0 * kBar, 20.0f, top, GestureShape::EaseIn, 1));
         sc.gestures.push_back(knobs.home(lowCut, static_cast<double>(line) * kBar));
     }
+    // Phase 8: the waves on the figure's knobs and the hats' bus (Dok. "Automation auf drei Zeitskalen", the meso scale:
+    // "filter cutoff creeping open over 16 to 32 bars"; Mills' rides "faded in on mixer"). After a landing a wave drops
+    // them to its low, then builds: a creep up to its landing (0.5), an arch over its middle (0.3), or an opening that
+    // closes slowly to the landing (0.2); after the last wave they go home over eight bars. Offsets in the knob's
+    // normalised range from the track's own value, scaled by the wave's depth (the main landing's the deepest).
+    {
+        struct WaveKnob { int id; float low, high; double from; float scale = 1.0f; };
+        std::vector<WaveKnob> wk;
+        if (figure != LayerId::Count && has(figure)) {
+            const double fb = entryBeat(figure);
+            switch (figure) {
+            case LayerId::Acid:
+                wk.push_back({ pid(Module::Acid, 0, synth::Cutoff), -0.16f, 0.10f, fb, figDepth });
+                wk.push_back({ pid(Module::Acid, 0, synth::EnvAmount), -0.08f, 0.10f, fb, figDepth });
+                wk.push_back({ pid(Module::Acid, 0, synth::Resonance), -0.05f, 0.12f, fb, figDepth });
+                break;
+            case LayerId::Chord:
+                wk.push_back({ pid(Module::Chord, 0, chord::Bright), -0.18f, 0.08f, fb, figDepth });
+                wk.push_back({ pid(Module::Chord, 0, chord::Band), -0.10f, 0.10f, fb, figDepth });
+                break;
+            case LayerId::Ping:
+                wk.push_back({ pid(Module::Ping, 0, ping::Index), -0.12f, 0.12f, fb, figDepth });
+                wk.push_back({ pid(Module::Ping, 0, ping::Band), -0.12f, 0.10f, fb, figDepth });
+                break;
+            case LayerId::Bass:
+                wk.push_back({ pid(Module::Bass, 0, synth::Cutoff), -0.10f, 0.08f, fb, figDepth });
+                break;
+            default:
+                break;
+            }
+        }
+        // The hats' bus: its low pass down to 2.9 kHz at the most, its level 5 dB.
+        wk.push_back({ hatsCut, -std::min(0.42f, 0.30f * hatDepth), 0.0f, 0.0 });
+        wk.push_back({ pid(Module::Mix, 0, mix::HatsLevel), -0.08f * hatDepth, 0.0f, 0.0 });
+        const auto real = [&](int id, float off) {
+            return p.fromNormalised(id, std::clamp(p.toNormalised(id, knobs.get(id)) + off, 0.0f, 1.0f));
+        };
+        for (const WaveKnob& k : wk) {
+            float at = 0.0f;
+            bool any = false;
+            for (const Wave& w : waves) {
+                const double a = static_cast<double>(w.start) * kBar, len = static_cast<double>(w.land - w.start) * kBar;
+                if (a < k.from) continue;
+                const float lo = k.low * k.scale * w.depth, hi = k.high * k.scale * w.depth;
+                any = true;
+                if (w.shape == 0) {
+                    sc.gestures.push_back(knobs.ramp(k.id, a, 2.0 * kBar, real(k.id, at), real(k.id, lo), GestureShape::EaseOut, 0));
+                    sc.gestures.push_back(knobs.ramp(k.id, a + 2.0 * kBar, len - 2.0 * kBar, real(k.id, lo), real(k.id, hi), GestureShape::EaseIn, 0));
+                    at = hi;
+                } else if (w.shape == 1) {
+                    sc.gestures.push_back(knobs.ramp(k.id, a, len / 2.0, real(k.id, at), real(k.id, hi), GestureShape::MinimumJerk, 0));
+                    sc.gestures.push_back(knobs.ramp(k.id, a + len / 2.0, len / 2.0, real(k.id, hi), real(k.id, lo), GestureShape::MinimumJerk, 0));
+                    at = lo;
+                } else {
+                    sc.gestures.push_back(knobs.ramp(k.id, a, 4.0 * kBar, real(k.id, at), real(k.id, hi), GestureShape::EaseOut, 0));
+                    sc.gestures.push_back(knobs.ramp(k.id, a + 4.0 * kBar, len - 4.0 * kBar, real(k.id, hi), real(k.id, lo), GestureShape::EaseIn, 0));
+                    at = lo;
+                }
+            }
+            if (any) {
+                const double e = static_cast<double>(waves.back().land) * kBar;
+                sc.gestures.push_back(knobs.ramp(k.id, e, 8.0 * kBar, real(k.id, at), knobs.get(k.id), GestureShape::MinimumJerk, 0));
+            }
+        }
+    }
     // The edges filtered (the profile's chance; Dok. 8.5's group high pass): the intro opens from 250 Hz over its first 16 bars, the
     // last 16 bars close to 300 Hz. A track's loudness moves at its edges as the references' do (their LRA 3 to 5 LU, ours
     // 1 to 2 with the kick at full from the first bar to the last, 27.09.2026).
@@ -780,12 +1111,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         knob(pid(Module::Mix, 0, mix::PercCut), 0.25f, -0.15f, 0.0f, 1.0f, 0.0);
         knob(pid(Module::Space, 0, space::Level), 0.06f, -0.02f, 0.03f, 0.7f, 0.0);
         knob(pid(Module::Dub, 0, dub::EchoReturn), 0.08f, -0.03f, 0.03f, 0.7f, 0.0);
-        if (has(LayerId::Chord)) knob(pid(Module::Chord, 0, chord::Band), 0.2f, -0.05f, 0.1f, 1.5f, entryBeat(LayerId::Chord) + 64.0);
-        if (has(LayerId::Acid)) {
+        // (The figure's knobs are the waves'; a knob follows the gesture that started last, so the hands leave them.)
+        if (has(LayerId::Chord) && figure != LayerId::Chord) knob(pid(Module::Chord, 0, chord::Band), 0.2f, -0.05f, 0.1f, 1.5f, entryBeat(LayerId::Chord) + 64.0);
+        if (has(LayerId::Acid) && figure != LayerId::Acid) {
             knob(pid(Module::Acid, 0, synth::Cutoff), 0.25f, -0.05f, 0.18f, 2.0f, entryBeat(LayerId::Acid));
             knob(pid(Module::Acid, 0, synth::Resonance), 0.15f, 0.0f, 0.08f, 1.0f, entryBeat(LayerId::Acid));
         }
-        if (has(LayerId::Ping)) {
+        if (has(LayerId::Ping) && figure != LayerId::Ping) {
             knob(pid(Module::Ping, 0, ping::Band), 0.15f, -0.05f, 0.08f, 1.2f, entryBeat(LayerId::Ping));
             knob(pid(Module::Ping, 0, ping::Index), 0.15f, -0.05f, 0.08f, 1.0f, entryBeat(LayerId::Ping));
         }
@@ -839,6 +1171,16 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         t.similarity = cs.similarity;
         t.micro = cs.micro;
         t.density = cs.density;
+        if (figure != LayerId::Count && has(figure)) {
+            t.figure = L(figure);
+            t.figureBar = entryBar[L(figure)];
+            t.figureBars = plan.figBars;
+        }
+        for (const Wave& w : waves) if (w.land < bars) t.landings.push_back(w.land);   // (the Endless's last wave ends with it)
+        // (A figure that had to wait for the second half was not there to drop out before it came.)
+        for (const auto& mo : moments)
+            if (mo.second.find("figure") == std::string::npos || (t.figureBar >= 0 && mo.first >= t.figureBar)) t.moments.push_back(mo);
+        std::sort(t.moments.begin(), t.moments.end());
     }
     return sc;
 }

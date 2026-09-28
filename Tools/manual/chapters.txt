@@ -56,9 +56,18 @@ set's plan" draw more at once (the Arrange page).
 A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars from the kick on, a body that adds
 one layer every 32-bar block, an outro that takes them away again -- so it mixes. The Peak builds to a long kick-out and
 returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
-hypnotic records do. Every block boundary has exactly one operation (add, remove, swap), every change falls on a
-4-bar line and a return on a 16-bar line; nothing tonal plays in the first and last 32 bars, so two tracks can be
-mixed without a clash.
+hypnotic records do. Every block has exactly one operation (add, remove, swap) on its first bar -- a hat or a perc may
+come in on the block's 8- or 16-bar line instead --, every change falls on a 4-bar line and a return on a 16-bar line;
+nothing tonal plays in the first and last 32 bars, so two tracks can be mixed without a clash.
+
+Every track has a figure: the voice it is remembered by -- a ping motif for Hypnotic, a chord stab or a bass riff for
+Ostgut, the dub chord for Dub, a 303 line for Raw. It plays the same one or two bars from its entry (the body's second
+block; a bass riff with the body) to the end and changes only through its filters. Between the operations the body
+runs in waves of 32 or 64 bars: the figure's filters and the hats' bus open towards a wave's end and fall back after
+it; two to four bars before that landing something drops away -- the centre of the mix, the kick and the claps, the
+figure -- so that the landing lands; in the middle of a wave one element (the figure, the bass or the rumble, the
+percussion, the open hats and the ride) breathes out for 8 or 16 bars and comes back with an echo throw. The Arrange
+page names the figure and the bars where the waves land.
 
 Style picks the profile; Morph To and Morph blend it with a second one; the Dub and Hypnotic shares pull any profile
 along the two axes the style is described by. With Auto the tempo, the key and the owner of the low end are drawn from
@@ -98,7 +107,8 @@ perc, ping, bass, pads -- lit where it plays. The Arrange page shows the operati
 there.
 
 The row of rerolls acts on the track under the playhead; each part of it is drawn from a stream of its own, so a
-reroll of the blocks keeps the harmony and the sounds, and a reroll of the hands (the automation) keeps every note.
+reroll of the blocks keeps the harmony and the sounds, a reroll of the hands (the automation) keeps every note, and a
+reroll of the figure draws another motif for the same voice.
 
 == Patterns and the Eclipse | | 2 ==
 
