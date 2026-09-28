@@ -585,6 +585,15 @@ void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float densi
             prev2 = prev1;
             prev1 = on[s];
         }
+        // Phase 10: a loop that plays is heard -- a loop bar its rolls left empty keeps its likeliest step (the rim's
+        // three chances of .4, .2 and .2 left it silent for whole blocks, 28.09.2026).
+        if (d.kind == LayerKind::Loop && density >= 1.0f) {
+            bool any = false;
+            for (int s = 0; s < kSteps; ++s) any = any || on[s];
+            int best = -1;
+            for (int s = 0; s < kSteps && !any; ++s) if (d.p[s] > 0.0f && (best < 0 || d.p[s] > d.p[best])) best = s;
+            if (best >= 0) on[best] = true;
+        }
     }
     if (plan.displace[li] > 0) {
         bool tmp[kSteps];

@@ -233,16 +233,17 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         g.push_back(stepOf(p, send, st.start, 0.0f));
         if (i > 0) {
             // In (Mix-Dok. 7): the low band killed until the swap; the fader opens blend bars before it with the highs
-            // 8 dB down (back over a quarter of the blend) and the mids 18 dB down (back over its last 16 bars).
+            // 8 dB down (back over a quarter of the blend) and the mids 10 dB down (back over its last 16 bars). (Phase
+            // 10: 18 dB took the incoming track's percussion with it.)
             const double open = std::max(st.start, st.swapIn - blendBars * kBar);
             const double midFrom = std::max(open, st.swapIn - 16.0 * kBar);
             g.push_back(stepOf(p, low, st.start, -60.0f));
             g.push_back(stepOf(p, fader, st.start, -60.0f));
             g.push_back(stepOf(p, high, st.start, -8.0f));
-            g.push_back(stepOf(p, mid, st.start, -18.0f));
+            g.push_back(stepOf(p, mid, st.start, -10.0f));
             g.push_back(rampOf(p, fader, open, 8.0 * kBar, -60.0f, 0.0f, GestureShape::EaseOut));
             g.push_back(rampOf(p, high, open, blendBars / 4.0 * kBar, -8.0f, 0.0f, GestureShape::Linear));
-            g.push_back(rampOf(p, mid, midFrom, st.swapIn - midFrom, -18.0f, 0.0f, GestureShape::EaseIn));
+            g.push_back(rampOf(p, mid, midFrom, st.swapIn - midFrom, -10.0f, 0.0f, GestureShape::EaseIn));
             g.push_back(stepOf(p, low, st.swapIn, 0.0f));
         } else {
             g.push_back(stepOf(p, low, st.start, 0.0f));
@@ -252,11 +253,11 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         }
         if (i + 1 < n) {
             // Out: the low band 6 dB down over the 16 bars before the swap ("A Low auf ~11 Uhr"), closed on it; the
-            // outgoing deck keeps its hats -- its mids fall in 8 bars, its highs over 16 -- and its fader falls through the
-            // 16 bars after eight more.
+            // outgoing deck keeps its hats and its percussion ("A nur noch Hats/Perc") -- its mids 6 dB down in 8 bars,
+            // its highs out over 16 -- and its fader falls through the 16 bars after eight more.
             g.push_back(rampOf(p, low, st.swapOut - 16.0 * kBar, 16.0 * kBar, 0.0f, -6.0f, GestureShape::Linear));
             g.push_back(stepOf(p, low, st.swapOut, -60.0f));
-            g.push_back(rampOf(p, mid, st.swapOut, 8.0 * kBar, 0.0f, -18.0f, GestureShape::EaseOut));
+            g.push_back(rampOf(p, mid, st.swapOut, 8.0 * kBar, 0.0f, -6.0f, GestureShape::EaseOut));
             g.push_back(rampOf(p, high, st.swapOut, 16.0 * kBar, 0.0f, -12.0f, GestureShape::Linear));
             const double from = st.swapOut + 8.0 * kBar, to = std::min(st.end, st.swapOut + 24.0 * kBar);
             if (to - from > kBar) g.push_back(rampOf(p, fader, from, to - from, 0.0f, -60.0f, GestureShape::EaseIn));

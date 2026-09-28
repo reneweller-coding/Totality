@@ -5,7 +5,7 @@
 The first release: a generator of hypnotic Berlin techno, as a VST3 plugin, a standalone application for Windows, a
 command-line renderer and an app for Meta Quest.
 
-**Composing.** Tracks in three forms -- the Arc (the DJ tool: intro, a body that adds one layer a block, outro), the
+**Composing.** Tracks in three forms -- the Arc (the DJ tool: intro, a body that builds its full groove by about bar 97, outro), the
 Peak (a long kick-out and the densest block after it), the Endless (full from the first bar, changing by exchange) --
 from four style profiles, Hypnotic, Ostgut, Dub and Raw Peak, which morph into each other and move along a Dub and a
 Hypnotic axis; or a style of your own (the Style page). One operation per 32-bar block, events on the 8-bar lines,

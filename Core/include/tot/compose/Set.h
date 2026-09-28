@@ -20,11 +20,11 @@
  * **The blend** (Dok. 6, 8.8; Mix-Dok. 7, "Ablauf Takt für Takt"). The outgoing track's outro begins on a 32-bar line; that
  * line is the **bass swap**: the incoming track, on the other deck, is placed so its body -- its bass's entry -- begins
  * exactly there. Its intro runs under the outgoing track with its low band killed at the isolator; its fader opens 16 or
- * 32 bars before the swap (set.blend) with its highs a little down and its mids well down, the highs coming up over the
+ * 32 bars before the swap (set.blend) with its highs 8 dB and its mids 10 dB down, the highs coming up over the
  * first quarter of the blend and the mids over its last 16 bars; the outgoing deck's low band comes down 6 dB over those
  * 16 bars. At the swap the outgoing deck's low band closes and the incoming one's opens in the same sample; the outgoing
- * deck keeps its hats (its mids fall in 8 bars, its highs over 16) and its fader falls through the next 16 bars. Only
- * one deck ever owns the band under 200 Hz.
+ * deck keeps its hats and percussion (its mids 6 dB down in 8 bars, its highs out over 16) and its fader falls through
+ * the next 16 bars. Only one deck ever owns the band under 200 Hz.
  *
  * **Live recomposition** (Rodhad, DVS1; Mix-Dok. 6: "Zwei bis drei Tracks laufen ständig, einzelne Elemente werden aus
  * einer Platte geborgt"). The third deck plays what is borrowed, in the source track's own sounds and with its low band

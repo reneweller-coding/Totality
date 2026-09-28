@@ -690,7 +690,8 @@ void testComposer()
                     else if ((std::fabs(o.beat - 128.0 * b - 32.0) < 1e-9 || std::fabs(o.beat - 128.0 * b - 64.0) < 1e-9)
                              && o.kind == OpKind::Add && small(o.layer)) ++inside;
                 }
-                if (!(n == 1 || (n == 0 && inside == 1))) { fail(badOps, who + fmt(": %d operations at block %d, %d inside it", n, b + 1, inside)); break; }
+                // (Phase 10: the build may bring further hats and percs on the block's 8-bar lines.)
+                if (!(n == 1 || (n == 0 && inside >= 1))) { fail(badOps, who + fmt(": %d operations at block %d, %d inside it", n, b + 1, inside)); break; }
             }
             for (const BlockOp& o : s.ops) {
                 if (std::fabs(std::fmod(o.beat, 16.0)) > 1e-9) fail(badLines, who + fmt(": an operation at beat %.2f", o.beat));
@@ -728,7 +729,7 @@ void testComposer()
                 fail(badLevel, who + ": the loudness mark");
         }
     }
-    check(badOps == 0, "exactly one operation a block, on its first bar (a hat or a perc may enter on its 8- or 16-bar line)",
+    check(badOps == 0, "one operation on a block's first bar (a hat or a perc may enter on its 8- or 16-bar line instead)",
           badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
     first.clear();
     check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
@@ -739,6 +740,48 @@ void testComposer()
     check(badLate == 0, "at least two layers enter in the second half", first);
     check(badPool == 0, "at least four layers beside the kick", first);
     check(badLevel == 0, "a loudness mark in the body", first);
+}
+
+/**
+ * Phase 10: the groove a track reaches (28.09.2026, the user on a set: "in den ersten 3 Minuten passiert praktisch
+ * überhaupt nichts ausser Kick und Hi-Hat ... praktisch gar keine Percussion"): in the body's second block five voices
+ * or more beside the kick, one of them percussion beyond the hats -- in a set's short track as in a track alone.
+ */
+void testGroove()
+{
+    section("the groove (Phase 10)");
+    int tracks = 0, full = 0, percs = 0;
+    std::string first;
+    for (int style = 0; style < 4; ++style) {
+        for (uint64_t seed = 1; seed <= 6; ++seed) {
+            for (int set = 0; set < 2; ++set) {
+                auto p = std::make_unique<ParamStore>();
+                p->set(p->find("compose.style"), static_cast<float>(style));
+                TrackRequest req;
+                if (set == 1) { req.blocks = 5; req.mixable = true; }
+                TrackInfo info;
+                const Score s = composeTrack(*p, seed, req, nullptr, std::string(), &info);
+                if (info.form == FormType::Endless) continue;
+                ++tracks;
+                const double from = (info.bassBar + 32) * 4.0, to = from + 128.0;
+                std::set<int> voices;
+                bool perc = false;
+                for (const NoteEvent& n : s.notes) {
+                    if (n.beat < from || n.beat >= to || n.part == Part::Kick) continue;
+                    voices.insert(static_cast<int>(n.part));
+                    const int lane = laneOf(n.part);
+                    perc = perc || (lane >= 4 && lane <= 10);
+                }
+                const std::string who = fmt("%s seed %d%s", kStyleNames[style], static_cast<int>(seed), set ? " (set)" : "");
+                if (voices.size() >= 5) ++full;
+                else if (first.empty()) first = who + fmt(": %zu voices in the body's second block", voices.size());
+                if (perc) ++percs;
+                else if (first.empty()) first = who + ": no percussion beyond the hats";
+            }
+        }
+    }
+    check(full == tracks, "five voices or more beside the kick in the body's second block", full == tracks ? fmt("%d tracks", tracks) : first);
+    check(percs * 10 >= tracks * 9, "percussion beyond the hats in nine tracks of ten", fmt("%d of %d", percs, tracks));
 }
 
 /** Phase 8: a signature voice that plays its motif, waves in the body, a reroll of the figure that keeps the rest. */
@@ -812,9 +855,11 @@ void testFigure()
     Curation fig;
     fig.reroll("figure");
     const Score b = composeTrack(*p, 42, TrackRequest{}, &fig, std::string(), &ib);
+    // (The kick's own notes, on the quarters: the ghost kicks move with the candidate each block keeps.)
     const auto notesOf = [](const Score& s, Part part) {
         std::vector<std::pair<double, int>> v;
-        for (const NoteEvent& n : s.notes) if (n.part == part) v.emplace_back(n.beat, n.pitch);
+        for (const NoteEvent& n : s.notes)
+            if (n.part == part && (part != Part::Kick || std::fabs(n.beat - std::round(n.beat)) < 1e-9)) v.emplace_back(n.beat, n.pitch);
         return v;
     };
     const bool sameVoice = ia.figure == ib.figure && ia.figure >= 0;
@@ -1909,6 +1954,7 @@ const TestSection kSections[] = {
     { "testLeveler", testLeveler },
     { "testComposer", testComposer },
     { "testFigure", testFigure },
+    { "testGroove", testGroove },
     { "testCuration", testCuration },
     { "testSet", testSet },
     { "testMix", testMix },

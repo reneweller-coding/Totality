@@ -22,6 +22,34 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Nachmittag: Phase 10, der Groove.** Nach dem Hören von `out/p9/set30_nachher.wav`: "In den ersten 3
+Minuten passiert praktisch überhaupt nichts ausser Kick und Hi-Hat ... Das kann doch so niemals der Standard im Berliner
+Techno sein. Ausserdem gibt es praktisch gar keine Percussion mehr." Die Partitur gab ihm recht: der erste Track spielte
+bis Takt 40 Kick, Closed Hat, rollende Hat und Shaker, ab 41 die Open Hat, erst ab 97 einen Ton; keine Clap, kein Rim,
+keine Toms im ganzen Track. Drei Ursachen:
+
+- **Der Pool schrumpfte auf die Zahl der Blöcke** ("eine Operation je Block"): ein Set-Track von fünf Blöcken behielt
+  drei, vier Lagen, meist Hats; die Percussion fiel zuerst. Jetzt hält der Pool mindestens die Kappe des Stils weniger
+  drei (sechs bis sieben Stimmen neben Kick und Hats), aufgefüllt aus dem, was die Ziehung ausließ -- zuerst Percussion
+  (Clap, Shaker, Toms, Rim: zwei bei Hypnotic und Dub, drei bei Ostgut und Raw), dann die Wahrscheinlichsten --,
+  höchstens die Kappe.
+- **Die Treppe war zu langsam:** eine Lage je 32 Takte. Mix-Dok. 2 und 3: die Tool-Vorlage steht bei Takt 97 voll
+  (Dichte 0,3 → 0,6 bei 33 → 0,85 bei 65 → 1,0 bei 97), der Kanon bringt auf fast jeder 8-Takt-Phrase seiner ersten
+  Minuten etwas ("The Bells": 1, 9, 11, 17, 25, 33, 41, 65). Jetzt bringt ein Body-Block unter seiner Dichte nach dem
+  Haupteinsatz bis zu zwei Hats oder Percussion auf den nächsten 8- und 16-Takt-Linien; bis zur Hälfte baut er bis zwei
+  unter die Kappe, damit danach noch zwei Lagen kommen. Eine Loop-Stimme, deren Würfe einen Takt leer ließen, behält
+  ihren wahrscheinlichsten Schlag (der Rim mit .4/.2/.2 schwieg ganze Blöcke).
+- **Der Blend nahm der gehenden Platte die Percussion** (Mitten −18 dB, gegen Mix-Dok. 7: "A nur noch Hats/Perc"): jetzt
+  die Mitten des Gehenden −6 dB, die des Kommenden −10 statt −18 dB.
+
+Gemessen, dasselbe Set (Seed 2026, 30 Minuten, `out/p9/set30_dicht.wav`): Stimmen je Takt neben der Kick 4,1 → 6,1,
+Takte mit Percussion jenseits der Hats 70 % → 90 %, in den ersten drei Minuten 3,1 → 3,9 Stimmen (die erste Minute bleibt
+das Intro des ersten Tracks: Kick, Hats, ab Takt 17 der Rim); Lautheitsspanne 3,3 LU, Wechsel je 64 Takte 5,2. Die zwölf
+Kalibriertracks (`docs/eval/kalibrierung-phase10.md`): 12 von 96 Werten außerhalb des Referenzbands wie in Phase 8, die
+Taktähnlichkeit im Korridor; Hypnotic bewegt sich mit mehr Stimmen etwas weniger (3,0 Wechsel gegen 4,5, im Band).
+Neuer Test `testGroove` (fünf Stimmen oder mehr im zweiten Body-Block, Percussion jenseits der Hats), `selftest`
+178/178.
+
 **28.09.2026, Mittag: Phase 9, die Mix-Engine.** Schritt 2 des Plans aus Phase 8 ("Mach ruhig schon mal mit dem Mix
 weiter"): das Set als Live-Rekomposition (Mix-Dok. 6--8) statt als Staffel. Vorher lief jeder Track seinen ganzen Body
 allein (4--5 Minuten, 14 Tracks die Stunde), der nächste Fader öffnete 16 oder 32 Takte vor dem Swap, Deck C spielte

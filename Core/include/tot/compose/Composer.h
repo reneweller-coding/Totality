@@ -12,7 +12,10 @@
  * reduction and full after it); the layers enter in Dok. 8.5's order (hats and ride, clap and perc, bass, stab, pad and
  * texture), at least two of them only in the second half; a sub bass enters with the body. Big changes (bass,
  * reduction, return) fall on 16 or 32-bar lines, everything on 4-bar lines; no tonal material in the first and last 32
- * bars (except the Endless).
+ * bars (except the Endless). Phase 10: a block under its density brings up to two further hats or percs on its 8-bar
+ * lines after that operation, so the groove is full by about bar 97 (Mix-Dok. 3, the Tool template); the pool holds at
+ * least the style's cap less three, two or three of them percussion beyond the hats; a set's short track keeps its
+ * kick-out to 8 or 16 bars.
  *
  * **Events** on the body's 8-bar lines at the profile's rate: a mute of one expected hit, a one-bar dropout of the kick,
  * a delay throw (a ping, a stab or the hats into the echo, the feedback to the edge and back), a ghost more, a nudge of

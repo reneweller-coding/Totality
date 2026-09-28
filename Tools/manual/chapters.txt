@@ -53,9 +53,10 @@ set's plan" draw more at once (the Arrange page).
 
 == The track and the set | compose set djfx | 0 ==
 
-A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars from the kick on, a body that adds
-one layer every 32-bar block, an outro that takes them away again -- so it mixes. The Peak builds to a long kick-out and
-returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
+A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars from the kick on, a body that builds
+its groove over its first blocks -- a main entry on each block's first bar and further hats and percussion on its
+8-bar lines, full by about bar 97 --, an outro that takes them away again -- so it mixes. The Peak builds to a
+kick-out and returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
 hypnotic records do. Every block has exactly one operation (add, remove, swap) on its first bar -- a hat or a perc may
 come in on the block's 8- or 16-bar line instead --, every change falls on a 4-bar line and a return on a 16-bar line;
 nothing tonal plays in the first and last 32 bars, so two tracks can be mixed without a clash.

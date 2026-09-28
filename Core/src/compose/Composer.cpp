@@ -352,14 +352,45 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             else keep[static_cast<size_t>(it - pool.begin())] = 10.0f;
         }
     }
-    // One operation a block: the pool is as large as there are blocks to bring it in -- the intro's perc (and hat), one a
-    // block of the body; the Endless starts with its tops and brings the rest one a block. The likeliest layers (a
-    // style's signature) stay.
+    // Phase 10 (28.09.2026, the user on a set: "in den ersten 3 Minuten passiert praktisch überhaupt nichts ausser Kick und
+    // Hi-Hat ... praktisch gar keine Percussion"): the pool is the groove the track reaches, not one layer a block. It
+    // was cut to as many layers as the track had blocks to bring them in, and a set's short track kept three or four,
+    // mostly hats. Now it holds at least the style's cap less three -- six or seven voices beside the kick and the offbeat
+    // and rolling hats -- filled from the layers the draw left out, the percussion first and the likeliest first, and at
+    // most the cap; the build brings several in a block (below). The likeliest layers (a style's signature) stay.
     {
-        const int bodyBlocks = bodyEnd - bodyFirst;
-        const int slots = form == FormType::Endless ? 3 + (subOwns ? 1 : 0) + blocks - 2
-                                                    : 1 + (introBlocks == 2 ? 1 : 0) + bodyBlocks;
-        const size_t maxPool = static_cast<size_t>(std::max(3, slots));
+        const size_t least = static_cast<size_t>(std::max(4, prof.densityCap - 3));
+        std::vector<std::pair<float, LayerId>> missing;
+        for (const LayerChance& c : prof.pool) {
+            if (c.chance <= 0.0f || std::find(pool.begin(), pool.end(), c.layer) != pool.end()) continue;
+            if (monotonic && (c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Drone || c.layer == LayerId::Acid)) continue;
+            missing.emplace_back(c.chance + (isTonal(c.layer) ? 0.0f : 1.0f), c.layer);
+        }
+        std::stable_sort(missing.begin(), missing.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+        // Percussion beyond the hats first: two voices of clap, shaker, toms and rim (Hypnotic, Dub), three (Ostgut, Raw)
+        // -- a pool of drones and textures left a track with its hats and a shaker.
+        static const float kPercVoices[4] = { 2.0f, 3.0f, 2.0f, 3.0f };
+        float percWant = 0.0f;
+        for (int st = 0; st < 4; ++st) percWant += prof.styleMix[st] * kPercVoices[st];
+        const auto percussion = [](LayerId id) {
+            return id == LayerId::ClapA || id == LayerId::Shaker || id == LayerId::TomConga || id == LayerId::Rim;
+        };
+        int percHave = 0;
+        for (LayerId id : pool) percHave += percussion(id) ? 1 : 0;
+        for (const auto& [weight, layer] : missing) {
+            if (percHave >= static_cast<int>(std::lround(percWant))) break;
+            if (!percussion(layer)) continue;
+            pool.push_back(layer);
+            keep.push_back(weight - 0.5f);   // (over the tonal layers of like chance when the cap trims)
+            ++percHave;
+        }
+        for (const auto& [weight, layer] : missing) {
+            if (pool.size() >= least) break;
+            if (std::find(pool.begin(), pool.end(), layer) != pool.end()) continue;
+            pool.push_back(layer);
+            keep.push_back(weight - 1.0f);
+        }
+        const size_t maxPool = static_cast<size_t>(std::max(4, prof.densityCap));
         while (pool.size() > maxPool) {
             size_t weakest = 0;
             for (size_t i = 1; i < pool.size(); ++i) if (keep[i] < keep[weakest]) weakest = i;
@@ -730,8 +761,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             };
             // --- the block's operation, at its first bar (a hat's or a perc's entry on its 8- or 16-bar line) ---
             const int first = b * 32;
-            LayerId pending = LayerId::Count;
-            int pendingBar = -1;
+            std::vector<std::pair<int, LayerId>> pendings;   // entries inside the block: (bar, layer)
             if (b == 0) {
                 op(first, OpKind::Start, LayerId::Kick);
             } else if (intro) {
@@ -755,7 +785,8 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                 }
                 // The other outro blocks remove one every eight bars, below.
             } else {
-                const int now = s.count(), want = targetCount(b);
+                // (Phase 10: the first half builds to two under the style's cap, so two layers still enter after it.)
+                const int now = s.count(), want = first < half ? std::min(targetCount(b), prof.densityCap - 2) : targetCount(b);
                 // What may enter now: the sub bass with the body (a big change on a 32-bar line); else in order, the
                 // next two if they are of one group (the candidates try both), the last two not before the half.
                 std::vector<size_t> can;
@@ -784,7 +815,23 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     q.erase(q.begin() + static_cast<long>(pick));
                     const int off = (groupOf(add) == 1 || groupOf(add) == 2) ? entryOffset[static_cast<size_t>(b)] : 0;
                     if (off == 0) enter(first, add, true);
-                    else { pending = add; pendingBar = first + off; }
+                    else pendings.emplace_back(first + off, add);
+                    // Phase 10: the build brings more than one in a block -- up to two hats or percs on the next 8- and
+                    // 16-bar lines after the main entry's, while the block is under its density (Mix-Dok. 3, the Tool
+                    // template: density 0.3 -> 0.6 at bar 33 -> 0.85 at 65 -> 1.0 at 97; the canon brings something in
+                    // on most 8-bar lines of its first minutes: "The Bells" at 1, 9, 11, 17, 25, 33, 41, 65).
+                    int room = want - now - 1;
+                    for (int line = 1; room > 0 && line <= 2; ++line) {
+                        const int at = first + off + 8 * line;
+                        if (at >= first + 32 || (q.size() <= 2 && first < half)) break;
+                        const auto next = std::find_if(q.begin(), q.end(), [](LayerId id) {
+                            return (groupOf(id) == 1 || groupOf(id) == 2) && id != LayerId::RollingHat;
+                        });
+                        if (next == q.end()) break;
+                        pendings.emplace_back(at, *next);
+                        q.erase(next);
+                        --room;
+                    }
                 } else if (now > want) {
                     LayerId gone = LayerId::Count;
                     if (removeLatest(s, ent, false, &gone)) op(first, OpKind::Remove, gone);
@@ -823,7 +870,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     else if (in == 0) op(bar, OpKind::Hold, LayerId::Count);
                 }
                 if (form != FormType::Endless && bar == bars - 16) { s.active[L(LayerId::RollingHat)] = false; op(bar, OpKind::Remove, LayerId::RollingHat); }
-                if (bar == pendingBar) enter(bar, pending, true);
+                for (const auto& [at, layer] : pendings) if (bar == at) enter(bar, layer, true);
                 BarSpec spec = emptyBar(bar, static_cast<double>(bar) * kBar, bpm);
                 for (int i = 0; i < kNumLayers; ++i) { spec.active[i] = s.active[i]; spec.density[i] = s.density[i]; }
                 spec.variant = k.variant;
