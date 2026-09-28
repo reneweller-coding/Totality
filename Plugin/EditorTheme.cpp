@@ -120,8 +120,8 @@ const std::vector<GroupSpec>& layoutOf(tot::Module m)
         { "Feel", F::Envelope, { "swing", "humanize", "~low_owner" } },
     };
     static const std::vector<GroupSpec> set = {
-        { "Set", F::Source, { "*minutes", "~dramaturgy", "~journey", "~blend" } },
-        { "Live", F::Motion, { "loops", "fx_breaks" } },
+        { "Set", F::Source, { "*minutes", "~dramaturgy", "~journey", "~blend", "track_minutes" } },
+        { "Live", F::Motion, { "loops", "fx_breaks", "dj_hand" } },
     };
     static const std::vector<GroupSpec> deck = {
         { "Channel", F::Space, { "*fader", "low", "mid", "high", "*filter", "fx_send" } },
