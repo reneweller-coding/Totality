@@ -57,6 +57,7 @@
 #include "tot/SetFile.h"
 #include "tot/compose/Composer.h"
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -115,9 +116,12 @@ struct SetInfo {
  * @param minutes  its length; the last track ends at or after it
  * @param curation rerolls, or null
  * @param info     receives where everything lies, or null
+ * @param prefs    Phase 17: the ratings' weights, or null
+ * @param stop     asked before every track: true breaks off with what is composed (a newer set is wanted; the plugin
+ *                 throws the rest away) -- a set of twelve hours is some two hundred tracks
  */
 SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* curation = nullptr, SetInfo* info = nullptr,
-                    const Preferences* prefs = nullptr);
+                    const Preferences* prefs = nullptr, const std::function<bool()>& stop = {});
 
 /** @brief The energy of dramaturgy @p d at @p t (0..1 of the set). */
 float setEnergy(Dramaturgy d, float t);

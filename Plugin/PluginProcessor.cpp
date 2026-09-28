@@ -153,7 +153,9 @@ Playing TotalityProcessor::composeNow(ParamStore& snapshot)
     const double setMinutes = snapshot.get(snapshot.id(Module::Set, 0, set::Minutes));
     if (setMinutes > 0.0) {
         out.isSet = true;
-        out.set = composeSet(snapshot, seed, setMinutes, &cur, &out.setInfo, useRatings ? &prefs : nullptr);
+        // A newer score asked for breaks a long set off (its rest is thrown away, the timer composes the new one).
+        out.set = composeSet(snapshot, seed, setMinutes, &cur, &out.setInfo, useRatings ? &prefs : nullptr,
+                             [this] { return again_.load() || threadShouldExit(); });
         for (const SetTrack& t : out.setInfo.tracks) out.tracks.push_back({ t.start, t.swapIn, t.end, t.deck, t.info });
     } else {
         TrackInfo info;

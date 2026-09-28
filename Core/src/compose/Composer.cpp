@@ -506,6 +506,9 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // The intro's one perc: the first of the clap-and-perc group that is no ghost.
     LayerId introPerc = LayerId::Count;
     for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick) { introPerc = id; break; }
+    // Phase 13: the Roller's and the Tribal track's toms are their face -- the intro's perc, so the kind is heard at once.
+    if ((arch == Archetype::Roller || arch == Archetype::Tribal) && std::find(order.begin(), order.end(), LayerId::TomConga) != order.end())
+        introPerc = LayerId::TomConga;
 
     // ---------------------------------------------------------------- rack
     Rng rr = streamOf(tseed, cur, unit, "rack");
@@ -940,10 +943,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     // 16-bar lines after the main entry's, while the block is under its density (Mix-Dok. 3, the Tool
                     // template: density 0.3 -> 0.6 at bar 33 -> 0.85 at 65 -> 1.0 at 97; the canon brings something in
                     // on most 8-bar lines of its first minutes: "The Bells" at 1, 9, 11, 17, 25, 33, 41, 65).
-                    int room = want - now - 1;
-                    for (int line = 1; room > 0 && line <= 2; ++line) {
-                        const int at = first + off + 8 * line;
-                        if (at >= first + 32 || (q.size() <= 2 && first < half)) break;
+                    // (On the block's free 8-bar lines: bars 8 and 16 of it when the main entry is on its first bar, 8
+                    // and 24 when it is on 16, 16 and 24 when on 8.)
+                    int room = std::min(2, want - now - 1);
+                    for (int line = 1; room > 0 && line <= 3; ++line) {
+                        if (8 * line == off) continue;
+                        const int at = first + 8 * line;
+                        if (q.size() <= 2 && first < half) break;
                         const auto next = std::find_if(q.begin(), q.end(), [](LayerId id) {
                             return (groupOf(id) == 1 || groupOf(id) == 2) && id != LayerId::RollingHat;
                         });

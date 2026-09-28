@@ -62,6 +62,17 @@ wird, ist [I], bis es gemessen ist.
   Hat-Welle etwas flacher (die Höhen bewegten sich 12 dB gegen 4,6), Ostgut und Dub öfter Wellen von 32 Takten, Raw
   weniger Lautheitsabsenkungen vor den Landungen. Offen: Raws Lautheitsspanne (2,7 LU gegen 1,3 -- die Raw-Platten sind
   sehr flach) und die trockenen Mitten (oben).
+- **Nachträge:** Roller und Tribal eröffnen mit Tom/Conga als Intro-Perc (ihr Gesicht ist gleich zu hören); die
+  zusätzlichen Einsätze des Aufbaus (Phase 10) nehmen die freien 8-Takt-Linien des Blocks (8, 16, 24), nicht nur die
+  nach dem Haupteinsatz -- Stimmen je Takt neben der Kick 5,21 → 5,27 (drei Sets à 30 Minuten, acht Tracks), Takte mit
+  Percussion unverändert 80 % (Sets 91-93 %). Ein langes Set (bis 720 Minuten, gut 200 Tracks) bricht im Plugin ab,
+  sobald eine neuere Partitur verlangt ist (`composeSet(..., stop)`).
+- **vst3test, 96 kHz stumm:** die Schleife "alle Parameter zufällig, dann Default" traf auch die 2080
+  MIDI-CC-Stellvertreter des VST3-Wrappers (VST3 kennt keine CC-Ereignisse). Auf Default gesetzt senden sie CC 1 = 0 --
+  das Modrad in Ruhe, und das schließt den Master-Filter ganz (Tiefpass bei 19,5 Hz). So seit Phase 5; bestanden hat
+  der Test, solange genug Sub durchkam. Jetzt nimmt er die CC-Parameter aus, 37/37. Offen, zu entscheiden: das Modrad
+  in Ruhe schließt den Filter -- ein Keyboard oder Host, der die Ruhelage sendet, macht das Plugin stumm (Vorschlag:
+  Modrad nur Hochpass, 0 = offen, oder das Pitch-Rad mit seiner Mitte für den ganzen Filter).
 - Nicht gebaut, weil es Hören oder Werkzeuge braucht, die ich nicht habe: der Ableton-Export (.als ohne Ableton nicht
   zu prüfen), Bandsättigung auf der Percussion (bräche die exakten Stems), der Test auf dem Headset.
 

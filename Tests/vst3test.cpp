@@ -196,8 +196,12 @@ int main(int argc, char** argv)
 
     // ---------------------------------------------------------------- state through the wrapper
     {
+        // The plugin's own parameters: not the bypass, nor the wrapper's stand-ins for MIDI controllers (VST3 has no CC
+        // events; JUCE lists 16 x 130 of them). Set to their defaults, those send CC 1 = 0 -- the mod wheel at rest, which
+        // closes the master filter -- and the checks below would hear only what leaks under 20 Hz.
         juce::Array<juce::AudioProcessorParameter*> ours;
-        for (auto* p : params) if (p->getName(64) != "Bypass") ours.add(p);
+        for (auto* p : params)
+            if (p->getName(64) != "Bypass" && !p->getName(64).startsWith("MIDI CC ")) ours.add(p);
         juce::AudioBuffer<float> buf(2, 256);
         juce::MidiBuffer midi;
         // A value a host sets reaches the processor through the parameter queues of the next process call.

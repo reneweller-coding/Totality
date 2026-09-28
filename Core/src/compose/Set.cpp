@@ -140,7 +140,8 @@ float setTempo(Dramaturgy d, float t)
     }
 }
 
-SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* cur, SetInfo* info, const Preferences* prefs)
+SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* cur, SetInfo* info, const Preferences* prefs,
+                    const std::function<bool()>& stop)
 {
     const Dramaturgy dram = static_cast<Dramaturgy>(p.getInt(p.id(Module::Set, 0, set::Dramaturgy)));
     const bool wander = p.getInt(p.id(Module::Set, 0, set::Journey)) != 0;
@@ -162,6 +163,7 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
     float bpmPrev = 0.0f;
     int keyPrev = -1;
     for (int i = 0; i < 256; ++i) {
+        if (i > 0 && stop && stop()) break;   // (a newer set is wanted)
         const float t = static_cast<float>(std::min(1.0, seconds / totalSeconds));
         const float e = setEnergy(dram, t);
         const StyleProfile prof = wander ? ladderProfile(e, p) : fixed;
