@@ -351,7 +351,7 @@ int main(int argc, char** argv)
         if (quest) engine->setQuality(Engine::Quality::Quest);
         engine->prepare(rate, block);
         engine->loadSet(setScore);
-        std::printf("Totality %s  set of seed %llu, %s, %zu tracks, %zu live loops, %zu breaks, %.1f min\n", TOT_VERSION,
+        std::printf("Totality %s  set of seed %llu, %s, %zu tracks, %zu borrowed loops, %zu breaks, %.1f min\n", TOT_VERSION,
                     static_cast<unsigned long long>(seed), kDramaturgyNames[static_cast<int>(si.dramaturgy)], si.tracks.size(),
                     si.loops.size(), si.breaks.size(), engine->lengthSeconds() / 60.0);
         const TempoMap& tm = setScore.decks[0].tempo;
@@ -363,8 +363,38 @@ int main(int argc, char** argv)
                         t.info.camelot.c_str(), t.info.bars, tm.secondsAt(t.swapIn) / 60.0, t.energy);
         }
         for (const SetLoop& l : si.loops)
-            std::printf("  loop of T%d (%d bars) on deck C from %.2f to %.2f min\n", l.from + 1, l.bars, tm.secondsAt(l.start) / 60.0,
-                        tm.secondsAt(l.end) / 60.0);
+            std::printf("  %s of T%d (%d bars) on deck C from %.2f to %.2f min\n", kLoopKindNames[static_cast<int>(l.kind)], l.from + 1, l.bars,
+                        tm.secondsAt(l.start) / 60.0, tm.secondsAt(l.end) / 60.0);
+        // Phase 9: the DJ's hand, counted by kind.
+        if (!si.moves.empty()) {
+            int count[static_cast<int>(MoveKind::Count)] = {};
+            for (const SetMove& m : si.moves) ++count[static_cast<int>(m.kind)];
+            std::string moves;
+            for (int k = 0; k < static_cast<int>(MoveKind::Count); ++k)
+                if (count[k] > 0) moves += (moves.empty() ? "" : ", ") + std::to_string(count[k]) + " " + kMoveNames[k];
+            std::printf("  the DJ's hand: %zu moves (%s)\n", si.moves.size(), moves.c_str());
+        }
+        // Phase 9: how much of the set layers sources (Mix-Dok. 6: "zwei bis drei Tracks laufen ständig"): per bar, the
+        // tracks heard (from their fader's opening to its closing) and the third deck's loops.
+        {
+            const double blend = p.getInt(p.id(Module::Set, 0, set::BlendBars)) == 0 ? 64.0 : 128.0;
+            int two = 0, three = 0, bars = 0;
+            for (double beat = 2.0; beat < setScore.lengthBeats; beat += 4.0, ++bars) {
+                int heard = 0;
+                for (size_t i = 0; i < si.tracks.size(); ++i) {
+                    const SetTrack& t = si.tracks[i];
+                    const double from = i == 0 ? t.start : t.swapIn - blend;
+                    const double to = i + 1 < si.tracks.size() ? t.swapOut + 96.0 : t.end;
+                    if (beat >= from && beat < to) ++heard;
+                }
+                for (const SetLoop& l : si.loops) if (beat >= l.start && beat < l.end) ++heard;
+                two += heard >= 2 ? 1 : 0;
+                three += heard >= 3 ? 1 : 0;
+            }
+            const double setMin = tm.secondsAt(setScore.lengthBeats) / 60.0;
+            std::printf("  %.1f tracks an hour; two sources or more in %.0f %% of the bars, three in %.0f %%\n",
+                        si.tracks.size() * 60.0 / std::max(1.0, setMin), 100.0 * two / std::max(1, bars), 100.0 * three / std::max(1, bars));
+        }
         size_t k = 0;
         for (const LevelReading& r : levels)
             std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB\n", ++k, r.measured, r.target, r.trim);

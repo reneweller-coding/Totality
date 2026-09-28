@@ -179,6 +179,9 @@ enum : int { EchoTime, Feedback, EchoReturn, HallDecay, HallReturn, Count };
 namespace set {
 enum : int { Dramaturgy, Journey, Loops, FxBreaks, BlendBars,
              Minutes,   ///< the plugin's length of a set; 0: a single track (compose.minutes)
+             /** Phase 9: a track's own time in a set (swap to swap, its body; about three minutes in the club), and
+              *  how busy the DJ's hand is on the channels between the blends. */
+             TrackMinutes, DjHand,
              Count };
 }
 /**

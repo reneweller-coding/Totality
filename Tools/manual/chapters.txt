@@ -73,10 +73,22 @@ Style picks the profile; Morph To and Morph blend it with a second one; the Dub 
 along the two axes the style is described by. With Auto the tempo, the key and the owner of the low end are drawn from
 the profile; without it the knobs decide. Minutes is the track's length, rounded to whole blocks.
 
+A set is mixed the way the Berghain residents describe their nights: as one long recomposition, not a row of
+crossfades. Each track is heard for about three minutes of its own (Track Time) and a third of it lies under its
+neighbours -- about twenty tracks an hour. The incoming track comes in with its intro, its highs first and its mids
+over the last 16 bars, its low band killed; on a 32-bar line the bass goes over in one move; the outgoing track keeps
+its hats a while, loses its mids and highs and fades. The third deck borrows: the hats and percussion of the track
+that just left carry on under the new one, the next track's figure is teased in, high-passed, before its blend (where
+the keys agree), or a percussion loop of the track before last is layered under the one playing. Between the blends
+the DJ's hand works the channel on the 16-bar lines -- a low kill before the line so the kick slams back, the highs
+taken out and faded back in, a dip of the mids, the high-pass filter drawn up into the line, an echo throw on the last
+beat -- never where the track itself already drops something.
+
 The set knobs: its length, the dramaturgy (Warm-up, Peak, Closing, Sunday, Flat -- the arc of tempo and energy over
-its length), whether the styles wander with the energy or stay, how often a loop of the outgoing track plays on under
-the next one, how often a break comes from the mixer's effects, and the blend's length. The mixer's effects are one
-send per deck into a tape echo and a long hall, which the set's breaks throw into and the Perform page's throw uses.
+its length), whether the styles wander with the energy or stay, how often the third deck borrows (Live Loops), how
+often a break comes from the mixer's effects, the blend's length, a track's own time (Track Time) and how busy the
+DJ's hand is (DJ Hand). The mixer's effects are one send per deck into a tape echo and a long hall, which the set's
+breaks throw into and the Perform page's throw uses.
 
 == Sounds and presets | | - ==
 

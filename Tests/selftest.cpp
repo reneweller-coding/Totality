@@ -971,7 +971,8 @@ void testSet()
         const float outBefore = e->lowGain(out.deck), inBefore = e->lowGain(in.deck);
         e->process(L.data(), R.data(), 1);
         const float outAfter = e->lowGain(out.deck), inAfter = e->lowGain(in.deck);
-        check(outBefore == 1.0f && inBefore < 1e-6f && outAfter < 1.0f && inAfter > 0.0f, "the bass swap in one sample",
+        // (Phase 9: the outgoing low band is 6 dB down by then, "A Low auf ~11 Uhr".)
+        check(outBefore > 0.45f && outBefore < 0.55f && inBefore < 1e-6f && outAfter < outBefore && inAfter > 0.0f, "the bass swap in one sample",
               fmt("out %.4f -> %.4f, in %.2e -> %.4f", outBefore, outAfter, inBefore, inAfter));
     }
     // Two decks at once: blocks of 1, 37 and 512 give the same bits over the first swap.
@@ -1480,6 +1481,58 @@ std::vector<float> renderStudy(int block, double seconds, uint64_t seed, const c
     return out;
 }
 
+/** Phase 9: the mix -- tracks of about three minutes, layered sources, what the third deck borrows, the DJ's hand. */
+void testMix()
+{
+    section("the mix (Phase 9)");
+    auto p = std::make_unique<ParamStore>();
+    p->parseText("set.loops=1; set.dj_hand=1");
+    SetInfo a;
+    const SetScore s = composeSet(*p, 11, 40.0, nullptr, &a);
+    const TempoMap& tm = s.decks[0].tempo;
+    const double minutes = tm.secondsAt(s.lengthBeats) / 60.0;
+    const double perHour = a.tracks.size() * 60.0 / minutes;
+    check(perHour > 15.0 && perHour < 25.0, "about twenty tracks an hour at three minutes a track (Fabric 66, Berghain 04)",
+          fmt("%.1f an hour, %zu in %.1f min", perHour, a.tracks.size(), minutes));
+    // Sources per bar: the tracks from their blend to their fade, and the third deck.
+    int two = 0, bars = 0;
+    for (double beat = 2.0; beat < s.lengthBeats; beat += 4.0, ++bars) {
+        int heard = 0;
+        for (size_t i = 0; i < a.tracks.size(); ++i) {
+            const SetTrack& t = a.tracks[i];
+            const double from = i == 0 ? t.start : t.swapIn - 128.0, to = i + 1 < a.tracks.size() ? t.swapOut + 96.0 : t.end;
+            heard += beat >= from && beat < to ? 1 : 0;
+        }
+        for (const SetLoop& l : a.loops) heard += beat >= l.start && beat < l.end ? 1 : 0;
+        two += heard >= 2 ? 1 : 0;
+    }
+    check(two * 2 >= bars, "two sources or more in half the set at least (Mix-Dok. 6)", fmt("%d of %d bars", two, bars));
+    // The third deck: one thing at a time, of more than one kind; a tease only where the keys agree.
+    bool apart = true, keys = true;
+    std::set<int> kinds;
+    for (size_t i = 0; i < a.loops.size(); ++i) {
+        const SetLoop& l = a.loops[i];
+        kinds.insert(static_cast<int>(l.kind));
+        if (i > 0 && l.start < a.loops[i - 1].end) apart = false;
+        if (l.kind == LoopKind::Tease && l.from >= 1) {
+            const int dk = ((a.tracks[static_cast<size_t>(l.from)].info.key - a.tracks[static_cast<size_t>(l.from - 1)].info.key) % 12 + 12) % 12;
+            keys = keys && (dk == 0 || dk == 5 || dk == 7);
+        }
+    }
+    check(apart && keys && kinds.size() >= 2, "the third deck borrows one thing at a time, of several kinds, a tease in agreeing keys",
+          fmt("%zu loops of %zu kinds", a.loops.size(), kinds.size()));
+    // The DJ's hand: moves between the blends, never near a track's own moments; none with the knob at zero.
+    bool clear = true;
+    for (const SetMove& m : a.moves)
+        for (const SetTrack& t : a.tracks)
+            for (const auto& mo : t.info.moments) clear = clear && std::fabs(t.start + mo.first * 4.0 - m.beat) >= 16.0;
+    p->parseText("set.dj_hand=0");
+    SetInfo b;
+    composeSet(*p, 11, 40.0, nullptr, &b);
+    check(!a.moves.empty() && clear && b.moves.empty(), "the DJ's hand moves between the blends, clear of the tracks' own moments",
+          fmt("%zu moves", a.moves.size()));
+}
+
 /** Blocks of 1, 37 and 512 samples give the same bits (the raster and the event splits, Engine.h). */
 void testBlockSizes()
 {
@@ -1858,6 +1911,7 @@ const TestSection kSections[] = {
     { "testFigure", testFigure },
     { "testCuration", testCuration },
     { "testSet", testSet },
+    { "testMix", testMix },
     { "testBlockSizes", testBlockSizes },
     { "testMaster", testMaster },
     { "testMidi", testMidi },

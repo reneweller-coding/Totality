@@ -368,10 +368,12 @@ const char* const kBlendNames[] = { "16 bars", "32 bars" };
 const ParamDesc kSetParams[set::Count] = {
     { "dramaturgy", "Dramaturgy", "", 0.0f, 4.0f, 1.0f, Curve::Choice, kDramaturgyChoiceNames },
     { "journey",    "Styles",     "", 0.0f, 1.0f, 1.0f, Curve::Choice, kJourneyNames },
-    { "loops",      "Live Loops", "", 0.0f, 1.0f, 0.3f, Curve::Linear },
+    { "loops",      "Live Loops", "", 0.0f, 1.0f, 0.5f, Curve::Linear },
     { "fx_breaks",  "FX Breaks",  "", 0.0f, 1.0f, 0.3f, Curve::Linear },
     { "blend",      "Blend",      "", 0.0f, 1.0f, 1.0f, Curve::Choice, kBlendNames },
     { "minutes",    "Set Length", "min", 0.0f, 240.0f, 0.0f, Curve::Linear },
+    { "track_minutes", "Track Time", "min", 2.0f, 6.0f, 3.0f, Curve::Linear },
+    { "dj_hand",    "DJ Hand",    "", 0.0f, 1.0f, 0.5f, Curve::Linear },
 };
 
 /** The performer's controls (live only). */

@@ -11,18 +11,39 @@
  * **Keys.** No transposition (Dok. 6): each track draws its own key, a Camelot neighbour of the last (p 0.6: a fifth up or
  * down), the same (p 0.25) or any (p 0.15).
  *
- * **The blend** (Dok. 6, 8.8). The outgoing track's outro begins on a 32-bar line; that line is the **bass swap**: the
- * incoming track, on the other deck, is placed so its body -- its bass's entry -- begins exactly there. Its intro runs
- * under the outgoing track with its low band killed at the isolator, its fader opening 16 or 32 bars before the swap
- * (set.blend); at the swap the outgoing deck's low band closes and the incoming one's opens in the same sample, and the
- * outgoing deck fades through its outro. Only one deck ever owns the band under 200 Hz.
+ * **A track's time** (Phase 9, Mix-Dok. 6 and 8: "Klocks Berghain 04: jeder Track 'a good two or three minutes'",
+ * Fabric 66: 24 tracks in 73 minutes). A set's track is as long as its own time asks (set.track_minutes, three minutes
+ * by default: its body, swap to swap, in whole blocks at its tempo, the fraction drawn), with an intro and an outro of 32
+ * bars each that lie under its neighbours -- about twenty tracks an hour, each heard for four to five minutes, a third of
+ * it under another.
  *
- * **Live recomposition** (Rodhad, DVS1). At a swap (p set.loops) a loop of four or eight bars of the outgoing track --
- * its hats, its percussion, its ping, from its loudest block -- plays on under the new one on the third deck for 32 or
- * 64 bars, its low band always killed, in the outgoing track's own sounds.
+ * **The blend** (Dok. 6, 8.8; Mix-Dok. 7, "Ablauf Takt für Takt"). The outgoing track's outro begins on a 32-bar line; that
+ * line is the **bass swap**: the incoming track, on the other deck, is placed so its body -- its bass's entry -- begins
+ * exactly there. Its intro runs under the outgoing track with its low band killed at the isolator; its fader opens 16 or
+ * 32 bars before the swap (set.blend) with its highs a little down and its mids well down, the highs coming up over the
+ * first quarter of the blend and the mids over its last 16 bars; the outgoing deck's low band comes down 6 dB over those
+ * 16 bars. At the swap the outgoing deck's low band closes and the incoming one's opens in the same sample; the outgoing
+ * deck keeps its hats (its mids fall in 8 bars, its highs over 16) and its fader falls through the next 16 bars. Only
+ * one deck ever owns the band under 200 Hz.
+ *
+ * **Live recomposition** (Rodhad, DVS1; Mix-Dok. 6: "Zwei bis drei Tracks laufen ständig, einzelne Elemente werden aus
+ * einer Platte geborgt"). The third deck plays what is borrowed, in the source track's own sounds and with its low band
+ * always killed, one thing at a time (p set.loops each):
+ *  - **the carry**: a loop of four or eight bars of the outgoing track's hats and percussion (from its loudest block) plays
+ *    on for 32 or 64 bars as its own fader falls;
+ *  - **the tease**: the incoming track's figure (its first bars) comes in 16 or 32 bars before its blend, high-passed and
+ *    opening, and hands over to the track itself -- only where the keys agree (the same or a fifth apart);
+ *  - **the layer**: a percussion loop of the track before last under a track's core for 16 or 32 bars ("ein dritter
+ *    Layer, Hat- oder Perc-Loop eines weiteren Tracks").
+ *
+ * **The DJ's hand** (Phase 9, set.dj_hand; Mix-Dok. 6: "working the EQs, the effects, all precision"). Between the blends,
+ * on a track's 16-bar lines, the channel moves: the low band killed for the last one or two bars before the line (the
+ * kick slams back), the highs taken down 10 dB and brought back over 8 or 16 bars, a dip of the mids, the filter's high
+ * pass drawn up into the line, an echo throw on the phrase's last beat. Never within four bars of the track's own
+ * moments (its downs and breaths, Composer.h), so the two hands do not double.
  *
  * **Breaks from the mixer** (p set.fx_breaks): at a swap the outgoing deck is thrown into the mixer's echo and hall for a
- * beat, a break where the track has none.
+ * beat, a break where the track has none; and the rest of a fading track goes into the echo as its fader closes.
  *
  * **Streams.** The set's own choices (keys, lengths, loops) on the stream `set`; each track on its own seed (reroll
  * `track<n>`) and its units as `track<n>.form` and so on (SetFile.h).
@@ -52,12 +73,27 @@ struct SetTrack {
     TrackInfo info;            ///< what it told
 };
 
+/** @brief What the third deck borrows (Phase 9). */
+enum class LoopKind : int { Carry = 0, Tease, Layer, Count };
+extern const char* const kLoopKindNames[];     ///< "carry", "tease", "layer"
+
 /** @brief A loop on the third deck. */
 struct SetLoop {
     int from = 0;              ///< the track it comes from
     double start = 0.0;        ///< set beat
     double end = 0.0;
     int bars = 4;              ///< the loop's length
+    LoopKind kind = LoopKind::Carry;
+};
+
+/** @brief A move of the DJ's hand on a channel (Phase 9). */
+enum class MoveKind : int { LowKill = 0, HighSwell, MidDip, FilterBuild, EchoThrow, Count };
+extern const char* const kMoveNames[];         ///< "low kill", "high swell", "mid dip", "filter build", "echo throw"
+
+struct SetMove {
+    double beat = 0.0;         ///< the line it leads into (or starts on)
+    int deck = 0;
+    MoveKind kind = MoveKind::LowKill;
 };
 
 /** @brief What a set tells. */
@@ -66,6 +102,7 @@ struct SetInfo {
     std::vector<SetTrack> tracks;
     std::vector<SetLoop> loops;
     std::vector<double> breaks;   ///< set beats of the mixer's breaks
+    std::vector<SetMove> moves;   ///< Phase 9: the DJ's hand
 };
 
 /**

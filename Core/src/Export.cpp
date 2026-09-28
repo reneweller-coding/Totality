@@ -49,7 +49,11 @@ std::vector<CueAt> setCues(const SetInfo& si, const TempoMap& tm)
         if (i > 0) cues.push_back({ tm.secondsAt(t.swapIn), "Swap to " + name });
         for (size_t r = 0; r < t.info.reductions.size(); ++r) cues.push_back({ tm.secondsAt(t.start + 4.0 * t.info.reductions[r]), name + " kick out" });
     }
-    for (const SetLoop& l : si.loops) cues.push_back({ tm.secondsAt(l.start), "Loop of T" + std::to_string(l.from + 1) });
+    for (const SetLoop& l : si.loops) {
+        std::string kind = kLoopKindNames[static_cast<int>(l.kind)];
+        kind[0] = static_cast<char>(kind[0] - 'a' + 'A');
+        cues.push_back({ tm.secondsAt(l.start), kind + " of T" + std::to_string(l.from + 1) });
+    }
     std::sort(cues.begin(), cues.end(), [](const CueAt& a, const CueAt& b) { return a.seconds < b.seconds; });
     return cues;
 }

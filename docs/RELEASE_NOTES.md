@@ -16,9 +16,12 @@ just before it (the centre, the kick and the claps, the figure), and an element 
 comes back with a throw. Every part on its own seed stream: form, harmony, rack, layers, blocks, events, hands, sounds,
 figure can be rerolled alone.
 
-**Sets.** Up to four hours on two decks and a third for loops: five dramaturgies of tempo and energy, tracks in
-neighbouring Camelot keys, blends of 16 or 32 bars with the bass swapped on a 32-bar line through the isolator, loops of
-the outgoing track under the next, breaks from the mixer's tape echo and hall.
+**Sets.** Up to four hours, mixed as one long recomposition on two decks and a third that borrows: five dramaturgies
+of tempo and energy, tracks in neighbouring Camelot keys, about twenty an hour with three minutes of their own each
+(Track Time); blends of 16 or 32 bars led by the EQs -- the highs first, the mids over the last 16 bars -- with the bass
+swapped on a 32-bar line through the isolator; the outgoing track's hats carried on, the next track's figure teased in,
+a percussion loop of the one before layered under; the DJ's hand on the channels between the blends (low kills, high
+swells, mid dips, filter builds, echo throws; DJ Hand); breaks from the mixer's tape echo and hall.
 
 **Sound.** A kick of three engines and a 909 top layer; the rumble, which continues the kick's phase under its hall;
 a sub locked to the kick; twelve kit lanes with the 909's metal oscillators; the ping; a bass synth and a 303 through ten

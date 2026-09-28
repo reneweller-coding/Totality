@@ -11,9 +11,11 @@ Quest. The sibling of [Noctuary](../AmbientSynth) (ambient), Phosphene (psytranc
 lines, automation by two "hands", harmony by the research document's rules, eight candidates per block judged against a
 hypnosis corridor. Every track has a figure -- a ping motif, a stab, a bass riff or a 303 line it is remembered by --
 and its body runs in waves of 32 or 64 bars that build towards a landing, drop something away just before it and
-breathe in between, as often as the reference records change (`Tools/analyze_ref.py`, meso). A set composer mixes them on two decks as a Berlin DJ would -- five dramaturgies, the tempo drifting
-by at most 1 BPM a track, blends of 16 or 32 bars with a hard bass swap on a 32-bar line through the isolator, live
-loops of the last track on a third deck, breaks from the mixer's effects. Every part is drawn on its own seed stream and
+breathe in between, as often as the reference records change (`Tools/analyze_ref.py`, meso). A set composer mixes them as a Berlin DJ would, as one long recomposition -- five dramaturgies, the tempo drifting
+by at most 1 BPM a track, about twenty tracks an hour of three minutes each, blends with the highs first and the mids
+over the last 16 bars and a hard bass swap on a 32-bar line through the isolator, a third deck that borrows (the last
+track's hats carried on, the next one's figure teased in, a loop of the one before layered under), the DJ's hand on
+the EQs, filter and echo between the blends, breaks from the mixer's effects. Every part is drawn on its own seed stream and
 can be rerolled alone (`.totset`).
 
 The sound: the kick (three engines, a 909 top layer), the rumble that continues the kick's phase under its hall, the

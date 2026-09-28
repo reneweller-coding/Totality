@@ -281,6 +281,10 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     if (form == FormType::Peak) redLen = uRedLen < 0.5f ? 8 : uRedLen < 0.85f ? 16 : 32;
     else if (form == FormType::Arc && uRed < prof.toolReductionChance) redLen = uRedLen < 0.5f ? 4 : 8;
     redLen = std::min(redLen, prof.maxReduction);
+    // Phase 9: a set's track is short (about three minutes of body, Set.h) and its kick-out stays a moment of it -- 8 bars
+    // in a body of three blocks or less, 16 in four; the long breaks of a set come from the mixer (Mix-Dok. 8: "Breaks
+    // kommen vom DJ ... der Track selbst braucht keinen Breakdown"). A 32-bar kick-out took a set's whole middle block.
+    if (req.mixable) redLen = std::min(redLen, bodyEnd - bodyFirst <= 3 ? 8 : 16);
     int redReturn = -1, redStart = -1;
     if (redLen > 0 && bodyBars >= 64) {
         const double at = bodyFirst * 32 + (0.5 + 0.15 * uRedPos) * bodyBars;
@@ -1050,7 +1054,8 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         }
         // The hats' bus: its low pass down to 2.9 kHz at the most, its level 5 dB.
         wk.push_back({ hatsCut, -std::min(0.42f, 0.30f * hatDepth), 0.0f, 0.0 });
-        wk.push_back({ pid(Module::Mix, 0, mix::HatsLevel), -0.08f * hatDepth, 0.0f, 0.0 });
+        const int hatsLevel = pid(Module::Mix, 0, mix::HatsLevel);
+        wk.push_back({ hatsLevel, -0.08f * hatDepth, 0.0f, 0.0 });
         const auto real = [&](int id, float off) {
             return p.fromNormalised(id, std::clamp(p.toNormalised(id, knobs.get(id)) + off, 0.0f, 1.0f));
         };
@@ -1060,7 +1065,9 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             for (const Wave& w : waves) {
                 const double a = static_cast<double>(w.start) * kBar, len = static_cast<double>(w.land - w.start) * kBar;
                 if (a < k.from) continue;
-                const float lo = k.low * k.scale * w.depth, hi = k.high * k.scale * w.depth;
+                // (The wave over a kick-out keeps the hats open: the kick-out is its down already, 28.09.2026.)
+                const bool open = (k.id == hatsCut || k.id == hatsLevel) && redLen > 0 && w.land == redReturn;
+                const float lo = open ? 0.0f : k.low * k.scale * w.depth, hi = open ? 0.0f : k.high * k.scale * w.depth;
                 any = true;
                 if (w.shape == 0) {
                     sc.gestures.push_back(knobs.ramp(k.id, a, 2.0 * kBar, real(k.id, at), real(k.id, lo), GestureShape::EaseOut, 0));

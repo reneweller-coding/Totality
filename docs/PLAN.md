@@ -22,6 +22,43 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**28.09.2026, Mittag: Phase 9, die Mix-Engine.** Schritt 2 des Plans aus Phase 8 ("Mach ruhig schon mal mit dem Mix
+weiter"): das Set als Live-Rekomposition (Mix-Dok. 6--8) statt als Staffel. Vorher lief jeder Track seinen ganzen Body
+allein (4--5 Minuten, 14 Tracks die Stunde), der nächste Fader öffnete 16 oder 32 Takte vor dem Swap, Deck C spielte
+selten eine Loop, zwischen den Blends rührte niemand den Mixer an.
+
+- **Die Zeit eines Tracks** (`set.track_minutes`, 3 Minuten; Mix-Dok.: Klocks Berghain 04 "a good two or three minutes",
+  Fabric 66 24 Tracks in 73 Minuten): ein Set-Track ist so lang, wie seine eigene Zeit verlangt -- sein Body, Swap zu
+  Swap, in ganzen Blöcken bei seinem Tempo (der Bruchteil gezogen), dazu Intro und Outro von je 32 Takten unter den
+  Nachbarn. Rund 20 Tracks die Stunde. Sein Kick-Out bleibt ein Moment: höchstens 8 Takte bei drei Body-Blöcken, 16 bei
+  vier (ein Peak-Kick-Out von 32 Takten nahm sonst den ganzen mittleren Block und lag 36 dB unter dem Set); die Hat-Welle
+  über einem Kick-Out lässt die Hats offen.
+- **Der Blend** nach dem "Ablauf Takt für Takt" (Mix-Dok. 7): der Fader des Kommenden öffnet `set.blend` Takte vor dem
+  Swap, seine Höhen 8 dB unten und über ein Viertel des Blends zurück, seine Mitten 18 dB unten und über die letzten 16
+  Takte zurück; der Bass des Gehenden 6 dB herunter über dieselben 16 Takte ("A Low auf ~11 Uhr"), dann der Swap im
+  selben Sample; der Gehende behält seine Hats (Mitten fallen in 8 Takten, Höhen über 16), sein Fader fällt durch die 16
+  danach; mit `set.fx_breaks` geht sein Rest ins Echo.
+- **Deck C borgt** (Mix-Dok. 6: "Zwei bis drei Tracks laufen ständig ... einzelne Elemente werden aus einer Platte
+  geborgt"): je Track-Strecke eine Anleihe (p `set.loops` × 1,4, Standard jetzt 0,5) -- das **Carry** (Hats und
+  Percussion des gerade gegangenen Tracks laufen 32 oder 48 Takte weiter), der **Tease** (die Figur des nächsten Tracks
+  16 oder 32 Takte vor seinem Blend, hochpassgefiltert und sich öffnend, nur wo die Tonarten gleich oder eine Quinte
+  auseinander sind), der **Layer** (ein Perc-Loop des vorletzten Tracks 16 oder 32 Takte unter dem Kern). Immer eines
+  zugleich, 16 Takte Nachhall dazwischen.
+- **Die Hand des DJs** (`set.dj_hand`, 0,5; Mix-Dok. 6: "working the EQs, the effects, all precision"): zwischen den
+  Blends auf den 16-Takt-Linien des Tracks ein Low-Kill (1 oder 2 Takte vor der Linie, die Kick schlägt zurück), ein
+  High-Swell (Höhen −10 dB, zurück über 8 oder 16 Takte: Mills' "Rides am Mixer eingefadet"), ein Mitten-Dip, ein
+  Hochpass-Build in die Linie, ein Echo-Throw auf dem letzten Schlag -- nie näher als vier Takte an den eigenen Momenten
+  des Tracks (Phase 8), damit die zwei Hände nichts doppeln.
+- `tot_render --plan` nennt die Anleihen nach Art, die Bewegungen der Hand und wie viel des Sets geschichtet ist; die
+  Cues heißen "Carry of T3", "Tease of T5", "Layer of T2". Neuer Test `testMix`.
+
+Gemessen an einem Set von 30 Minuten (Seed 2026, Peak; `out/p9`, vorher mit dem Renderer von Phase 8): vorher 7 Tracks,
+2 Loops, 1 Break; jetzt 10 Tracks (19,2 die Stunde), 5 Anleihen, 11 Handgriffe, zwei Quellen oder mehr in 62 % der
+Takte, drei in 7 %. Wechsel je 64 Takte (meso) 3,3 → 4,9; die Lautheitsspanne bleibt bei 3,7 LU (ohne die
+Kick-Out-Grenze waren es 6,7: der 32-Takt-Kick-Out eines Peak-Tracks lag 36 dB unter dem Set). Die tiefsten Stellen sind
+jetzt die Kick-Outs von 8 Takten. `selftest` 176/176. Offen (Schritt 3): die Kalibrierung an echten Mixen (Tracklists von
+Berghain 04 und 06: Tracks je Stunde, Überlagerung, Tempodrift) und Hörrunden.
+
 **28.09.2026, Vormittag: Phase 8, Figur und Spannung.** Nach dem ersten Hören ("es gab eben keine richtigen Ups und
 Downs, es plätscherte eben einfach so vor sich hin in einem starren 32-Takt-Raster") und mit dem zweiten
 Recherchedokument des Nutzers (`Berlin Techno: Arrangement und DJ-Mixing im Club`, 28.09.2026; im Folgenden **Mix-Dok.**).
