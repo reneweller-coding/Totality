@@ -21,7 +21,8 @@ track that plays; with Favor Ratings the liked kinds and sounds come more often.
 **Sets.** Up to four hours, mixed as one long recomposition on two decks and a third that borrows: five dramaturgies
 of tempo and energy, tracks in neighbouring Camelot keys, about twenty an hour with three minutes of their own each
 (Track Time); blends of 16 or 32 bars led by the EQs -- the highs first, the mids over the last 16 bars -- with the bass
-swapped on a 32-bar line through the isolator; the outgoing track's hats carried on, the next track's figure teased in,
+swapped on a 32-bar line through the isolator, where the incoming track's figure lands (its first body block runs under
+the outgoing track's full groove, nearly full itself); the outgoing track's hats carried on, the next track's figure teased in,
 a percussion loop of the one before layered under; the DJ's hand on the channels between the blends (low kills, high
 swells, mid dips, filter builds, echo throws; DJ Hand); breaks from the mixer's tape echo and hall; seven dramaturgies (with Cruise and Marathon), up to twelve hours.
 

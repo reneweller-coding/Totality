@@ -21,8 +21,11 @@
  * it under another.
  *
  * **The blend** (Dok. 6, 8.8; Mix-Dok. 7, "Ablauf Takt für Takt"). The outgoing track's outro begins on a 32-bar line; that
- * line is the **bass swap**: the incoming track, on the other deck, is placed so its body -- its bass's entry -- begins
- * exactly there. Its intro runs under the outgoing track with its low band killed at the isolator; its fader opens 16 or
+ * line is the **bass swap**: the incoming track, on the other deck, is placed so its figure's entry -- its body's second
+ * block, bar 65 -- lands exactly there (Phase 19, 29.09.2026: placed by its bass's entry, bar 33, the swap left the
+ * incoming track alone with its kick, its hats and its bass for the 32 bars to its figure, over the outgoing track's
+ * outro, and the user heard "two minutes of kick and hi-hat" at every track). Its intro and its first body block run
+ * under the outgoing track's last two body blocks with its low band killed at the isolator; its fader opens 16 or
  * 32 bars before the swap (set.blend) with its highs 8 dB and its mids 10 dB down, the highs coming up over the
  * first quarter of the blend and the mids over its last 16 bars; the outgoing deck's low band comes down 6 dB over those
  * 16 bars. At the swap the outgoing deck's low band closes and the incoming one's opens in the same sample; the outgoing

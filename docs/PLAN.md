@@ -22,6 +22,34 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**29.09.2026, früh: Phase 19, der Swap auf der Figur.** Der Nutzer über das Set des Phase-18-Builds: "Nach wie vor
+bestehen die ersten zwei Minuten jedes Tracks im Mix nur aus Kick und Hi Hat, das ist viel zu lang."
+
+- **Befund, am Set gemessen** (Stems des Sets, je 15 s das lauteste Sample von Hats, Percussion und tonaler Stimme gegen
+  die Kick; voll = Percussion ≥ −18 und tonal ≥ −16 dB): 145 von 211 Fenstern voll, 4,2 Minuten ganz dünn -- die ersten
+  zwei Minuten des Sets (der erste Track hatte als Intro-Perc einen Shaker, der auf dem Hat-Bus liegt, seinen Clap erst
+  bei Takt 97) und nach jedem Swap 0,5 bis 1 Minute: Der Swap lag auf dem Bass-Einsatz des ankommenden Tracks (Takt 33),
+  seine Figur kam 32 Takte später; unter ihm der abgehende Track in seinem Outro (ohne tonales Material, Mitten und
+  Höhen weggezogen, Fader nach 24 Takten zu). Dazu ein Ostgut-Roller mit einem Tom-Schlag je Takt als ganzer
+  Percussion für 64 Takte: Die Kappe des Pools (9) war mit Hats, Ride, Ghost-Kick und Shaker voll und hatte den Clap
+  weggeschnitten, Rim und Ride waren für die zweite Hälfte zurückgehalten.
+- **Der Swap auf der Figur** (`Set.cpp`, `Set.h`): der ankommende Track steht so, dass sein Takt 65 -- der zweite
+  Body-Block, die Figur -- auf dem Swap liegt; Intro und erster Body-Block (2 Minuten) laufen unter den letzten zwei
+  vollen Body-Blöcken des abgehenden, der Bass am Isolator gekillt und mit der Figur freigegeben. Dafür ein Block mehr
+  je Track (224 statt 192 Takte, mindestens 3 Body-Blöcke), die eigene Zeit von Swap zu Swap bleibt. Dichte eines
+  Set-Tracks: 0,85 im Block unter dem anderen, 1,0 ab dem Swap (der Swap ist sein Drop); der erste Track des Sets 1,0 ab
+  dem Body, seine Figur auf der 8-Takt-Linie nach dem Bass.
+- **Percussion, die man hört** (`Composer.cpp`): Intro-Perc ist Clap, Rim oder Tom, nicht der Shaker; Shaker und
+  Ghost-Kick zählen beim Verweben der Einsätze zu den Hats und der Shaker nicht mehr zur Percussion-Mindestzahl; die
+  Kappe des Pools schont Clap, Tom und Rim bis zur Mindestzahl.
+- **Ergebnis:** Set 16050400 (52,8 min) 145 → 180 von 211 Fenstern voll, dünne Strecken 4,2 → 0,8 min (das
+  Schluss-Outro), Percussion ab 0:15, voll ab 1:00. Einzeltracks (28): Percussion-Spitze gegen die Kick −17,1 → −13,9 dB,
+  hörbar in 60 → 91 % der Body-Fenster; Stimmen je Takt in der Partitur 5,36 → 5,57. Der Wächter der Balance (Phase 18)
+  zählt nur Stellen mit Kick-Band (im Set lag eine Stelle vor dem Bass-Swap und nahm alle Anhebungen zurück). `testMix`
+  prüft den Swap auf der Figur; 186/186.
+- **Offen:** Hören. Nach dem Swap trägt der ankommende Track 32 Takte lang zwei bis drei Percussion-Stimmen und die Figur;
+  ob das dem Ohr reicht, entscheidet der Nutzer.
+
 **28.09.2026, Nacht: Phase 18, das Gleichgewicht.** Der Nutzer über Track und Set des Builds von 19:54: "Die bestehen
 zum überwiegenden Teil nur aus Kick und Hi Hats (und vielleicht ein wenig Ride)".
 

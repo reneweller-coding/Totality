@@ -416,6 +416,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             if (form == FormType::Peak && redReturn >= 0 && b * 32 >= redReturn && b * 32 < redReturn + 64) d = 1.0f;
         }
         if (energy >= 0.0f && b >= bodyFirst && b < bodyEnd) d = std::clamp(d * (0.85f + 0.3f * energy), 0.3f, 1.0f);
+        // Phase 19 (29.09.2026, the user on the set: "die ersten zwei Minuten jedes Tracks ... nur Kick und Hi Hat"): a
+        // set's track is heard from its body's first block, under the outgoing track, and owns the floor from its second
+        // (Set.h): 0.85 under the other, everything from the swap on -- the swap is its drop. The template's climb (0.6,
+        // 0.85, 1.0) is a track's alone. The set's first track the same from its body's first block: nothing lies under it.
+        if ((req.mixable || req.quickStart) && b >= bodyFirst && b < bodyEnd) d = (b == bodyFirst && !req.quickStart) ? 0.85f : 1.0f;
         density[static_cast<size_t>(b)] = d;
     }
 
@@ -483,14 +488,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             missing.emplace_back(c.chance + (isTonal(c.layer) ? 0.0f : 1.0f), c.layer);
         }
         std::stable_sort(missing.begin(), missing.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
-        // Percussion beyond the hats first: two voices of clap, shaker, toms and rim (Hypnotic, Dub), three (Ostgut, Raw)
-        // -- a pool of drones and textures left a track with its hats and a shaker.
+        // Percussion beyond the hats first: two voices of clap, toms and rim (Hypnotic, Dub), three (Ostgut, Raw) -- a
+        // pool of drones and textures left a track with its hats and a shaker. (Phase 19: the shaker no longer counts, it
+        // plays on the hats' bus and is one more hat to the ear; a set's Roller had a tom a bar as its whole percussion.)
         static const float kPercVoices[4] = { 2.0f, 3.0f, 2.0f, 3.0f };
         float percWant = 0.0f;
         for (int st = 0; st < 4; ++st) percWant += prof.styleMix[st] * kPercVoices[st];
-        const auto percussion = [](LayerId id) {
-            return id == LayerId::ClapA || id == LayerId::Shaker || id == LayerId::TomConga || id == LayerId::Rim;
-        };
+        const auto percussion = [](LayerId id) { return id == LayerId::ClapA || id == LayerId::TomConga || id == LayerId::Rim; };
         int percHave = 0;
         for (LayerId id : pool) percHave += percussion(id) ? 1 : 0;
         for (const auto& [weight, layer] : missing) {
@@ -506,10 +510,19 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             pool.push_back(layer);
             keep.push_back(weight - 1.0f);
         }
+        // The cap trims the weakest -- never the percussion the floor asked for (Phase 19: an Ostgut Roller's cap was
+        // filled with hats, ride, ghost kick and shaker, and cut the clap; its percussion was a tom a bar).
         const size_t maxPool = static_cast<size_t>(std::max(4, prof.densityCap));
         while (pool.size() > maxPool) {
-            size_t weakest = 0;
-            for (size_t i = 1; i < pool.size(); ++i) if (keep[i] < keep[weakest]) weakest = i;
+            int percNow = 0;
+            for (LayerId id : pool) percNow += percussion(id) ? 1 : 0;
+            const bool spare = percNow <= static_cast<int>(std::lround(percWant));
+            size_t weakest = pool.size();
+            for (size_t i = 0; i < pool.size(); ++i) {
+                if (spare && percussion(pool[i])) continue;
+                if (weakest == pool.size() || keep[i] < keep[weakest]) weakest = i;
+            }
+            if (weakest == pool.size()) break;
             pool.erase(pool.begin() + static_cast<long>(weakest));
             keep.erase(keep.begin() + static_cast<long>(weakest));
         }
@@ -524,7 +537,8 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     {
         std::vector<std::pair<float, LayerId>> hats, percs;
         for (size_t i = 0; i < pool.size(); ++i) {
-            if (groupOf(pool[i]) == 1) hats.emplace_back(keep[i], pool[i]);
+            // (The shaker: a hat to the ear; the ghost kick: an accent, no voice -- both among the hats here.)
+            if (groupOf(pool[i]) == 1 || pool[i] == LayerId::Shaker || pool[i] == LayerId::GhostKick) hats.emplace_back(keep[i], pool[i]);
             else if (groupOf(pool[i]) == 2) percs.emplace_back(keep[i], pool[i]);
         }
         const auto likeliest = [](const auto& a, const auto& b) { return a.first > b.first; };
@@ -542,9 +556,12 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         order.insert(order.end(), woven.begin(), woven.end());
         for (LayerId id : rest) if (groupOf(id) != 0) order.push_back(id);
     }
-    // The intro's one perc: the first of the clap-and-perc group that is no ghost.
+    // The intro's one perc: the first of the clap-and-perc group that is no ghost -- and no shaker (Phase 19: it plays on
+    // the hats' bus and sounds as one more hat; a set's first track had its clap at bar 97).
     LayerId introPerc = LayerId::Count;
-    for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick) { introPerc = id; break; }
+    for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick && id != LayerId::Shaker) { introPerc = id; break; }
+    if (introPerc == LayerId::Count)
+        for (LayerId id : order) if (groupOf(id) == 2 && id != LayerId::GhostKick) { introPerc = id; break; }
     // Phase 13: the Roller's and the Tribal track's toms are their face -- the intro's perc, so the kind is heard at once.
     if ((arch == Archetype::Roller || arch == Archetype::Tribal) && std::find(order.begin(), order.end(), LayerId::TomConga) != order.end())
         introPerc = LayerId::TomConga;
@@ -699,7 +716,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         // The body's second block (Dok. 8.5's template: +Bass at 33, +Stab at 65); the bass with the body; the Endless's from
         // its first bar.
         if (form == FormType::Endless) figureBlock = 0;
-        else if (figure == LayerId::Bass) figureBlock = bodyFirst;
+        else if (figure == LayerId::Bass || req.quickStart) figureBlock = bodyFirst;   // (Phase 19: the set's first track at once)
         else figureBlock = std::min(bodyFirst + 1, bodyEnd - 1);
     }
     struct Wave { int start = 0, land = 0, shape = 0; float depth = 1.0f; };
@@ -981,6 +998,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                     const int off = (groupOf(add) == 1 || groupOf(add) == 2) ? entryOffset[static_cast<size_t>(b)] : 0;
                     if (off == 0) enter(first, add, true);
                     else pendings.emplace_back(first + off, add);
+                    // Phase 19: the set's first track brings its figure on the 8-bar line after its bass took the block.
+                    if (req.quickStart && bassNow && figure != LayerId::Count && figure != LayerId::Bass && b == figureBlock) {
+                        const auto f2 = std::find(q.begin(), q.end(), figure);
+                        if (f2 != q.end()) { pendings.emplace_back(first + 8, figure); q.erase(f2); }
+                    }
                     // Phase 10: the build brings more than one in a block -- up to two hats or percs on the next 8- and
                     // 16-bar lines after the main entry's, while the block is under its density (Mix-Dok. 3, the Tool
                     // template: density 0.3 -> 0.6 at bar 33 -> 0.85 at 65 -> 1.0 at 97; the canon brings something in

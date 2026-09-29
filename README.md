@@ -14,7 +14,8 @@ and its body runs in waves of 32 or 64 bars that build towards a landing, drop s
 breathe in between, as often as the reference records change (`Tools/analyze_ref.py`, meso). A track is also of a kind
 -- Tool, Roller, Stab, Acid, Bleep, Dub Chord or Tribal --, drawn by its style; a set never plays two of a kind in a row. A set composer mixes them as a Berlin DJ would, as one long recomposition -- five dramaturgies, the tempo drifting
 by at most 1 BPM a track, about twenty tracks an hour of three minutes each, blends with the highs first and the mids
-over the last 16 bars and a hard bass swap on a 32-bar line through the isolator, a third deck that borrows (the last
+over the last 16 bars and a hard bass swap on a 32-bar line through the isolator -- where the incoming track's figure
+lands, its first body block under the outgoing track's full groove --, a third deck that borrows (the last
 track's hats carried on, the next one's figure teased in, a loop of the one before layered under), the DJ's hand on
 the EQs, filter and echo between the blends, breaks from the mixer's effects; seven dramaturgies, up to twelve hours. Every part is drawn on its own seed stream and
 can be rerolled alone (`.totset`).

@@ -175,10 +175,12 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
         int key = anyKey;
         if (i > 0) key = uk < 0.6f ? (keyPrev + (ud < 0.5f ? 7 : 5)) % 12 : uk < 0.85f ? keyPrev : anyKey;
         // Phase 9: the track's own time -- its body, swap to swap -- in whole blocks near set.track_minutes at its tempo
-        // (the fraction drawn), and an intro and an outro of a block each.
+        // (the fraction drawn), and an intro and an outro of a block each. Phase 19: from the second track on, one
+        // more block -- the body's first, which runs under the outgoing track before the swap (Set.h); three at least,
+        // or the track before last would still be in its outro on the deck.
         const double want = static_cast<double>(trackMinutes) * bpm / 4.0 / 32.0;
-        const int body = std::clamp(static_cast<int>(std::floor(want)) + (sr.uniform() < want - std::floor(want) ? 1 : 0), 2, 8);
-        const int blocks = body + 2;
+        const int body = std::clamp(static_cast<int>(std::floor(want)) + (sr.uniform() < want - std::floor(want) ? 1 : 0), 3, 8);
+        const int blocks = body + (i == 0 ? 2 : 3);
         const std::string unit = "track" + std::to_string(i + 1) + ".";
         const uint64_t trackSeed = mixSeed(mixSeed(seed, 0x545241434Bull + static_cast<uint64_t>(i)),
                                            static_cast<uint64_t>(cur != nullptr ? cur->count("track" + std::to_string(i + 1)) : 0));
@@ -209,7 +211,9 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
             const double swap = prev.start + prev.info.outroBar * kBar;
             prev.swapOut = swap;
             st.deck = 1 - prev.deck;
-            st.start = swap - st.info.introBars * kBar;
+            // Phase 19: the swap on the incoming track's figure -- the first bar of its body's second block (its bass,
+            // in from the body's first bar, is killed at the isolator until then and lands with the figure).
+            st.start = swap - (st.info.bassBar + 32) * kBar;
             st.swapIn = swap;
             // The tempo ramps through the blend, to the swap.
             tempo.add(swap - blendBars * kBar, bpmPrev, true);

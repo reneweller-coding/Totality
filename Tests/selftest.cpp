@@ -980,7 +980,7 @@ void testSet()
             same = s.decks[d].notes[i].beat == t.decks[d].notes[i].beat && s.decks[d].notes[i].pitch == t.decks[d].notes[i].pitch;
     }
     check(same && a.tracks.size() >= 5, "the same seed, the same set", fmt("%zu tracks, %zu loops, %zu breaks", a.tracks.size(), a.loops.size(), a.breaks.size()));
-    int badDeck = 0, badLine = 0, badTempo = 0;
+    int badDeck = 0, badLine = 0, badTempo = 0, badDrop = 0;
     for (size_t i = 0; i < a.tracks.size(); ++i) {
         const SetTrack& k = a.tracks[i];
         if (i >= 1 && a.tracks[i - 1].deck == k.deck) ++badDeck;
@@ -988,11 +988,16 @@ void testSet()
         if (i >= 1) {
             const SetTrack& o = a.tracks[i - 1];
             if (std::fabs(std::fmod(k.swapIn - k.start, 128.0)) > 1e-9 || std::fabs(std::fmod(k.swapIn - o.start, 128.0)) > 1e-9) ++badLine;
+            // Phase 19: the swap on the incoming track's figure, a body block after its bass; the outgoing track's
+            // outro begins there.
+            if (k.info.figure < 0 || k.start + k.info.figureBar * 4.0 > k.swapIn + 1e-9 || std::fabs(k.swapIn - k.start - (k.info.bassBar + 32) * 4.0) > 1e-9
+                || std::fabs(o.start + o.info.outroBar * 4.0 - k.swapIn) > 1e-9) ++badDrop;
             if (k.info.bpm < o.info.bpm - 1e-6 || k.info.bpm > o.info.bpm + 1.0f + 1e-6) ++badTempo;   // Peak: rising, at most 1 BPM
         }
     }
     check(badDeck == 0, "the tracks alternate between the decks and never overlap on one", fmt("%d", badDeck));
     check(badLine == 0, "every bass swap on a 32-bar line of both tracks", fmt("%d", badLine));
+    check(badDrop == 0, "every swap where the incoming track's figure lands, a block after its bass, on the outgoing track's outro", fmt("%d", badDrop));
     check(badTempo == 0, "the tempo rises by at most 1 BPM a track (Peak)", fmt("%d", badTempo));
     // The low band: at the middle of every bar, at most one deck with a track sounding has it open.
     int owners = 0, bars = 0, worst = 0;

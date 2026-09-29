@@ -42,7 +42,8 @@ behind them, the room taken back where the mids would stand over the records' --
 loudness; the status says "levelling" until the corrections have glided in.
 
 For a set, move Set min above zero: Totality then writes a set of that many minutes -- a dramaturgy of tempo and energy,
-tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line, loops of the last track
+tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line where the incoming
+track's figure lands -- its first body block runs under the outgoing track's full groove --, loops of the last track
 under the next on the third deck, breaks from the mixer's effects.
 
 In a DAW, Totality is an instrument plugin that follows the host's transport: it plays when the host plays, jumps when
