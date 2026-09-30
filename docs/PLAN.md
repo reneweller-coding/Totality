@@ -22,6 +22,45 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**30.09.2026: Phase 20, Anfang und Ende wie auf den Platten.** Der Nutzer: "Ich bin mir sehr sicher, dass nahezu keiner
+mit einer simplen 4-to-the-floor Kick alleine beginnt" -- und dasselbe für das Outro. Bisher: Takt 1 bis 8 die Kick
+allein, dann Closed Hat (9), halbe Rolling Hat (17), eine Percussion (25); im Outro fiel alle 8 Takte etwas weg, die Kick
+blieb bis zum Schluss.
+
+- **Gemessen an den 30 Referenzplatten** (neu: `intro_ref.py`/`outro_ref.py` im Scratchpad der Sitzung; je 2 Takte der
+  ersten bzw. letzten 64, Kick als Puls auf den Vierteln im 40-150-Hz-Band, Hats 7-10,5 kHz, Percussion perkussiv
+  400-4000 Hz abseits der Kick-Schläge, tonal harmonisch 200-4000 Hz, jedes gegen seinen Pegel im Body). **Anfang**
+  (Takt 1-8): nur 2 mit der Kick allein, 1 mit Kick und Hats; 20 haben Percussion ab den ersten Takten, 18 halten die
+  Kick 8 bis 24 Takte zurück (oder spielen sie gefiltert) unter Percussion, Hats oder einer Fläche. Nach Stil: Hypnotic
+  2-3 von 7 mit der Kick sofort, Ostgut 3 von 11, Dub 1 von 6, Raw 4-5 von 6. **Ende** (letzte 8 Takte): 22 von 30 ohne
+  Kick -- sie geht 4 bis 36 Takte vor dem Ende, 8 haben sie in den letzten 64 Takten gar nicht mehr; Hypnotic nie in den
+  letzten 8 Takten, Raw 4 von 6 bis zum Schluss. Die Hats sind in 18 von 30 vorher gegangen (Median 9 Takte vor dem
+  Ende); Percussion und ein tonales Bett tragen die letzten Takte, danach 1 bis 21 s Ausklang.
+- **Die Literatur** sagt dasselbe für den Anfang (TrackSensei: "drums and percussion only: kick, hats, maybe a filtered
+  loop"; Dok. 8.5: Kick, Closed Hat, eine Perc) und für das Ende uneinheitlich: "mirror the intro", "subtracts
+  elements every 8 bars until only the kick remains" oder "until only percussion or a fading texture remains", ein
+  sauberer Schnitt auf dem Downbeat (Mixed In Key, Mastrng, EDM Ghost Production). Die Platten entscheiden für die
+  Percussion und die Fläche.
+- **Drei Eröffnungen** (`Opening`, `Composer.h`), je Stil gewichtet: *drums* (Kick, Closed Hat und die Intro-Perc ab
+  Takt 1, die Rolling Hat auf der ersten 8-Takt-Linie), *percussion first* (Closed Hat, Rolling Hat und die Perc ab
+  Takt 1, die Kick auf Takt 9 oder 17), *atmosphere first* (Textur und Perc ab Takt 1, die Hats auf den 8- und
+  16-Takt-Linien, die Kick auf 9 oder 17); Gewichte Hypnotic 0,35/0,30/0,35, Ostgut 0,30/0,30/0,40, Dub 0,20/0,20/0,60,
+  Raw 0,70/0,15/0,15. Das Hat-Filter öffnet ab 4 kHz statt 1,5 kHz (von dort lagen die Hats 30-40 dB unter der Kick,
+  und ein Drums-Anfang klang wie die Kick allein); die Spur, die den Track eröffnet, behält in der Balance ihr Fenster
+  (`LevelMark::front`).
+- **Das Ende**: die Kick geht 0, 8, 16 oder 32 Takte vor dem Ende (je Stil gewichtet, mindestens so weit, wie die
+  Eröffnung sie zurückhielt), die Closed Hat 8 oder 16 Takte vorher oder gar nicht (bleibt: Hypnotic 20 %, Ostgut 45 %,
+  Dub 25 %, Raw 35 %); Intro-Perc, Textur und, wo die Hat geht, eine zweite Percussion bleiben bis zum Schluss. Die
+  Textur darf einen Track beenden (keine Tonart, keine Reibung im Mix).
+- **Ergebnis, mit denselben Maßen an 24 eigenen Tracks:** Anfang "Kick allein" oder "Kick + Hats" 3 von 24 (Platten 3
+  von 30; unsere drei sind Roller/Tribal mit einer spärlichen Tom als Intro-Perc), Kick zurückgehalten 16 von 24 (18
+  von 30); Ende ohne Kick 20 von 24 (22 von 30), die Kick geht im Median 18 Takte vorher (Platten etwa 20). Die
+  Hörbarkeit im Body bleibt (Percussion −10,9 dB gegen die Kick, in 91 % der Fenster). `testComposer`: nie die Kick
+  allein, zwei Stimmen neben ihr in den ersten und letzten vier Takten, die Kick bis Takt 17, alle drei Eröffnungen;
+  187/187.
+- **Offen:** Hören. Der Ausklang der Platten (median gut 4 s Hall oder Fade nach dem letzten lauten Takt) ist bei uns
+  kürzer (um 2 s); nicht angefasst, weil die Literatur für DJs den klaren Schnitt will.
+
 **29.09.2026, früh: Phase 19, der Swap auf der Figur.** Der Nutzer über das Set des Phase-18-Builds: "Nach wie vor
 bestehen die ersten zwei Minuten jedes Tracks im Mix nur aus Kick und Hi Hat, das ist viel zu lang."
 

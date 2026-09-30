@@ -56,7 +56,9 @@ set's plan" draw more at once (the Arrange page).
 
 == The track and the set | compose set djfx | 0 ==
 
-A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars from the kick on, a body that builds
+A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars -- never the kick alone: kick, hats
+and a percussion from the first bar, or hats and percussion, or an atmosphere and percussion, with the kick on bar 9
+or 17, as most of the reference records begin (the plan names the opening) --, a body that builds
 its groove over its first blocks -- a main entry on each block's first bar and further hats and percussion on its
 8-bar lines, full by about bar 97 --, an outro that takes them away again -- so it mixes. The Peak builds to a
 kick-out and returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
@@ -83,7 +85,7 @@ the profile; without it the knobs decide. Minutes is the track's length, rounded
 
 A set is mixed the way the Berghain residents describe their nights: as one long recomposition, not a row of
 crossfades. Each track is heard for about three minutes of its own (Track Time) and a third of it lies under its
-neighbours -- about twenty tracks an hour. The incoming track comes in with its intro, its highs first and its mids
+neighbours -- about twenty tracks an hour. The incoming track comes in with its first body block, its highs first and its mids
 over the last 16 bars, its low band killed; on a 32-bar line the bass goes over in one move; the outgoing track keeps
 its hats a while, loses its mids and highs and fades. The third deck borrows: the hats and percussion of the track
 that just left carry on under the new one, the next track's figure is teased in, high-passed, before its blend (where

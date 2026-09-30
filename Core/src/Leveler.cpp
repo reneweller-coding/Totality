@@ -131,6 +131,9 @@ BalanceDb corrections(const Engine& e, const LevelMark& m, const BalanceDb& foun
         for (size_t k = 0; k < heard.size(); ++k)
             lower[heard[k].second] = kind == 2 ? (k == 0 ? 0.0f : 4.0f) : (k < 2 ? 0.0f : k == 2 ? 3.0f : 6.0f);
     }
+    // (Phase 20: the lane that opens the track keeps its window -- ranked fourth, a Tribal track's conga lay 28 dB under the
+    // kick through the intro it carries.)
+    if (m.front >= 0 && m.front < kBalLanes) lower[m.front] = 0.0f;
     BalanceDb out{};
     for (int p = 0; p < kBalParts; ++p) {
         const float f = found[static_cast<size_t>(p)];

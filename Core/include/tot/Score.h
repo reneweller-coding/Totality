@@ -119,6 +119,7 @@ struct LevelMark {
     float trimDb = 0.0f;        ///< the correction (levelScore); 0 until measured
     BalanceDb balDb{};          ///< Phase 18: the parts' corrections against the kick (levelScore); 0 until measured
     std::array<float, 4> styleMix{};   ///< the track's styles (StyleProfile::styleMix), for the parts' windows; 0: Hypnotic's
+    int front = -1;             ///< Phase 20: the kit lane that opens the track (its intro's perc): kept up front by the balance
 };
 
 /**

@@ -281,6 +281,12 @@ int main(int argc, char** argv)
             std::string layers;
             for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
             std::printf("archetype: %s; layers in order: %s\n", kArchetypeNames[info.archetype], layers.c_str());
+            if (info.form != FormType::Endless)
+                std::printf("opening: %s%s\n", kOpeningNames[info.opening],
+                            info.kickBar > 0 ? (", the kick from bar " + std::to_string(info.kickBar + 1)).c_str() : ", the kick from bar 1");
+            if (info.form != FormType::Endless)
+                std::printf("ending: %s\n", info.kickLeaves > 0 ? ("the kick leaves " + std::to_string(info.kickLeaves) + " bars before the end").c_str()
+                                                              : "the kick to the end");
             // Phase 8: the figure, the waves' landings and what moves between the operations.
             if (info.figure >= 0)
                 std::printf("figure: the %s, a motif of %d bar%s, from bar %d\n", kLayerNames[info.figure], info.figureBars,

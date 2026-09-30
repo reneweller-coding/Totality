@@ -661,7 +661,9 @@ void testComposer()
 {
     section("the composer's grammar");
     int tracks = 0, badOps = 0, badLines = 0, badReturns = 0, badTonal = 0, badEndless = 0, badBass = 0, badLate = 0,
-        badPool = 0, badHarmony = 0, badLevel = 0;
+        badPool = 0, badHarmony = 0, badLevel = 0, badOpening = 0;
+    std::set<int> openings;
+    std::string firstOpening;
     std::string first;
     const auto fail = [&](int& counter, const std::string& what) { ++counter; if (first.empty()) first = what; };
     int forms[3] = {};
@@ -676,6 +678,27 @@ void testComposer()
             const std::string who = fmt("%s seed %d (%s)", kStyleNames[style], static_cast<int>(seed), kFormNames[static_cast<int>(info.form)]);
             const int blocks = info.bars / 32;
             const bool endless = info.form == FormType::Endless;
+            // Phase 20: the opening -- in the first four bars two voices beside the kick and the sub at least, and the
+            // kick by bar 17 (where the opening holds it back, not in the first four bars).
+            if (!endless) {
+                openings.insert(info.opening);
+                std::set<int> voices;
+                double firstKick = 1e30;
+                for (const NoteEvent& n : s.notes) {
+                    if (n.part == Part::Kick) firstKick = std::min(firstKick, n.beat);
+                    else if (n.part != Part::Sub && n.beat < 16.0) voices.insert(static_cast<int>(n.part));
+                }
+                // (And the end, the opening's mirror: two voices beside the kick in the last four bars.)
+                std::set<int> tail;
+                for (const NoteEvent& n : s.notes)
+                    if (n.part != Part::Kick && n.part != Part::Sub && n.beat >= s.lengthBeats - 16.0) tail.insert(static_cast<int>(n.part));
+                if (tail.size() < 2) { ++badOpening; if (firstOpening.empty()) firstOpening = who + fmt(": %zu voices beside the kick in the last four bars", tail.size()); }
+                const bool held = info.opening != static_cast<int>(Opening::Drums);
+                const auto failOpening = [&](const std::string& what) { ++badOpening; if (firstOpening.empty()) firstOpening = what; };
+                if (voices.size() < 2) failOpening(who + fmt(": %zu voices beside the kick in bars 1-4 (%s)", voices.size(), kOpeningNames[info.opening]));
+                else if (firstKick > 64.0 + 1e-9 || (held && firstKick < 32.0 - 1e-9) || (!held && firstKick > 1e-9 + 1.0))
+                    failOpening(who + fmt(": the kick from beat %.1f (%s)", firstKick, kOpeningNames[info.opening]));
+            }
             // One staircase operation at every block boundary -- or, since Phase 8, a hat's or a perc's entry on the
             // block's 8- or 16-bar line in its place (Dok. "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase").
             const auto small = [](int layer) {
@@ -706,7 +729,10 @@ void testComposer()
             for (const NoteEvent& n : s.notes) {
                 const bool tonal = n.part == Part::Bass || n.part == Part::Acid || n.part == Part::Chord || n.part == Part::Drone
                                 || n.part == Part::Ping;
-                if (n.part == Part::Texture && !endless && (n.beat < 128.0 || n.beat >= s.lengthBeats - 128.0))
+                // (Phase 20: the atmosphere's opening begins with the texture.)
+                const bool atmosphere = info.opening == static_cast<int>(Opening::Atmosphere);
+                // (Phase 20: and it may carry the end with the percussion, as the records' atmospheres do: no key to clash.)
+                if (n.part == Part::Texture && !endless && !atmosphere && n.beat < 128.0)
                     fail(badTonal, who + ": texture at the edge");
                 if (!tonal) continue;
                 if (!endless && (n.beat < 128.0 || n.beat >= s.lengthBeats - 128.0)) fail(badTonal, who + fmt(": %s at beat %.1f", kPartNames[static_cast<int>(n.part)], n.beat));
@@ -734,7 +760,10 @@ void testComposer()
           badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
     first.clear();
     check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
-    check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted)", first);
+    check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted; the texture may end a track)", first);
+    check(badOpening == 0 && openings.size() == 3,
+          "never the kick alone: two voices beside it in the first and the last four bars, the kick by bar 17; all three openings",
+          firstOpening.empty() ? fmt("%zu openings", openings.size()) : firstOpening);
     check(badEndless == 0, "the Endless without a kick-out", first);
     check(badBass == 0, "a bass line exactly where the sub owns the low end, from the body on", first);
     check(badHarmony == 0, "at most four pitch classes, the bass at most two, all in the scale (Dok. 8.9)", first);
@@ -1682,8 +1711,14 @@ void testMix()
     bool alternate = true;
     for (size_t i = 1; i < a.tracks.size(); ++i) alternate = alternate && a.tracks[i].info.archetype != a.tracks[i - 1].info.archetype;
     check(alternate, "no track of a set follows its own archetype", fmt("%zu tracks", a.tracks.size()));
-    bool quick = false;
-    for (const BlockOp& o : s.decks[0].ops) quick = quick || (o.kind == OpKind::Add && o.beat == 48.0);   // the first perc at bar 13
+    // (Phase 20: two voices beside the kick in its first four bars, the kick by bar 9.)
+    std::set<int> quickVoices;
+    double quickKick = 1e30;
+    for (const NoteEvent& n : s.decks[0].notes) {
+        if (n.part == Part::Kick) quickKick = std::min(quickKick, n.beat);
+        else if (n.part != Part::Sub && n.beat < 16.0) quickVoices.insert(static_cast<int>(n.part));
+    }
+    const bool quick = quickVoices.size() >= 2 && quickKick <= 32.0 + 1e-9;
     check(cruiseOk && marathonOk && quick, "Cruise and Marathon keep their arcs under 136 BPM; the first track under way in 16 bars",
           fmt("cruise %.2f / %.2f / %.2f, marathon %.2f .. %.2f .. %.2f, %zu tracks", cruise.front(), cruiseMid, cruise.back(),
               marathon.front(), marathonTop3, marathon.back(), c.tracks.size()));

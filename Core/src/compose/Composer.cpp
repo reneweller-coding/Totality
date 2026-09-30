@@ -17,6 +17,7 @@ namespace tot {
 
 const char* const kFormNames[] = { "Arc", "Peak", "Endless" };
 const char* const kArchetypeNames[] = { "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal" };
+const char* const kOpeningNames[] = { "drums", "percussion first", "atmosphere first" };
 const char* const kUnitNames[9] = { "form", "harmony", "rack", "layers", "blocks", "events", "hands", "sounds", "figure" };
 
 std::string camelotOf(int key)
@@ -358,6 +359,8 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     Rng fr = streamOf(tseed, cur, unit, "form");
     const float uForm = fr.uniform(), uIntro = fr.uniform(), uRed = fr.uniform(), uRedLen = fr.uniform(), uRedPos = fr.uniform();
     const float uRumble = fr.uniform(), uEdges = fr.uniform(), uArch = fr.uniform();
+    const float uOpen = fr.uniform(), uKickIn = fr.uniform();   // (Phase 20, after the others: they stay as they were)
+    const float uKickOut = fr.uniform(), uHatOut = fr.uniform();
     // Phase 13: the archetype -- the set's, the knob's, else drawn by the style -- and the profile as it plays it.
     const int archKnob = p.getInt(pid(Module::Compose, 0, compose::Archetype));
     const Archetype arch = req.archetype >= 0 ? static_cast<Archetype>(req.archetype)
@@ -525,6 +528,58 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             if (weakest == pool.size()) break;
             pool.erase(pool.begin() + static_cast<long>(weakest));
             keep.erase(keep.begin() + static_cast<long>(weakest));
+        }
+    }
+    // Phase 20: the opening (Opening, Composer.h), by the style's weights -- from the reference records' first 8 bars
+    // (the kick at once / percussion first / an atmosphere or a tonal bed first): Hypnotic 2-3 / 2 / 3 of 7, Ostgut
+    // 3 / 3 / 5 of 11, Dub 1 / 1 / 3-4 of 6, Raw 4-5 / 1 / 1 of 6. The atmosphere is the texture: in the pool whatever
+    // the pool drew (and, where it was drawn, one voice more for the build it no longer serves).
+    Opening opening = Opening::Drums;
+    int kickIn = 0, kickLeaves = 0, hatOut = 0;
+    if (form != FormType::Endless) {
+        static const float kOpenW[4][3] = { { 0.35f, 0.30f, 0.35f }, { 0.30f, 0.30f, 0.40f }, { 0.20f, 0.20f, 0.60f }, { 0.70f, 0.15f, 0.15f } };
+        float w[3] = {};
+        for (int st = 0; st < 4; ++st) for (int k = 0; k < 3; ++k) w[k] += prof.styleMix[st] * kOpenW[st][k];
+        const float u = uOpen * (w[0] + w[1] + w[2]);
+        opening = u < w[0] ? Opening::Drums : u < w[0] + w[1] ? Opening::PercussionFirst : Opening::Atmosphere;
+        if (req.opening >= 0 && req.opening < static_cast<int>(Opening::Count)) opening = static_cast<Opening>(req.opening);
+        if (opening != Opening::Drums) kickIn = (uKickIn < 0.6f ? 8 : 16) / (req.quickStart ? 2 : 1);
+        // Phase 20: the ending, from the reference records' last 64 bars (Tools, outro measurement): 22 of 30 end without
+        // the kick -- it leaves 4 to 36 bars before the end, a third of them earlier still; Hypnotic never has it in its
+        // last 8 bars, Raw 4 of 6 to the end. The hats have left in 18 of 30 (their median 9 bars before the end);
+        // percussion and an atmosphere carry the last bars. The kick leaves 0, 8, 16 or 32 bars before the end (at least
+        // as far as the opening held it back), the closed hat 8 or 16 bars before it or not at all.
+        static const float kKickOutW[4][4] = { { 0.00f, 0.20f, 0.30f, 0.50f }, { 0.15f, 0.25f, 0.30f, 0.30f },
+                                               { 0.15f, 0.10f, 0.25f, 0.50f }, { 0.60f, 0.25f, 0.15f, 0.00f } };
+        static const float kHatStay[4] = { 0.20f, 0.45f, 0.25f, 0.35f };
+        float kw[4] = {}, stay = 0.0f;
+        for (int st = 0; st < 4; ++st) {
+            for (int k = 0; k < 4; ++k) kw[k] += prof.styleMix[st] * kKickOutW[st][k];
+            stay += prof.styleMix[st] * kHatStay[st];
+        }
+        static const int kOut[4] = { 0, 8, 16, 32 };
+        float uk = uKickOut * (kw[0] + kw[1] + kw[2] + kw[3]);
+        for (int k = 0; k < 4; ++k) { if (uk < kw[k] || k == 3) { kickLeaves = kOut[k]; break; } uk -= kw[k]; }
+        kickLeaves = std::max(kickLeaves, kickIn);
+        hatOut = uHatOut < stay ? 0 : uHatOut < stay + 0.6f * (1.0f - stay) ? 8 : 16;
+        if (opening == Opening::Atmosphere) {
+            if (std::find(pool.begin(), pool.end(), LayerId::Texture) == pool.end()) {
+                pool.push_back(LayerId::Texture);
+                keep.push_back(10.0f);
+            } else {
+                LayerId more = LayerId::Count;
+                float most = 0.0f;
+                for (const LayerChance& c : prof.pool) {
+                    if (c.chance <= most || c.layer == LayerId::Texture || std::find(pool.begin(), pool.end(), c.layer) != pool.end()) continue;
+                    if (monotonic && (c.layer == LayerId::Ping || c.layer == LayerId::Chord || c.layer == LayerId::Drone || c.layer == LayerId::Acid)) continue;
+                    most = c.chance;
+                    more = c.layer;
+                }
+                if (more != LayerId::Count) { pool.push_back(more); keep.push_back(most); }
+            }
+            // (A place more under the density's cap: the atmosphere plays from the first bar, and the cap had the build
+            // throw its figure out again at bar 97.)
+            ++prof.densityCap;
         }
     }
     // The order: by group, shuffled within it. (The rolling hat's other half comes with the body's first bar.)
@@ -842,9 +897,10 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // ---------------------------------------------------------------- blocks, their operation and their candidates
     const uint64_t blocksSeed = streamSeed(tseed, cur, unit, "blocks");
     LayerState st;
-    st.active[L(LayerId::Kick)] = true;
+    st.active[L(LayerId::Kick)] = kickIn == 0;   // (Phase 20: the kick enters on bar 9 or 17 when the opening holds it back)
     std::vector<LayerId> queue;   // what may still enter, in order
-    for (LayerId id : order) if (id != introPerc || form == FormType::Endless) queue.push_back(id);
+    for (LayerId id : order)
+        if ((id != introPerc || form == FormType::Endless) && !(opening == Opening::Atmosphere && id == LayerId::Texture)) queue.push_back(id);
     std::vector<LayerId> entered = { LayerId::Kick };
     std::vector<int> entryBar(kNumLayers, -1);
     entryBar[L(LayerId::Kick)] = 0;
@@ -890,10 +946,11 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     }
 
     // Removes the latest-entered active layer that @p pick accepts (never kick, offbeat hat, rolling hat).
-    const auto removeLatest = [&](LayerState& s, std::vector<LayerId>& ent, bool tonalOnly, LayerId* out) {
+    const auto removeLatest = [&](LayerState& s, std::vector<LayerId>& ent, bool tonalOnly, LayerId* out, bool spareEnd = false) {
         for (auto it = ent.rbegin(); it != ent.rend(); ++it) {
             const LayerId id = *it;
             if (id == LayerId::Kick || id == LayerId::ClosedHat || id == LayerId::RollingHat || !s.active[L(id)]) continue;
+            if (spareEnd && (id == introPerc || id == LayerId::Texture)) continue;   // (Phase 20: they carry the end)
             if (tonalOnly && !isTonal(id)) continue;
             s.active[L(id)] = false;
             if (out) *out = id;
@@ -942,8 +999,10 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             // --- the block's operation, at its first bar (a hat's or a perc's entry on its 8- or 16-bar line) ---
             const int first = b * 32;
             std::vector<std::pair<int, LayerId>> pendings;   // entries inside the block: (bar, layer)
+            bool hatGoes = false;   // (Phase 20: the closed hat leaves before the end, in the last block)
             if (b == 0) {
-                op(first, OpKind::Start, LayerId::Kick);
+                op(first, OpKind::Start, form == FormType::Endless || opening == Opening::Drums ? LayerId::Kick
+                                         : opening == Opening::Atmosphere ? LayerId::Texture : LayerId::ClosedHat);
             } else if (intro) {
                 // The second intro block brings the first of the hats' group.
                 LayerId add = LayerId::Count;
@@ -952,10 +1011,24 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
                 else op(first, OpKind::Hold, LayerId::Count);
             } else if (outro) {
                 if (b == blocks - 1) {
+                    // Phase 20: the last block keeps the intro's perc and the atmosphere to the end (the records' last bars
+                    // are percussion and an atmosphere); where the closed hat leaves before the end, a second percussion
+                    // stays with them -- or, with none to stay, the hat does.
+                    LayerId second = LayerId::Count;
+                    for (LayerId id : ent)
+                        if (groupOf(id) == 2 && id != LayerId::GhostKick && id != LayerId::Shaker && id != introPerc && s.active[L(id)]) { second = id; break; }
+                    hatGoes = hatOut > 0 && (second != LayerId::Count || s.active[L(LayerId::Texture)]);
                     bool any = false;
+                    // (The kick leaving 32 bars before the end is this block's operation: one a block.)
+                    if (kickLeaves >= 32 && s.active[L(LayerId::Kick)]) {
+                        s.active[L(LayerId::Kick)] = false;
+                        op(first, OpKind::Remove, LayerId::Kick);
+                        any = true;
+                    }
                     for (int i = 1; i < kNumLayers; ++i) {
                         const LayerId id = static_cast<LayerId>(i);
-                        if (id == LayerId::ClosedHat || id == LayerId::RollingHat || !s.active[i]) continue;
+                        if (id == LayerId::ClosedHat || id == LayerId::RollingHat || id == introPerc || id == LayerId::Texture
+                            || (hatGoes && id == second) || !s.active[i]) continue;
                         if (!any) op(first, OpKind::Remove, id);
                         s.active[i] = false;
                         any = true;
@@ -1050,18 +1123,42 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
             for (int bar = first; bar < first + 32; ++bar) {
                 const int in = bar - first;
                 if (b == 0 && form != FormType::Endless) {
-                    // (Phase 11: a set's first track brings them at bars 5, 9 and 13.)
+                    // Phase 20: the opening (Composer.h) -- never the kick alone. (Phase 11: a set's first track at half
+                    // the distances.) What enters with the first bar comes without an operation of its own (the start's).
                     const int step = req.quickStart ? 4 : 8;
-                    if (bar == step) enter(bar, LayerId::ClosedHat, true);
-                    if (bar == 2 * step) { s.active[L(LayerId::RollingHat)] = true; s.density[L(LayerId::RollingHat)] = 0.5f; eb[L(LayerId::RollingHat)] = bar; op(bar, OpKind::Add, LayerId::RollingHat); }
-                    if (bar == 3 * step && introPerc != LayerId::Count) enter(bar, introPerc, true);
+                    const auto rolling = [&](int at, bool logOp) {
+                        if (bar != at) return;
+                        s.active[L(LayerId::RollingHat)] = true;
+                        s.density[L(LayerId::RollingHat)] = 0.5f;
+                        eb[L(LayerId::RollingHat)] = bar;
+                        if (logOp) op(bar, OpKind::Add, LayerId::RollingHat);
+                    };
+                    if (opening == Opening::Atmosphere) {
+                        if (bar == 0) {
+                            enter(0, LayerId::Texture, false);
+                            if (introPerc != LayerId::Count) enter(0, introPerc, false);
+                        }
+                        if (bar == step) enter(bar, LayerId::ClosedHat, true);
+                        rolling(2 * step, true);
+                    } else {
+                        if (bar == 0) {
+                            enter(0, LayerId::ClosedHat, false);
+                            if (introPerc != LayerId::Count) enter(0, introPerc, false);
+                        }
+                        if (opening == Opening::PercussionFirst) rolling(0, false);
+                        else rolling(step, true);
+                    }
+                    if (kickIn > 0 && bar == kickIn) enter(bar, LayerId::Kick, true);
                 }
                 if (outro && b < blocks - 1 && in % 8 == 0) {
                     LayerId gone = LayerId::Count;
-                    if (removeLatest(s, ent, true, &gone) || removeLatest(s, ent, false, &gone)) op(bar, OpKind::Remove, gone);
+                    if (removeLatest(s, ent, true, &gone, true) || removeLatest(s, ent, false, &gone, true)) op(bar, OpKind::Remove, gone);
                     else if (in == 0) op(bar, OpKind::Hold, LayerId::Count);
                 }
                 if (form != FormType::Endless && bar == bars - 16) { s.active[L(LayerId::RollingHat)] = false; op(bar, OpKind::Remove, LayerId::RollingHat); }
+                // (Phase 20: the kick leaves kickLeaves bars before the end, the closed hat hatOut -- the ending above.)
+                if (form != FormType::Endless && kickLeaves > 0 && kickLeaves < 32 && bar == bars - kickLeaves) { s.active[L(LayerId::Kick)] = false; op(bar, OpKind::Remove, LayerId::Kick); }
+                if (form != FormType::Endless && hatGoes && bar == bars - hatOut) { s.active[L(LayerId::ClosedHat)] = false; op(bar, OpKind::Remove, LayerId::ClosedHat); }
                 for (const auto& [at, layer] : pendings) if (bar == at) enter(bar, layer, true);
                 BarSpec spec = emptyBar(bar, static_cast<double>(bar) * kBar, bpm);
                 for (int i = 0; i < kNumLayers; ++i) { spec.active[i] = s.active[i]; spec.density[i] = s.density[i]; }
@@ -1193,8 +1290,12 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     const double introEnd = static_cast<double>(bodyFirst) * 32.0 * kBar, outroStart = static_cast<double>(bodyEnd) * 32.0 * kBar;
     // Intro: the hats' bus opens from 1.5 kHz (Dok. 8.5: "Perc-Bus LP 800 Hz -> offen"); outro: it closes in the last 16 bars.
     if (form != FormType::Endless) {
-        const double open = req.quickStart ? 4.0 * kBar : 8.0 * kBar, over = req.quickStart ? 8.0 * kBar : introEnd - 8.0 * kBar;
-        sc.gestures.push_back(knobs.ramp(hatsCut, open, over, 1500.0f, knobs.get(hatsCut), GestureShape::Linear, 0));
+        // (Phase 20: from the hats' entry -- the first bar, but in the atmosphere's opening.)
+        const double open = opening == Opening::Atmosphere ? (req.quickStart ? 4.0 : 8.0) * kBar : 0.0;
+        const double over = req.quickStart ? 8.0 * kBar : introEnd - open;
+        // (Phase 20: from 4 kHz -- from 1.5 kHz the hats lay 30 to 40 dB under the kick for the intro's first half, and
+        // a drums opening sounded as the kick alone.)
+        sc.gestures.push_back(knobs.ramp(hatsCut, open, over, 4000.0f, knobs.get(hatsCut), GestureShape::Linear, 0));
         sc.gestures.push_back(knobs.ramp(hatsCut, static_cast<double>(bars - 16) * kBar, 16.0 * kBar, knobs.get(hatsCut), 2500.0f, GestureShape::Linear, 0));
     }
     // The rumble with the body (p 0.7; PLAN 7.2's intro is "Kick (+Rumble)"): out in the intro and the outro, in on the
@@ -1394,6 +1495,7 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     {
         LevelMark lm{ 0.0, static_cast<double>(peakBlock) * 32.0 * kBar, prof.peakLufs, 0.0f };
         for (int sm = 0; sm < 4; ++sm) lm.styleMix[static_cast<size_t>(sm)] = prof.styleMix[sm];   // (the parts' windows, Leveler.h)
+        if (introPerc != LayerId::Count) lm.front = layerLane(plan, introPerc);   // (Phase 20: the opening's voice, up front)
         sc.levels.push_back(lm);
     }
     sc.lengthBeats = static_cast<double>(bars) * kBar;
@@ -1423,6 +1525,9 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         t.micro = cs.micro;
         t.density = cs.density;
         t.archetype = static_cast<int>(arch);
+        t.opening = static_cast<int>(opening);
+        t.kickBar = kickIn;
+        t.kickLeaves = kickLeaves;
         for (const SoundPick& k : picks) {
             const std::vector<SoundPreset>& list = factoryPresets(static_cast<Module>(k.module));
             if (k.preset >= 0 && k.preset < static_cast<int>(list.size())) t.groups.push_back(list[static_cast<size_t>(k.preset)].group);

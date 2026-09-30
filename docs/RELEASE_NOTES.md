@@ -8,7 +8,9 @@ command-line renderer and an app for Meta Quest.
 **Composing.** Tracks in three forms -- the Arc (the DJ tool: intro, a body that builds its full groove by about bar 97, outro), the
 Peak (a long kick-out and the densest block after it), the Endless (full from the first bar, changing by exchange) --
 from four style profiles, Hypnotic, Ostgut, Dub and Raw Peak, which morph into each other and move along a Dub and a
-Hypnotic axis; or a style of your own (the Style page). One operation per 32-bar block, events on the 8-bar lines,
+Hypnotic axis; or a style of your own (the Style page). A track never begins with the kick alone: it opens with kick,
+hats and percussion, or with hats and percussion or an atmosphere and the kick on bar 9 or 17, by its style's weights
+(measured on the reference records), and ends as it began. One operation per 32-bar block, events on the 8-bar lines,
 automation by two hands, eight candidates per block chosen against a corridor of bar similarity fitted to thirty
 reference tracks. Every track has a figure, the voice it is remembered by -- a ping motif, a dub stab, a bass riff or a
 303 line --, and its body runs in waves: the figure's filters and the hats open towards a landing, something drops away

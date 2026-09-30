@@ -75,6 +75,20 @@ extern const char* const kFormNames[];   ///< "Arc", "Peak", "Endless"
 enum class Archetype : int { Tool = 0, Roller, Stab, Acid, Bleep, DubChord, Tribal, Count };
 extern const char* const kArchetypeNames[];   ///< "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal"
 
+/**
+ * @brief Phase 20 (30.09.2026): how a track begins -- never with the kick alone. Of the 30 reference records two begin
+ * so; twenty have percussion from their first bars, eighteen hold back the kick (or play it filtered) for 8 to 24 bars
+ * under percussion, hats or an atmosphere, and the Raw records start with the kick and percussion together
+ * (Tools, intro measurement). The literature's intro is "drums and percussion only: kick, hats, maybe a filtered loop"
+ * (TrackSensei; Dok. 8.5: Kick, closed hat, one perc).
+ * - **Drums**: kick, closed hat and the intro's perc from bar 1, the rolling hat on the first 8-bar line;
+ * - **PercussionFirst**: closed hat, rolling hat and the perc from bar 1, the kick on bar 9 or 17;
+ * - **Atmosphere**: the texture and the perc from bar 1, the hats on the 8- and 16-bar lines, the kick on bar 9 or 17.
+ * Each style draws them with its own weights; the Endless has none (everything from its first bar).
+ */
+enum class Opening : int { Drums = 0, PercussionFirst, Atmosphere, Count };
+extern const char* const kOpeningNames[];   ///< "drums", "percussion first", "atmosphere first"
+
 /** @brief What a set asks of a track; every field left at its default is the composer's (or the knobs') to decide. */
 struct TrackRequest {
     const StyleProfile* profile = nullptr;   ///< the profile (null: profileOf(the knobs))
@@ -90,6 +104,7 @@ struct TrackRequest {
      *  3, 5 and 9 instead of 9, 17 and 25, and opens the hats' bus over eight bars: the set is under way in 16 bars. */
     bool quickStart = false;
     int archetype = -1;                      ///< Phase 13: -1 drawn (compose.archetype, else by the style), else an Archetype
+    int opening = -1;                        ///< Phase 20: -1 drawn by the style, else an Opening
     const Preferences* prefs = nullptr;      ///< Phase 17: the ratings' weights (the player's, when compose.use_ratings), or null
 };
 
@@ -114,6 +129,9 @@ struct TrackInfo {
     float micro = 0.0f;          ///< micro-change, dB
     float density = 0.0f;        ///< onsets per bar
     int archetype = 0;           ///< Phase 13: its Archetype
+    int opening = 0;             ///< Phase 20: its Opening
+    int kickBar = 0;             ///< Phase 20: where its kick enters (0: with its first bar)
+    int kickLeaves = 0;          ///< Phase 20: how many bars before the end its kick leaves (0: it plays to the end)
     std::vector<std::string> groups;   ///< Phase 17: the groups of the presets it plays (what a rating remembers)
     int figure = -1;             ///< Phase 8: the signature voice (LayerId), -1: none
     int figureBar = -1;          ///< where it enters
