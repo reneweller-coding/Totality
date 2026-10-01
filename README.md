@@ -41,24 +41,38 @@ phase: [docs/PLAN.md](docs/PLAN.md). The research it rests on: [docs/research](d
 
 ## Build
 
+The same in every instrument of the family (`build.ps1`, `CMakePresets.json`, `cmake/Family.cmake`):
+
+```powershell
+.\build.ps1               # Visual Studio's compiler, Release: build\msvc (the solution), the programs in bin\msvc
+.\build.ps1 icx           # Intel's oneAPI compiler: build\icx, the programs in bin\icx
+.\build.ps1 msvc -Test    # and the tests (ctest)
+.\build.ps1 icx -Run      # and start the standalone
+.\build.ps1 quest         # the Meta Quest app: bin\quest\TotalityQuest.apk
 ```
-cmake -S . -B build -G "Visual Studio 18 2026" -A x64
-cmake --build build --config Release
-cd build && ctest -C Release
-```
+
+| Folder | What is in it |
+|---|---|
+| `bin\msvc`, `bin\icx` | what can be started: the standalone, the VST3, the renderer (and the files they read) |
+| `build\<preset>` | the build trees -- `build\msvc\Totality.slnx` for Visual Studio |
+| `dist\` | the release: setup, portable zip, checksums (`Deploy\build_release.ps1`, from `build\release`) |
+| `work\` | local data, renders and logs, never in git |
+
+Without the script: `cmake --preset msvc`, `cmake --build --preset msvc`, `ctest --preset msvc`; the icx presets need
+Visual Studio's and oneAPI's environment, which `build.ps1` sets up.
 
 JUCE comes from `ThirdParty/JUCE`, else from the sibling Phosphene's checkout, else it is fetched (tag 9.0.1).
 `TOT_BUILD_PLUGIN=OFF` builds the core, the renderer and the tests alone. The release (tests, pluginval, manual,
-installer): `powershell -ExecutionPolicy Bypass -File Deploy\build_release.ps1`. The Quest app: see
+installer, into `dist\`): `powershell -ExecutionPolicy Bypass -File Deploy\build_release.ps1`. The Quest app: see
 [Quest/README.md](Quest/README.md).
 
 ## Render
 
 ```
-build/Tools/render/Release/tot_render --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
-build/Tools/render/Release/tot_render --seed 7 --set "compose.style=Dub" --form peak --out dub.wav
-build/Tools/render/Release/tot_render --seed 2026 --set-minutes 120 --set "set.dramaturgy=Peak" --out set.wav
-build/Tools/render/Release/tot_render --seed 7 --reroll block4 --reroll rack.ch --save-set track.totset --plan
+bin/msvc/tot_render.exe --seed 7 --out track.wav --midi track.mid --stems stems --loops loops
+bin/msvc/tot_render.exe --seed 7 --set "compose.style=Dub" --form peak --out dub.wav
+bin/msvc/tot_render.exe --seed 2026 --set-minutes 120 --set "set.dramaturgy=Peak" --out set.wav
+bin/msvc/tot_render.exe --seed 7 --reroll block4 --reroll rack.ch --save-set track.totset --plan
 ```
 
 A track's tempo, key, scale and low end are drawn from its style (`compose.auto`); `--bpm`, `--low` and `--form` fix

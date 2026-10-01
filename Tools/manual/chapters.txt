@@ -68,6 +68,11 @@ seed, Play and Mute. Its second row: the thumbs -- a verdict on what plays, for 
 Under the header the whole track or set at a glance; a click jumps there. The tabs come in one order everywhere: Set,
 Arrange, the instrument's own pages -- a page of several has small tabs of its own --, Mixer, Perform, Export, Style.
 
+A page taller than the window shows its groups in sections, one at a time, with a switch at its top right: a synth's
+sound and its modulation apart (Sound, Modulation), and where even those do not fit, cut further, each named after its
+first group (Filter, LFO, Matrix ...). At the window's usual size, 1280 by 860, no page scrolls. The overview above the
+tabs can be folded away in the settings; the pages then get its height.
+
 A colour says what a control does, the same on every page and in every generator of the family: the sources, the
 filters, the envelopes, what moves by itself, the room and the mix. A knob the composer moves has a thin ring round
 it that shows where it stands at this moment. A double click sets a control to its default; a right click offers
@@ -76,8 +81,8 @@ MIDI learn, forgetting the controller, and the default.
 Undo and Redo take back and bring back what was changed -- a knob, a new seed, a reroll, a preset, a loaded set --
 one step at a time; the button's tooltip names the step. Help opens this manual by topic, with the page in front, the
 keys and the headset as topics of their own. The settings hold the update check (it asks GitHub once a day whether a
-newer Totality is out; nothing else is sent), the picture behind the panel, the headset, the window's size, full
-screen, the keys and About.
+newer Totality is out; nothing else is sent), the picture behind the panel, the overview, the headset, the window's
+size, full screen, the keys and About.
 
     Space                 play / stop
     Ctrl+Z                undo
@@ -204,6 +209,9 @@ conjunction. Beside it the same bar as a step grid, with a tick where an onset l
 
 == Low End | kick rumble sub | 3 ==
 
+[image screenshots/tab_04.png: Low End, its second small tab: the rumble.]
+[image screenshots/tab_05.png: Low End, its third small tab: the sub.]
+
 The low end is one system. The kick hands its phase on: the rumble's sub continues the kick's tail at the phase the
 kick left it, and the sub bass locks its phase to the last kick, so the three never cancel each other. The kick has
 three engines (a swept sine, a resonator, a modelled 909) and a top layer; its drive runs at four times the rate.
@@ -211,7 +219,7 @@ three engines (a swept sine, a resonator, a modelled 909) and a top layer; its d
 The rumble is the kick sent into a hall, cut below the split, clipped and ducked by the next kick -- the dark roll of
 Berlin techno. Either the rumble or the sub bass owns the band under 80 Hz (compose.low_owner): never both at once.
 
-== Drums | perc mix | 4 ==
+== Drums | perc mix | 6 ==
 
 Twelve lanes, each a small drum synthesiser: a role (the closed and rolling hats, the open hat, the ride, the claps,
 the snare, the rim, the shaker, toms and congas, noise), an engine (noise, metal -- the 909's six square waves -- modal,
@@ -219,7 +227,13 @@ tone, FM), a filter, a shape. They run side by side in the lanes of the processo
 a bus with its level and a low pass, then the drum bus's saturation; the ducks let the pads and the rooms step aside
 for the kick, band by band.
 
-== Tones | ping bass acid chord drone texture | 5 ==
+== Tones | ping bass acid chord drone texture | 7 ==
+
+[image screenshots/tab_08.png: Tones: the bass.]
+[image screenshots/tab_09.png: Tones: the acid.]
+[image screenshots/tab_10.png: Tones: the chord.]
+[image screenshots/tab_11.png: Tones: the drone.]
+[image screenshots/tab_12.png: Tones: the texture.]
 
 The ping is the hypnotic school's figure: FM through a low-pass gate, a band pass that wanders. The bass and the 303
 share one synthesiser with ten circuit filters (the Moog ladder, the 303's diode ladder, the Prophet's SSM2040, the
@@ -227,13 +241,19 @@ Juno's IR3109, the SEM, the MS-20's Korg35 and more); the 303 line has its accen
 crusher and a phaser, sent into the tape echo and the plate. The drone holds a note under eight bars; the texture is
 vinyl crackle, hum and erosion.
 
-== Dub | dub space cloud | 6 ==
+== Dub | dub space cloud | 13 ==
+
+[image screenshots/tab_14.png: Dub: the space.]
+[image screenshots/tab_15.png: Dub: the grain cloud.]
 
 The dub chain: a tape echo with wow, flutter and drive, a spring, a plate. The ping, the chord and the kit's buses
 send into it, and the composer throws single hits into the echo on the 8-bar lines. The room is the hall the hats,
 the percussion and the ping live in; the grain cloud hears the ping and the chord and scatters them.
 
-== Mixer and Master | mix master motion deck | 7 ==
+== Mixer and Master | mix master motion deck | 16 ==
+
+[image screenshots/tab_17.png: The Mixer tab's second page: the buses and the master.]
+[image screenshots/tab_18.png: The Mixer tab's third page: the decks.]
 
 The Mixer tab has three pages. Console: a channel strip per part -- kick, rumble, sub, the kit's lanes, the tonal
 voices, the dub -- with its level, its mute, its sound and its meter, and the output with its loudness at the end (a
@@ -251,7 +271,7 @@ A deck's channel is a DJ mixer's: the fader, a three-band isolator (200 Hz and 2
 a kill to +6 dB), a filter that is a low pass to the left and a high pass to the right, and the send into the mixer's
 effects. In a set the composer moves them as a DJ would; in the plugin they are yours too.
 
-== Perform | perform | 8 ==
+== Perform | perform | 19 ==
 
 As at a mixer. Seven mutes: a muted group's notes stop and its tails ring out -- the kick out, the classic move. The
 master filter takes the whole mix, the echo throw sends it into the mixer's tape echo. Each deck has its kills and its
@@ -263,7 +283,7 @@ shows what they do (The panel).
 
 The perform controls are live only: an export or tot_render plays the track as it was composed.
 
-== Export and cues | cue | 9 ==
+== Export and cues | cue | 20 ==
 
 [image screenshots/set.png: A DJ mix of 40 minutes on the Arrange page: its eleven tracks on two decks, their blends, the swaps, a ruler of minutes.]
 
@@ -286,7 +306,7 @@ TOT_CUE_HOST.
     /tot/op s          the operation ("add ride", "kick out")
     /tot/key s         the key as a Camelot label ("8A")
 
-== Style | custom | 10 ==
+== Style | custom | 21 ==
 
 The numbers of the profile the knobs describe, and the references' measurements per style that the profiles are
 fitted to. A style of your own: Take the profile's numbers, change what you like, switch Use on -- the tempo range, the
@@ -296,7 +316,7 @@ loudness the Leveler brings each track to.
 
 == Meta Quest | | - ==
 
-The whole generator runs on the headset (build-quest\TotalityQuest.apk, see Quest/README.md). The hands are the hands at
+The whole generator runs on the headset (bin\quest\TotalityQuest.apk, see Quest/README.md). The hands are the hands at
 the mixer: left pinch play and stop, right pinch kick out and in, both hands together the next track; the left hand's
 height the master filter, the right's the echo throw -- the grammar of every generator's headset (The panel). Above
 and ahead of the player the Eclipse turns at the size of a room. A file tot.cfg in the app's folder sets the seed, the

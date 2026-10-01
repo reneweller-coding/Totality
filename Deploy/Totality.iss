@@ -1,6 +1,6 @@
 ; Totality -- the Windows installer (after Ephemeris' Deploy\Ephemeris.iss).
 ;
-; Built by Deploy\build_release.ps1, which stages everything under Deploy\stage first and only then calls the
+; Built by Deploy\build_release.ps1, which stages everything under dist\stage first and only then calls the
 ; compiler. Nothing in here reaches into a build tree: what is in the staging folder is exactly what gets
 ; installed, so the payload can be looked at before the setup is made.
 ;
@@ -15,7 +15,7 @@
 #endif
 #define AppName "Totality"
 #define Publisher "Rene Weller"
-#define Stage "stage"
+#define Stage "..\dist\stage"
 
 [Setup]
 AppId={{20CEA445-B82E-47FB-A9AC-71BCB9EC3871}
@@ -27,7 +27,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile={#Stage}\LICENSE.txt
-OutputDir=out
+OutputDir=..\dist
 OutputBaseFilename={#AppName}-{#Version}-Setup
 SetupIconFile={#Stage}\totality.ico
 UninstallDisplayIcon={app}\Totality.exe

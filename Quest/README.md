@@ -21,7 +21,7 @@ Quest/
 ```powershell
 powershell -File Quest\fetch_thirdparty.ps1
 powershell -File Quest\build_apk.ps1
-adb install -r build-quest\TotalityQuest.apk
+adb install -r bin\quest\TotalityQuest.apk
 ```
 
 Needs NDK r27 (`C:\Android-Buildtools\sdk\ndk\27.2.12479018`), build-tools 34, platform android-34 and JDK 17 — the

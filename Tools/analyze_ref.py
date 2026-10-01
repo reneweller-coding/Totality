@@ -36,7 +36,7 @@ Only statistics leave this tool: Tools/ref_stats.json holds a row per recording 
 
     python Tools/analyze_ref.py                      # every recording of ref_sets.txt
     python Tools/analyze_ref.py --only hypnotic
-    python Tools/analyze_ref.py out/study.wav        # a render, printed the same way
+    python Tools/analyze_ref.py work/renders/study.wav        # a render, printed the same way
 """
 from __future__ import annotations
 
