@@ -18,7 +18,8 @@ over the last 16 bars and a hard bass swap on a 32-bar line through the isolator
 lands, its first body block under the outgoing track's full groove --, a third deck that borrows (the last
 track's hats carried on, the next one's figure teased in, a loop of the one before layered under), the DJ's hand on
 the EQs, filter and echo between the blends, breaks from the mixer's effects; seven dramaturgies, up to twelve hours. Every part is drawn on its own seed stream and
-can be rerolled alone (`.totset`).
+can be rerolled alone (`.totset`). The panel chooses a single track or a DJ mix with two buttons and one length, and its
+arrangement zooms with the mouse wheel down to four bars, with a ruler of bars or minutes.
 
 The sound: the kick (three engines, a 909 top layer), the rumble that continues the kick's phase under its hall, the
 sub bass locked to the kick, a twelve-lane kit with the 909's metal oscillators, the ping (FM through a low-pass gate),

@@ -540,6 +540,9 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
         static const float kOpenW[4][3] = { { 0.35f, 0.30f, 0.35f }, { 0.30f, 0.30f, 0.40f }, { 0.20f, 0.20f, 0.60f }, { 0.70f, 0.15f, 0.15f } };
         float w[3] = {};
         for (int st = 0; st < 4; ++st) for (int k = 0; k < 3; ++k) w[k] += prof.styleMix[st] * kOpenW[st][k];
+        // (Phase 21, 01.10.2026: a set's first track opens the mix with nothing under it -- never with the kick. 24 sets
+        // measured: 5 began as the kick alone or with muffled hats.)
+        if (req.quickStart) w[0] = 0.0f;
         const float u = uOpen * (w[0] + w[1] + w[2]);
         opening = u < w[0] ? Opening::Drums : u < w[0] + w[1] ? Opening::PercussionFirst : Opening::Atmosphere;
         if (req.opening >= 0 && req.opening < static_cast<int>(Opening::Count)) opening = static_cast<Opening>(req.opening);
@@ -645,6 +648,24 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     makeFigure(plan, figure, streamSeed(tseed, cur, unit, "figure"));
     if (monotonic) for (int8_t& fp : plan.figPitch) fp = fp == 12 ? static_cast<int8_t>(12) : static_cast<int8_t>(0);   // (its one tone)
     limitHarmony(plan, pool, subOwns);
+    // Phase 21 (01.10.2026, the user on a mix: it "begann ... wieder mit einer Solo-Kick"): the voice that opens the
+    // track carries it. A tom or a rim left to the matrix played one or two hits a bar (a set's first track: its tom 24 dB
+    // under the kick, the body's percussion 13); it gets a Euclidean figure on the twelve sixteenths off the quarters --
+    // E(5,12), E(6,12) or E(7,12), rotated, five to seven hits a bar -- unless the rack gave it a cycle or a figure
+    // already. (E(5,16) and E(7,16) have an onset on every place of the beat: no rotation keeps them off the quarters.)
+    // From the rack's stream, so a reroll of the rack draws it anew.
+    if ((introPerc == LayerId::TomConga || introPerc == LayerId::Rim) && plan.period[L(introPerc)] == 0 && plan.euclid[L(introPerc)] == 0) {
+        Rng er;
+        er.seed(mixSeed(streamSeed(tseed, cur, unit, "rack"), 0x4F50454E494E47ull));
+        const uint64_t slots = rotateMask(euclidMask(5 + er.below(3), 12), 12, er.below(12));
+        uint16_t m = 0;
+        for (int j = 0, step = 0; step < 16; ++step) {
+            if (step % 4 == 0) continue;   // the quarters are the kick's
+            if ((slots >> j++) & 1u) m = static_cast<uint16_t>(m | (1u << step));
+        }
+        plan.euclid[L(introPerc)] = m;
+        plan.displace[L(introPerc)] = 0;
+    }
     int bands[kNumParts];
     partBands(plan, bands);
 

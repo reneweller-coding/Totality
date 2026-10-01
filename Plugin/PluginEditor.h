@@ -2,9 +2,10 @@
  * @file PluginEditor.h
  * @brief The plugin's panel (PLAN 10.1): the track or set on top, the instrument in tabs below.
  *
- * Top: style, key, scale, the track's and the set's length, compose, a new seed, play, mute; a row of rerolls (one per
- * unit of the track under the playhead, SetFile.h) and the files; the arrange strip -- a set's tracks on their decks, a
- * track's blocks, a lane per group of layers lit where it plays, the playhead, click to jump. Below, the tabs of PLAN
+ * Top: style, key, scale, a single track or a DJ mix (a set) and its length, compose, a new seed, play, mute; a row of
+ * rerolls (one per unit of the track under the playhead, SetFile.h) and the files; the arrange strip -- a set's tracks
+ * on their decks, a track's blocks, a lane per group of layers lit where it plays, the playhead, click to jump, the
+ * wheel to zoom. Below, the tabs of PLAN
  * 10.1: Set, Arrange, Patterns (the Eclipse view), Low End, Drums, Tones, Dub, Mixer, Perform, Export, Style. The
  * parameter pages are generated from the parameter tables (EditorTheme.h, layoutOf), so a parameter that exists is on
  * the panel without anyone writing it there.
@@ -12,6 +13,7 @@
  * `TOT_SHOT` (a PNG file) and `TOT_TAB` (a tab index) render the panel into a picture after the first score is composed
  * and quit the standalone -- how the layout is checked without a person looking. `TOT_SHOT_SIZE` ("1600x1000") the
  * window's size, `TOT_SHOT_AT` (a beat) jumps there first; with `TOT_PLAY` set, the meters then show that place.
+ * `TOT_SHOT_ZOOM` ("from:to", beats) zooms the Arrange tab's view to that window.
  *
  * @note After Ephemeris' Plugin/PluginEditor.h at d047d79 (27.09.2026).
  */
@@ -108,25 +110,59 @@ private:
 /**
  * @brief What plays, across its length (PLAN 10.1, Arrange): a set's tracks as bars on their decks (their blends where
  *        two overlap), a track's blocks by their markers, the operations of the form as ticks, and a lane per group of
- *        layers (kick, hats, perc, ping, bass, pads) lit where it has notes; the playhead; a click jumps.
+ *        layers (kick, hats, perc, ping, bass, pads) lit where it has notes; a ruler (a track's bars, a mix's minutes);
+ *        the playhead; a click jumps. The mouse wheel zooms around the pointer, a drag (or the wheel sideways, or with
+ *        Shift) moves along, a double click shows the whole length again; a zoomed view pages on with the playhead.
  */
-class ArrangeView final : public juce::Component {
+class ArrangeView final : public juce::Component, public juce::SettableTooltipClient, private juce::Timer {
 public:
     /** @brief Shows @p p's score; @p detailed adds the operations' names and a larger matrix (the Arrange tab). */
-    ArrangeView(TotalityProcessor& p, bool detailed) : proc_(p), detailed_(detailed) {}
-    void paint(juce::Graphics& g) override;                     ///< the tracks or blocks, the matrix, the playhead
-    void mouseDown(const juce::MouseEvent& e) override;         ///< jumps to the clicked position
+    ArrangeView(TotalityProcessor& p, bool detailed);
+    void paint(juce::Graphics& g) override;                     ///< the tracks or blocks, the matrix, the ruler, the playhead
+    void mouseDown(const juce::MouseEvent& e) override;         ///< jumps there (zoomed: on release, if it was no drag)
+    void mouseDrag(const juce::MouseEvent& e) override;         ///< moves a zoomed view along
+    void mouseUp(const juce::MouseEvent& e) override;           ///< the jump of a zoomed view
+    void mouseDoubleClick(const juce::MouseEvent& e) override;  ///< the whole length again
+    /** @brief Zooms around the pointer; the wheel sideways, or with Shift, moves along. */
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
+    void mouseMagnify(const juce::MouseEvent& e, float scale) override;   ///< a trackpad's pinch zooms
+    /** @brief The beats shown, @p from to @p to; false while the view shows the whole length. */
+    bool zoomed(double& from, double& to) const;
+    /** @brief Shows the beats @p from to @p to (once a score is there; the screenshots' TOT_SHOT_ZOOM). */
+    void zoomTo(double from, double to) { wanted_ = { from, to }; }
+    /** @brief Another view whose zoomed window this one marks (the strip on top marks the Arrange tab's). */
+    void setDetail(const ArrangeView* detail) { detail_ = detail; }
     static constexpr int kLanes = 6;                            ///< kick, hats, perc, ping, bass (sub, bass, 303), pads
     static const char* const kLaneNames[kLanes];
 
 private:
-    static constexpr int kBins = 600;     ///< columns of the matrix across the length
-    void rebuild();                       ///< the matrix of a new score
+    /** @brief A note as the matrix draws it: where it begins and ends (beats), how loud. */
+    struct Hit { double from, to; float velocity; };
+    static constexpr double kNarrowest = 16.0;   ///< the least the view shows, in beats (four bars)
+    void timerCallback() override;               ///< pages on with the playhead, repaints while it is shown
+    void rebuild();                              ///< the hits of a new score
+    void fill(double from, double to, int columns);   ///< the matrix of what is shown, a column per pixel
+    void show(double from, double span);         ///< the window, kept inside the length (all of it: not zoomed)
+    void zoomAround(float x, double factor);     ///< the window times @p factor, the beat under @p x staying put
+    void window(double& from, double& to) const; ///< the beats shown
+    double beatAt(float x) const;                ///< the beat under @p x
     TotalityProcessor& proc_;
     bool detailed_;
-    int version_ = -1;                    ///< the score the matrix was built from
+    int version_ = -1;                    ///< the score the hits were taken from
     Playing playing_;                     ///< a copy of what plays
-    std::vector<float> lanes_;            ///< kLanes x kBins activity, 0..1
+    std::vector<Hit> hits_[kLanes];       ///< per lane, in the order they begin
+    double longest_[kLanes] = {};         ///< a lane's longest hit (how far before a window its hits begin)
+    float typical_[kLanes] = {};          ///< a lane's cover per beat where it plays: what lights it fully
+    std::vector<float> cells_;            ///< kLanes x columns_, 0..1, for cellsFrom_ .. cellsTo_
+    double cellsFrom_ = 0.0, cellsTo_ = 0.0;
+    int columns_ = 0, cellsVersion_ = -1;
+    double from_ = 0.0, span_ = 0.0;      ///< the window (span 0: the whole length)
+    double lastPos_ = -1.0, lastFrom_ = 0.0, lastTo_ = 0.0;   ///< the playhead and the window at the last tick
+    float downX_ = 0.0f;                  ///< where a press began
+    double downFrom_ = 0.0;               ///< the window's beginning then
+    bool dragged_ = false;
+    const ArrangeView* detail_ = nullptr;
+    std::pair<double, double> wanted_{ 0.0, 0.0 };   ///< zoomTo's window, until a score takes it
 };
 
 /**
@@ -138,6 +174,7 @@ public:
     explicit ArrangePage(TotalityProcessor& p);
     void resized() override;
     void paint(juce::Graphics& g) override;
+    ArrangeView& view() { return view_; }   ///< the large view (the strip on top marks its window)
 
 private:
     void timerCallback() override;
@@ -145,7 +182,7 @@ private:
     ArrangeView view_;
     juce::Label which_, sounds_;
     juce::OwnedArray<juce::TextButton> rerolls_;
-    juce::TextButton track_{ "reroll the whole track" }, set_{ "reroll the set's plan" };
+    juce::TextButton track_{ "reroll the whole track" }, set_{ "reroll the mix's plan" };
     juce::String prefix_;   ///< "track3." in a set, empty for a track
 };
 
@@ -196,6 +233,7 @@ private:
     void timerCallback() override;
     void layoutBody();                                 ///< the top bar, the arrange strip, the tabs, at the design scale
     void toggleFullScreen();                           ///< the standalone's window full screen and back
+    void showLength(bool mix);                         ///< the length slider for a track's minutes or a mix's
     TotalityProcessor& proc_;
     totui::LookAndFeel lnf_;                           ///< first, so it outlives every component that uses it
     juce::TooltipWindow tooltips_{ nullptr, 700 };
@@ -207,14 +245,17 @@ private:
     juce::Label title_, status_, rerolls_;
     juce::Rectangle<float> logo_;
     juce::ComboBox style_, key_, scale_;
-    juce::Slider minutes_, setMinutes_;
-    juce::Label minutesLabel_, setLabel_;
-    juce::TextButton compose_{ "Compose" }, seed_{ "New seed" }, play_{ "Play" }, mute_{ "Mute" };
+    /** One track or a DJ mix (set.minutes 0 or not, TotalityProcessor::chooseMix), and the length of what is chosen. */
+    juce::TextButton trackMode_{ "Track" }, mixMode_{ "DJ mix" };
+    juce::Slider length_;
+    juce::Label lengthLabel_;
+    bool lengthOfMix_ = false;                         ///< the slider shows set.minutes (else compose.minutes)
+    bool syncing_ = false;                             ///< the slider is set from its parameter, not by a hand
+    juce::TextButton compose_{ "Compose track" }, seed_{ "New seed" }, play_{ "Play" }, mute_{ "Mute" };
     juce::TextButton like_{ "+" }, dislike_{ "-" };   ///< Phase 17: the ratings
     juce::String rated_;                             ///< what was rated last, shown a while
     int ratedTicks_ = 0;
     std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> combos_;
-    std::vector<std::unique_ptr<juce::SliderParameterAttachment>> sliders_;
     ArrangeView arrange_;
     juce::TabbedComponent tabs_{ juce::TabbedButtonBar::TabsAtTop };
     juce::String shotPath_;

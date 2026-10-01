@@ -10,7 +10,8 @@ Peak (a long kick-out and the densest block after it), the Endless (full from th
 from four style profiles, Hypnotic, Ostgut, Dub and Raw Peak, which morph into each other and move along a Dub and a
 Hypnotic axis; or a style of your own (the Style page). A track never begins with the kick alone: it opens with kick,
 hats and percussion, or with hats and percussion or an atmosphere and the kick on bar 9 or 17, by its style's weights
-(measured on the reference records), and ends as it began. One operation per 32-bar block, events on the 8-bar lines,
+(measured on the reference records), and ends as it began; the percussion that opens it carries it (four to seven
+hits a bar, up front in the balance), and a DJ mix's first track never begins with the kick. One operation per 32-bar block, events on the 8-bar lines,
 automation by two hands, eight candidates per block chosen against a corridor of bar similarity fitted to thirty
 reference tracks. Every track has a figure, the voice it is remembered by -- a ping motif, a dub stab, a bass riff or a
 303 line --, and its body runs in waves: the figure's filters and the hats open towards a landing, something drops away
@@ -42,6 +43,11 @@ and texture -- in sixteen named groups each. The composer chooses one per synth 
 well its group suits the track's style (a lane among those made for its role); every page names the preset of the track
 that plays, and its values stand on the knobs, so a turn goes on from what you hear. In a set each deck keeps its own
 track's sounds through the blend.
+
+**The panel.** Track or DJ mix, chosen by two buttons beside the style, with one length for what is chosen; Compose
+names what it writes, the status line what plays. The arrangement zooms with the mouse wheel around the pointer down
+to four bars, a drag or Shift + wheel moves along, a double click shows everything; a ruler counts a track's bars and
+a mix's minutes, and a zoomed view pages on with the playhead.
 
 **Playing.** In a DAW Totality follows the host's transport and tempo. The Perform page is a mixer: seven mutes (their
 tails ring out), a master filter, an echo throw, isolator kills and faders per deck, every control learnable from a

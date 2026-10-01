@@ -344,10 +344,20 @@ void ScrollingPage::resized()
 
 const char* const ArrangeView::kLaneNames[kLanes] = { "kick", "hats", "perc", "ping", "bass", "pads" };
 
+ArrangeView::ArrangeView(TotalityProcessor& p, bool detailed) : proc_(p), detailed_(detailed)
+{
+    setTooltip("Click: jump there. Mouse wheel: zoom in and out around the pointer; drag, or Shift + wheel: move along; "
+               "double click: the whole length.");
+    startTimerHz(20);
+}
+
 void ArrangeView::rebuild()
 {
+    const bool wasMix = playing_.isSet;
     proc_.copyPlaying(playing_);
-    lanes_.assign(static_cast<size_t>(kLanes * kBins), 0.0f);
+    if (playing_.isSet != wasMix) { from_ = 0.0; span_ = 0.0; }   // a mix after a track (or back): the whole of it
+    for (int l = 0; l < kLanes; ++l) { hits_[l].clear(); longest_[l] = 0.0; typical_[l] = 1.0f; }
+    cellsVersion_ = -1;
     const double len = playing_.set.lengthBeats;
     if (len <= 0.0) return;
     // Which percussion lanes are hats (their role, as the deck sorts them onto its buses).
@@ -367,14 +377,112 @@ void ArrangeView::rebuild()
             else if (n.part == Part::Sub || n.part == Part::Bass || n.part == Part::Acid) lane = 4;
             else if (n.part == Part::Chord || n.part == Part::Drone || n.part == Part::Texture) lane = 5;
             if (lane < 0 || n.velocity <= 0.0f) continue;
-            const int b0 = std::clamp(static_cast<int>(n.beat / len * kBins), 0, kBins - 1);
-            const int b1 = std::clamp(static_cast<int>((n.beat + std::max(n.length, 0.25)) / len * kBins), b0, kBins - 1);
-            for (int b = b0; b <= b1; ++b) {
-                float& v = lanes_[static_cast<size_t>(lane * kBins + b)];
-                v = std::min(1.0f, v + 0.08f);
-            }
+            // The drums as short strokes, so their hits stand apart zoomed in; the rest as long as it sounds.
+            const double length = lane < 3 ? 0.2 : std::max(n.length, 0.125);
+            hits_[lane].push_back({ n.beat, n.beat + length, std::min(1.0f, n.velocity) });
         }
     }
+    for (int l = 0; l < kLanes; ++l) {
+        std::vector<Hit>& h = hits_[l];
+        std::sort(h.begin(), h.end(), [](const Hit& a, const Hit& b) { return a.from < b.from; });
+        // What lights a lane fully: its cover (length times velocity) per beat over the bars it plays in -- the same at
+        // any zoom, from the whole set to a single hit.
+        std::vector<char> on(static_cast<size_t>(len / 4.0) + 2, 0);
+        double cover = 0.0;
+        int bars = 0;
+        for (const Hit& x : h) {
+            cover += (x.to - x.from) * x.velocity;
+            longest_[l] = std::max(longest_[l], x.to - x.from);
+            char& c = on[std::min(on.size() - 1, static_cast<size_t>(std::max(0.0, x.from) / 4.0))];
+            if (c == 0) { c = 1; ++bars; }
+        }
+        typical_[l] = bars > 0 ? static_cast<float>(cover / (4.0 * bars)) : 1.0f;
+    }
+}
+
+void ArrangeView::fill(double from, double to, int columns)
+{
+    cells_.assign(static_cast<size_t>(kLanes * columns), 0.0f);
+    cellsFrom_ = from;
+    cellsTo_ = to;
+    columns_ = columns;
+    cellsVersion_ = version_;
+    const double per = (to - from) / columns;   // beats a column
+    if (per <= 0.0) return;
+    for (int l = 0; l < kLanes; ++l) {
+        const std::vector<Hit>& h = hits_[l];
+        float* row = cells_.data() + static_cast<size_t>(l * columns);
+        auto it = std::lower_bound(h.begin(), h.end(), from - longest_[l], [](const Hit& x, double b) { return x.from < b; });
+        for (; it != h.end() && it->from < to; ++it) {
+            if (it->to <= from) continue;
+            const double a = std::max(it->from, from), b = std::min(it->to, to);
+            const int c0 = static_cast<int>((a - from) / per), c1 = std::min(columns - 1, static_cast<int>((b - from) / per));
+            for (int c = c0; c <= c1; ++c) {
+                const double cs = from + per * c;
+                const double over = std::min(b, cs + per) - std::max(a, cs);
+                if (over > 0.0) row[c] += static_cast<float>(over / per) * it->velocity;
+            }
+        }
+        const float k = 0.85f / std::max(1.0e-3f, typical_[l]);
+        for (int c = 0; c < columns; ++c) row[c] = std::min(1.0f, row[c] * k);
+    }
+}
+
+void ArrangeView::window(double& from, double& to) const
+{
+    const double len = playing_.set.lengthBeats;
+    if (span_ <= 0.0 || span_ >= len) { from = 0.0; to = std::max(len, 1.0); return; }
+    from = std::clamp(from_, 0.0, len - span_);
+    to = from + span_;
+}
+
+bool ArrangeView::zoomed(double& from, double& to) const
+{
+    window(from, to);
+    return span_ > 0.0 && span_ < playing_.set.lengthBeats;
+}
+
+void ArrangeView::show(double from, double span)
+{
+    const double len = playing_.set.lengthBeats;
+    if (len <= 0.0) return;
+    span = std::clamp(span, std::min(len, kNarrowest), len);
+    if (span >= len - 1.0e-9) { from_ = 0.0; span_ = 0.0; return; }
+    span_ = span;
+    from_ = std::clamp(from, 0.0, len - span);
+}
+
+void ArrangeView::zoomAround(float x, double factor)
+{
+    double a = 0.0, b = 0.0;
+    window(a, b);
+    const double t = std::clamp(static_cast<double>(x) / std::max(1, getWidth()), 0.0, 1.0);
+    const double at = a + (b - a) * t, span = (b - a) * factor;
+    show(at - span * t, span);
+    repaint();
+}
+
+double ArrangeView::beatAt(float x) const
+{
+    double a = 0.0, b = 0.0;
+    window(a, b);
+    return a + (b - a) * std::clamp(static_cast<double>(x) / std::max(1, getWidth()), 0.0, 1.0);
+}
+
+void ArrangeView::timerCallback()
+{
+    if (!isShowing()) return;
+    // A zoomed view pages on when the playhead runs out of it -- not when the view was moved away from the playhead.
+    const double pos = proc_.positionBeats();
+    double a = 0.0, b = 0.0;
+    if (zoomed(a, b) && !dragged_ && a == lastFrom_ && b == lastTo_ && lastPos_ >= a && lastPos_ <= b && (pos < a || pos > b)) {
+        show(pos - 0.05 * (b - a), b - a);
+        window(a, b);
+    }
+    lastPos_ = pos;
+    lastFrom_ = a;
+    lastTo_ = b;
+    repaint();
 }
 
 void ArrangeView::paint(juce::Graphics& g)
@@ -382,14 +490,24 @@ void ArrangeView::paint(juce::Graphics& g)
     g.fillAll(kPanel);
     if (proc_.scoreVersion() != version_) { version_ = proc_.scoreVersion(); rebuild(); }
     const double beats = playing_.set.lengthBeats;
+    if (wanted_.second > wanted_.first && beats > 0.0) {
+        show(wanted_.first, wanted_.second - wanted_.first);
+        wanted_ = { 0.0, 0.0 };
+    }
     if (beats <= 0.0) {
         g.setColour(kDim);
         g.drawText("composing ...", getLocalBounds(), juce::Justification::centred);
         return;
     }
+    double a = 0.0, b = 0.0;
+    const bool zoom = zoomed(a, b);
     const float w = static_cast<float>(getWidth()), h = static_cast<float>(getHeight());
-    const auto xOf = [&](double b) { return static_cast<float>(b / beats) * w; };
-    const float head = detailed_ ? 44.0f : 24.0f;
+    const auto xOf = [&](double beat) { return static_cast<float>((beat - a) / (b - a)) * w; };
+    // A bar from x0 to x1 inside the view, and the room for its name (from the view's edge where it began before it).
+    const auto clipped = [&](float x0, float x1, float y, float height) {
+        return juce::Rectangle<float>(std::max(x0, -2.0f), y, std::min(x1, w + 2.0f) - std::max(x0, -2.0f), height);
+    };
+    const float head = detailed_ ? 44.0f : 24.0f, rule = detailed_ ? 16.0f : 12.0f, ry = h - rule;
     g.setFont(juce::FontOptions(11.0f));
     if (playing_.isSet) {
         // The tracks on their decks: A on top, B below it; a blend where two overlap.
@@ -398,24 +516,28 @@ void ArrangeView::paint(juce::Graphics& g)
             const TrackPlace& t = playing_.tracks[i];
             const float y = 2.0f + rowH * static_cast<float>(t.deck == 1 ? 1 : 0);
             const float x0 = xOf(t.start), x1 = xOf(t.end), xs = xOf(t.swapIn);
+            if (x1 < 0.0f || x0 > w) continue;
+            const auto r = clipped(x0 + 1.0f, x1 - 1.0f, y, rowH - 2.0f);
             g.setColour(totui::deckColour(t.deck).interpolatedWith(kBack, 0.7f));
-            g.fillRect(x0 + 1.0f, y, std::max(1.0f, x1 - x0 - 2.0f), rowH - 2.0f);
+            g.fillRect(r.withWidth(std::max(1.0f, r.getWidth())));
             g.setColour(totui::deckColour(t.deck).interpolatedWith(kBack, 0.45f));
             g.fillRect(xs, y, 2.0f, rowH - 2.0f);   // its swap: from here it owns the low end
             g.setColour(kInk);
             const juce::String name = "T" + juce::String(static_cast<int>(i) + 1) + " " + juce::String(t.info.style) + " " + juce::String(t.info.camelot);
-            if (x1 - x0 > 40.0f) g.drawFittedText(name, juce::Rectangle<int>(static_cast<int>(x0) + 4, static_cast<int>(y), static_cast<int>(x1 - x0) - 8, static_cast<int>(rowH - 2.0f)), juce::Justification::centredLeft, 1);
+            if (r.getWidth() > 40.0f) g.drawFittedText(name, r.reduced(4.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft, 1);
         }
     } else {
         const std::vector<Marker>& markers = playing_.set.decks[0].markers;
         for (size_t i = 0; i < markers.size(); ++i) {
             const double b0 = markers[i].beat, b1 = i + 1 < markers.size() ? markers[i + 1].beat : beats;
             const float x0 = xOf(b0), x1 = xOf(b1);
+            if (x1 < 0.0f || x0 > w) continue;
             const juce::String name(markers[i].text);
+            const auto r = clipped(x0 + 1.0f, x1 - 1.0f, 2.0f, head - 4.0f);
             g.setColour(blockColour(name));
-            g.fillRect(x0 + 1.0f, 2.0f, std::max(1.0f, x1 - x0 - 2.0f), head - 4.0f);
+            g.fillRect(r.withWidth(std::max(1.0f, r.getWidth())));
             g.setColour(kInk);
-            if (x1 - x0 > 30.0f) g.drawFittedText(name, juce::Rectangle<int>(static_cast<int>(x0) + 4, 4, static_cast<int>(x1 - x0) - 8, 16), juce::Justification::topLeft, 1);
+            if (r.getWidth() > 30.0f) g.drawFittedText(name, r.reduced(3.0f, 2.0f).withHeight(16.0f).toNearestInt(), juce::Justification::topLeft, 1);
         }
         if (detailed_) {
             // The operations of the form, named, under the blocks.
@@ -424,6 +546,7 @@ void ArrangeView::paint(juce::Graphics& g)
             for (const BlockOp& o : playing_.set.decks[0].ops) {
                 if (o.kind == OpKind::End || o.kind == OpKind::Hold) continue;
                 const float x = xOf(o.beat);
+                if (x < -1.0f || x > w) continue;
                 g.setColour(kOnset.withAlpha(0.8f));
                 g.fillRect(x, head - 18.0f, 1.5f, 16.0f);
                 juce::String t = kOpNames[static_cast<int>(o.kind)];
@@ -436,17 +559,56 @@ void ArrangeView::paint(juce::Graphics& g)
             }
         }
     }
-    // The matrix: a lane per group of layers, lit where it plays.
-    const float top = head + 2.0f, laneH = (h - top - 2.0f) / static_cast<float>(kLanes);
-    if (!lanes_.empty() && laneH > 2.0f) {
-        const float bw = w / static_cast<float>(kBins);
+    // The ruler: a track's bars, a mix's minutes -- at a step that leaves the numbers room; faint lines through the lanes.
+    {
+        const TempoMap& tm = playing_.set.decks[0].tempo;
+        const auto clock = [](double secs) {
+            const int s = static_cast<int>(std::lround(secs)), hours = s / 3600, mins = (s / 60) % 60;
+            return (hours > 0 ? juce::String(hours) + ":" + juce::String(mins).paddedLeft('0', 2) : juce::String(mins)) + ":"
+                   + juce::String(s % 60).paddedLeft('0', 2);
+        };
+        const float room = detailed_ ? 80.0f : 52.0f;
+        g.setFont(juce::FontOptions(detailed_ ? 10.5f : 9.0f));
+        const auto tick = [&](double beat, const juce::String& label) {
+            const float x = xOf(beat);
+            g.setColour(kInk.withAlpha(0.07f));
+            g.fillRect(x, head, 1.0f, ry - head);
+            g.setColour(kDim);
+            g.fillRect(x, ry, 1.0f, 4.0f);
+            g.drawText(label, juce::Rectangle<float>(x + 3.0f, ry, room, rule), juce::Justification::centredLeft);
+        };
+        if (playing_.isSet) {
+            const double s0 = tm.secondsAt(a), s1 = tm.secondsAt(b);
+            static const int kClockSteps[] = { 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600 };
+            int step = 3600;
+            for (int k : kClockSteps) if (static_cast<double>(k) * w / std::max(1.0, s1 - s0) >= room) { step = k; break; }
+            for (double t = std::ceil(s0 / step) * step; t <= s1; t += step) tick(tm.beatAt(t), clock(t));
+        } else {
+            const double perBar = w / std::max(1.0e-9, (b - a) / 4.0);
+            int step = 1;
+            while (step * perBar < room && step < 4096) step *= 2;
+            for (int bar = static_cast<int>(std::ceil(a / 4.0 / step)) * step; 4.0 * bar <= b; bar += step)
+                tick(4.0 * bar, juce::String(bar + 1) + (detailed_ ? "   " + clock(tm.secondsAt(4.0 * bar)) : juce::String()));
+        }
+    }
+    // The matrix: a lane per group of layers, lit where it plays (a column per pixel, like columns drawn as one).
+    const float top = head + 2.0f, laneH = (ry - top - 1.0f) / static_cast<float>(kLanes);
+    const int columns = std::max(1, getWidth());
+    if (cellsVersion_ != version_ || cellsFrom_ != a || cellsTo_ != b || columns_ != columns) fill(a, b, columns);
+    if (laneH > 2.0f) {
+        const auto level = [](float v) { return v > 0.0f ? std::max(1, static_cast<int>(v * 24.0f + 0.5f)) : 0; };
         for (int l = 0; l < kLanes; ++l) {
             const float y = top + laneH * static_cast<float>(l);
-            for (int b = 0; b < kBins; ++b) {
-                const float a = lanes_[static_cast<size_t>(l * kBins + b)];
-                if (a <= 0.0f) continue;
-                g.setColour(kInk.withAlpha(0.12f + 0.5f * a));
-                g.fillRect(bw * static_cast<float>(b), y + 1.0f, bw + 0.5f, laneH - 2.0f);
+            const float* row = cells_.data() + static_cast<size_t>(l * columns);
+            for (int c = 0; c < columns;) {
+                const int q = level(row[c]);
+                int e = c + 1;
+                while (e < columns && level(row[e]) == q) ++e;
+                if (q > 0) {
+                    g.setColour(kInk.withAlpha(0.12f + 0.5f * static_cast<float>(q) / 24.0f));
+                    g.fillRect(static_cast<float>(c), y + 1.0f, static_cast<float>(e - c), laneH - 2.0f);
+                }
+                c = e;
             }
         }
         if (laneH >= 7.0f) {
@@ -460,16 +622,86 @@ void ArrangeView::paint(juce::Graphics& g)
             }
         }
     }
+    // Zoomed: where the window lies in the whole, under the ruler.
+    if (zoom) {
+        g.setColour(kInk.withAlpha(0.1f));
+        g.fillRect(0.0f, h - 2.0f, w, 2.0f);
+        g.setColour(kAccent.withAlpha(0.85f));
+        g.fillRect(w * static_cast<float>(a / beats), h - 2.0f, std::max(3.0f, w * static_cast<float>((b - a) / beats)), 2.0f);
+    }
+    // The window of the Arrange tab, while it is zoomed and shown, marked on the strip.
+    double da = 0.0, db = 0.0;
+    if (detail_ != nullptr && detail_->isShowing() && detail_->zoomed(da, db)) {
+        const float x0 = xOf(da), x1 = std::max(x0 + 2.0f, xOf(db));
+        g.setColour(kAccent.withAlpha(0.10f));
+        g.fillRect(x0, 0.0f, x1 - x0, h);
+        g.setColour(kAccent.withAlpha(0.7f));
+        g.drawRect(juce::Rectangle<float>(x0, 0.0f, x1 - x0, h), 1.0f);
+    }
     const float x = xOf(proc_.positionBeats());
-    g.setColour(kOnset);
-    g.fillRect(x - 1.0f, 0.0f, 2.0f, h);
+    if (x >= -1.0f && x <= w + 1.0f) {
+        g.setColour(kOnset);
+        g.fillRect(x - 1.0f, 0.0f, 2.0f, h);
+    }
 }
 
 void ArrangeView::mouseDown(const juce::MouseEvent& e)
 {
-    double beats = 0.0, secs = 0.0;
-    proc_.length(beats, secs);
-    proc_.seekTo(beats * e.position.x / std::max(1.0f, static_cast<float>(getWidth())));
+    downX_ = e.position.x;
+    dragged_ = false;
+    double a = 0.0, b = 0.0;
+    const bool zoom = zoomed(a, b);
+    downFrom_ = a;
+    if (!zoom) proc_.seekTo(beatAt(e.position.x));   // the whole length: at once, as ever
+}
+
+void ArrangeView::mouseDrag(const juce::MouseEvent& e)
+{
+    double a = 0.0, b = 0.0;
+    if (!zoomed(a, b)) return;
+    const float dx = e.position.x - downX_;
+    if (!dragged_ && std::abs(dx) < 4.0f) return;
+    dragged_ = true;
+    setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    show(downFrom_ - (b - a) * dx / std::max(1, getWidth()), b - a);
+    repaint();
+}
+
+void ArrangeView::mouseUp(const juce::MouseEvent& e)
+{
+    if (dragged_) {
+        dragged_ = false;
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+        return;
+    }
+    double a = 0.0, b = 0.0;
+    if (zoomed(a, b)) proc_.seekTo(beatAt(e.position.x));
+}
+
+void ArrangeView::mouseDoubleClick(const juce::MouseEvent&)
+{
+    show(0.0, 0.0);
+    repaint();
+}
+
+void ArrangeView::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    double a = 0.0, b = 0.0;
+    window(a, b);
+    // Sideways (a trackpad, a tilting wheel) or with Shift: along the length; else in and out, about 1.4 times a notch.
+    const bool sideways = std::abs(wheel.deltaX) > std::abs(wheel.deltaY);
+    if (sideways || e.mods.isShiftDown()) {
+        const float d = sideways ? wheel.deltaX : wheel.deltaY;
+        show(a - (b - a) * 0.5 * d, b - a);
+        repaint();
+        return;
+    }
+    if (wheel.deltaY != 0.0f) zoomAround(e.position.x, std::pow(2.0, -2.0 * wheel.deltaY));
+}
+
+void ArrangeView::mouseMagnify(const juce::MouseEvent& e, float scale)
+{
+    if (scale > 0.0f) zoomAround(e.position.x, 1.0 / scale);
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -505,7 +737,7 @@ void ArrangePage::timerCallback()
     juce::String text;
     if (t >= 0 && t < static_cast<int>(p.tracks.size())) {
         const TrackInfo& i = p.tracks[static_cast<size_t>(t)].info;
-        text << (p.isSet ? "Track " + juce::String(t + 1) + " of " + juce::String(static_cast<int>(p.tracks.size())) + ": " : juce::String("The track: "))
+        text << (p.isSet ? "Track " + juce::String(t + 1) + " of " + juce::String(static_cast<int>(p.tracks.size())) + " in the mix: " : juce::String("The track: "))
              << juce::String(i.style) << " " << kArchetypeNames[i.archetype] << ", " << kFormNames[static_cast<int>(i.form)] << ", " << juce::String(i.bpm, 1) << " BPM, "
              << kKeyNames[i.key] << " " << kScaleNames[i.scale] << " (" << juce::String(i.camelot) << "), " << i.bars << " bars, "
              << (i.subOwns ? "the sub owns the low end" : "the rumble owns the low end") << ", bar similarity " << juce::String(i.similarity, 2);
@@ -529,7 +761,6 @@ void ArrangePage::timerCallback()
     sounds_.setText(sounds, juce::dontSendNotification);
     track_.setVisible(p.isSet);
     set_.setVisible(p.isSet);
-    view_.repaint();
 }
 
 void ArrangePage::resized()
@@ -673,19 +904,33 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
     combo(style_, s.id(Module::Compose, 0, compose::Style));
     combo(key_, s.id(Module::Compose, 0, compose::Key));
     combo(scale_, s.id(Module::Compose, 0, compose::Scale));
-    auto slider = [&](juce::Slider& sl, juce::Label& label, const char* text, int id, const char* tip) {
-        sl.setSliderStyle(juce::Slider::LinearHorizontal);
-        sl.setTextBoxStyle(juce::Slider::TextBoxRight, false, 56, 20);
-        sliders_.push_back(std::make_unique<juce::SliderParameterAttachment>(*proc_.parameter(id), sl));
-        label.setText(text, juce::dontSendNotification);
-        label.setColour(juce::Label::textColourId, kDim);
-        sl.setTooltip(tip);
-        body_.addAndMakeVisible(sl);
-        body_.addAndMakeVisible(label);
+    // One track or a DJ mix (a set of tracks on two decks): two buttons that compose what they name, and one length,
+    // the one of what is chosen (compose.minutes or set.minutes).
+    trackMode_.setTooltip("Compose a single track (its length beside)");
+    mixMode_.setTooltip("Compose a DJ mix: a set of tracks mixed on two decks (its length beside; a track's time in it and the "
+                        "set's course on the Set page)");
+    trackMode_.onClick = [this] { proc_.chooseMix(false); };
+    mixMode_.onClick = [this] { proc_.chooseMix(true); };
+    trackMode_.setConnectedEdges(juce::Button::ConnectedOnRight);
+    mixMode_.setConnectedEdges(juce::Button::ConnectedOnLeft);
+    for (auto* b : { &trackMode_, &mixMode_ }) {
+        b->setColour(juce::TextButton::buttonOnColourId, kAccent.withAlpha(0.5f));
+        body_.addAndMakeVisible(b);
+    }
+    length_.setSliderStyle(juce::Slider::LinearHorizontal);
+    length_.setTextBoxStyle(juce::Slider::TextBoxRight, false, 62, 20);
+    length_.onValueChange = [this] {
+        if (syncing_) return;
+        const ParamStore& st = proc_.store();
+        proc_.setFromUi(lengthOfMix_ ? st.id(Module::Set, 0, set::Minutes) : st.id(Module::Compose, 0, compose::Minutes),
+                        static_cast<float>(length_.getValue()));
     };
-    slider(minutes_, minutesLabel_, "Track min", s.id(Module::Compose, 0, compose::Minutes), "The length of a track");
-    slider(setMinutes_, setLabel_, "Set min", s.id(Module::Set, 0, set::Minutes),
-           "The length of a DJ set of tracks mixed on two decks; 0: a single track");
+    lengthLabel_.setText("Length", juce::dontSendNotification);
+    lengthLabel_.setColour(juce::Label::textColourId, kDim);
+    lengthLabel_.setJustificationType(juce::Justification::centredRight);
+    body_.addAndMakeVisible(length_);
+    body_.addAndMakeVisible(lengthLabel_);
+    showLength(proc_.mixChosen());
 
     compose_.onClick = [this] { proc_.compose(); };
     seed_.onClick = [this] { proc_.newSeed(); };
@@ -731,7 +976,9 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
         tabs_.addTab(name, kPanel, new ScrollingPage(std::make_unique<ParamPage>(proc_, std::move(groups), instances, std::move(names))), true);
     };
     page("Set", { { M::Compose, 0 }, { M::Set, 0 }, { M::DjFx, 0 } });
-    tabs_.addTab("Arrange", kPanel, new ArrangePage(proc_), true);
+    auto* arrangePage = new ArrangePage(proc_);
+    tabs_.addTab("Arrange", kPanel, arrangePage, true);
+    arrange_.setDetail(&arrangePage->view());
     tabs_.addTab("Patterns", kPanel, new EclipsePage(proc_), true);
     page("Low End", { { M::Kick, 0 }, { M::Rumble, 0 }, { M::Sub, 0 } });
     std::vector<juce::String> lanes;
@@ -752,6 +999,10 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
     if (const char* shot = std::getenv("TOT_SHOT")) {
         shotPath_ = shot;
         if (const char* tab = std::getenv("TOT_TAB")) tabs_.setCurrentTabIndex(juce::String(tab).getIntValue());
+        if (const char* zoom = std::getenv("TOT_SHOT_ZOOM")) {
+            const juce::String z(zoom);
+            arrangePage->view().zoomTo(z.upToFirstOccurrenceOf(":", false, false).getDoubleValue(), z.fromFirstOccurrenceOf(":", false, false).getDoubleValue());
+        }
         if (const char* size = std::getenv("TOT_SHOT_SIZE")) {
             const juce::String sz(size);
             setSize(sz.upToFirstOccurrenceOf("x", false, false).getIntValue(), sz.fromFirstOccurrenceOf("x", false, false).getIntValue());
@@ -812,23 +1063,48 @@ bool TotalityEditor::keyPressed(const juce::KeyPress& key)
     return false;
 }
 
+void TotalityEditor::showLength(bool mix)
+{
+    // A track: 2 to 16 minutes; a mix: 10 minutes to 12 hours, its first two hours over most of the way.
+    const juce::ScopedValueSetter<bool> quiet(syncing_, true);
+    lengthOfMix_ = mix;
+    if (mix) {
+        length_.setRange(10.0, 720.0, 1.0);
+        length_.setSkewFactorFromMidPoint(90.0);
+        length_.textFromValueFunction = [](double v) { return juce::String(juce::roundToInt(v)) + " min"; };
+        length_.setTooltip("The DJ mix's length (Compose mix makes it)");
+    } else {
+        length_.setRange(2.0, 16.0, 0.1);
+        length_.setSkewFactor(1.0);
+        length_.textFromValueFunction = [](double v) { return juce::String(v, 1) + " min"; };
+        length_.setTooltip("The track's length (Compose track makes it)");
+    }
+    length_.valueFromTextFunction = [](const juce::String& t) { return t.getDoubleValue(); };
+    const ParamStore& st = proc_.store();
+    length_.setValue(st.get(mix ? st.id(Module::Set, 0, set::Minutes) : st.id(Module::Compose, 0, compose::Minutes)), juce::dontSendNotification);
+    length_.updateText();
+}
+
 void TotalityEditor::layoutBody()
 {
     auto area = body_.getLocalBounds().reduced(10);
     auto top = area.removeFromTop(34);
-    logo_ = top.removeFromLeft(34).toFloat().reduced(2.0f);
-    title_.setBounds(top.removeFromLeft(112));
-    style_.setBounds(top.removeFromLeft(120).reduced(3));
-    key_.setBounds(top.removeFromLeft(64).reduced(3));
-    scale_.setBounds(top.removeFromLeft(120).reduced(3));
-    minutesLabel_.setBounds(top.removeFromLeft(70));
-    minutes_.setBounds(top.removeFromLeft(122).reduced(2));
-    setLabel_.setBounds(top.removeFromLeft(56));
-    setMinutes_.setBounds(top.removeFromLeft(122).reduced(2));
     mute_.setBounds(top.removeFromRight(proc_.muteForced() && shotPath_.isEmpty() ? 100 : 70).reduced(3));
     play_.setBounds(top.removeFromRight(76).reduced(3));
     seed_.setBounds(top.removeFromRight(90).reduced(3));
-    compose_.setBounds(top.removeFromRight(96).reduced(3));
+    compose_.setBounds(top.removeFromRight(118).reduced(3));
+    top.removeFromRight(6);
+    logo_ = top.removeFromLeft(34).toFloat().reduced(2.0f);
+    title_.setBounds(top.removeFromLeft(104));
+    style_.setBounds(top.removeFromLeft(120).reduced(3));
+    key_.setBounds(top.removeFromLeft(64).reduced(3));
+    scale_.setBounds(top.removeFromLeft(120).reduced(3));
+    top.removeFromLeft(10);
+    trackMode_.setBounds(top.removeFromLeft(66).reduced(0, 3));
+    mixMode_.setBounds(top.removeFromLeft(74).reduced(0, 3));
+    top.removeFromLeft(4);
+    lengthLabel_.setBounds(top.removeFromLeft(52));
+    length_.setBounds(top.withWidth(std::min(top.getWidth(), 220)).reduced(2));
     area.removeFromTop(4);
     auto third = area.removeFromTop(20);
     if (full_.isVisible()) full_.setBounds(third.removeFromRight(100));
@@ -859,11 +1135,27 @@ void TotalityEditor::timerCallback()
         update_.setVisible(v.isNotEmpty());
     }
     play_.setButtonText(proc_.isPlaying() ? "Stop" : "Play");
+    // The choice and its length as the parameters have them (the Set page and a host move them too); Compose names
+    // what it makes, and is lit while what plays is the other.
+    {
+        const bool mix = proc_.mixChosen();
+        if (mix != lengthOfMix_) showLength(mix);
+        trackMode_.setToggleState(!mix, juce::dontSendNotification);
+        mixMode_.setToggleState(mix, juce::dontSendNotification);
+        const ParamStore& st = proc_.store();
+        const double v = st.get(mix ? st.id(Module::Set, 0, set::Minutes) : st.id(Module::Compose, 0, compose::Minutes));
+        if (!length_.isMouseButtonDown() && std::abs(length_.getValue() - v) > 1.0e-3) {
+            const juce::ScopedValueSetter<bool> quiet(syncing_, true);
+            length_.setValue(v, juce::dontSendNotification);
+        }
+        compose_.setButtonText(mix ? "Compose mix" : "Compose track");
+        const juce::Colour c = kAccent.withAlpha(mix != proc_.playingMix() && !proc_.isComposing() ? 0.45f : 0.14f);
+        if (compose_.findColour(juce::TextButton::buttonColourId) != c) compose_.setColour(juce::TextButton::buttonColourId, c);
+    }
     const bool shown = proc_.muted() && shotPath_.isEmpty();
     mute_.setToggleState(shown, juce::dontSendNotification);
     mute_.setButtonText(shown ? (proc_.muteForced() ? "Muted (env)" : "Muted") : "Mute");
     compose_.setEnabled(!proc_.isComposing());
-    arrange_.repaint();
     // The test mode: the recording, when full, is written and the standalone quits.
     if (proc_.recordingDone()) {
         proc_.writeRecording();

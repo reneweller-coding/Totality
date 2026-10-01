@@ -40,7 +40,7 @@ void usage()
 {
     std::printf("tot_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
                 "           [--set \"key=value; ...\"] [--reroll unit] [--save-set f.totset] [--load-set f.totset] [--study]\n"
-                "           [--set-minutes M]  (a DJ set of M minutes on two decks)\n"
+                "           [--set-minutes M]  (a DJ set of M minutes on two decks)  [--seconds S]  (its first S seconds only)\n"
                 "           [--loops dir] [--score-json f.json] [--decks dir] [--plan]\n"
                 "           [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512]\n"
                 "           [--bench] [--quality desktop|quest] [--list] [--dump-params f.json] [--version] [--stats] [--patterns]\n");
@@ -145,7 +145,7 @@ int main(int argc, char** argv)
     bool bench = false, list = false, stats = false, patterns = false, study = false, seedGiven = false, planOnly = false;
     float minutes = -1.0f, bpm = -1.0f;
     int low = -1, form = -1;
-    double setMinutes = 0.0;
+    double setMinutes = 0.0, seconds = 0.0;
     std::string decksDir, loopsDir, scoreJson;
     Curation curation;
     for (int i = 1; i < argc; ++i) {
@@ -162,6 +162,7 @@ int main(int argc, char** argv)
         else if (!std::strcmp(a, "--load-set")) loadSetPath = next();
         else if (!std::strcmp(a, "--study")) study = true;
         else if (!std::strcmp(a, "--set-minutes")) setMinutes = std::atof(next());
+        else if (!std::strcmp(a, "--seconds")) seconds = std::atof(next());
         else if (!std::strcmp(a, "--decks")) decksDir = next();
         else if (!std::strcmp(a, "--loops")) loopsDir = next();
         else if (!std::strcmp(a, "--score-json")) scoreJson = next();
@@ -390,10 +391,12 @@ int main(int argc, char** argv)
         const TempoMap& tm = setScore.decks[0].tempo;
         for (size_t i = 0; i < si.tracks.size(); ++i) {
             const SetTrack& t = si.tracks[i];
-            std::printf("  T%-2zu deck %c  %6.2f min  %5.1f BPM  %-10s %-9s %-7s %-2s %-16s %-4s  %d bars, swap in %6.2f, energy %.2f\n",
+            std::printf("  T%-2zu deck %c  %6.2f min  %5.1f BPM  %-10s %-9s %-7s %-2s %-16s %-4s  %d bars, swap in %6.2f, energy %.2f; "
+                        "opening: %s, the kick from bar %d, leaving %d bars before the end\n",
                         i + 1, 'A' + t.deck, tm.secondsAt(t.start) / 60.0, t.info.bpm, t.info.style.c_str(), kArchetypeNames[t.info.archetype],
                         kFormNames[static_cast<int>(t.info.form)], kKeyNames[t.info.key], kScaleNames[t.info.scale],
-                        t.info.camelot.c_str(), t.info.bars, tm.secondsAt(t.swapIn) / 60.0, t.energy);
+                        t.info.camelot.c_str(), t.info.bars, tm.secondsAt(t.swapIn) / 60.0, t.energy, kOpeningNames[t.info.opening],
+                        t.info.kickBar + 1, t.info.kickLeaves);
         }
         for (const SetLoop& l : si.loops)
             std::printf("  %s of T%d (%d bars) on deck C from %.2f to %.2f min\n", kLoopKindNames[static_cast<int>(l.kind)], l.from + 1, l.bars,
@@ -521,7 +524,8 @@ int main(int argc, char** argv)
     LoudnessMeter meter;
     meter.prepare(rate);
     std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
-    const int64_t total = static_cast<int64_t>(engine->lengthSeconds() * rate) + static_cast<int64_t>(2.0 * rate);
+    int64_t total = static_cast<int64_t>(engine->lengthSeconds() * rate) + static_cast<int64_t>(2.0 * rate);
+    if (seconds > 0.0) total = std::min(total, static_cast<int64_t>(seconds * rate));   // --seconds: the beginning only
     int64_t done = 0;
     const auto t2 = std::chrono::steady_clock::now();
     while (done < total) {

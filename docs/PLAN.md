@@ -22,6 +22,46 @@ wird, ist [I], bis es gemessen ist.
 
 ## Stand der Umsetzung
 
+**01.10.2026: Phase 21, Track oder Mix, der Zoom und der Anfang eines Mixes.** Der Nutzer: "In der GUI ist es etwas
+verwirrend, ob man jetzt einen Einzeltrack erzeugt oder einen Mix"; bei langen Mixes und Tracks ein Zoom "etwa mit dem
+Mausrad"; und sein Mix "begann ... wieder mit einer Solo-Kick".
+
+- **Track oder DJ-Mix.** Statt "Track min" und "Set min" (0 hieß: ein Track) zwei Knöpfe "Track | DJ mix" neben der
+  Tonart und ein Längenregler für das Gewählte (Track 2 bis 16 min, Mix 10 min bis 12 h, die ersten zwei Stunden über
+  den größten Teil des Wegs); ein Klick komponiert sofort, Compose heißt "Compose track" oder "Compose mix" und leuchtet,
+  solange das Gespielte das andere ist; die Statuszeile beginnt mit "single track" oder "DJ mix of N tracks". Die Länge
+  des Mixes bleibt gemerkt, solange ein Track gewählt ist (`TotalityProcessor::chooseMix`, im State `mixMinutes`).
+  `set.minutes` bleibt der Parameter (0: ein Track): Host, `.totset`, Quest und `tot_render` unverändert.
+- **Zoom** (`ArrangeView`, im Streifen oben und auf der Arrange-Seite): das Mausrad zoomt um den Zeiger bis auf vier
+  Takte, Ziehen, Shift + Rad oder ein seitliches Rad verschieben, ein Doppelklick zeigt alles; ein Lineal (die Takte
+  eines Tracks, auf der Arrange-Seite mit der Zeit, die Minuten eines Mixes); die Matrix eine Spalte je Pixel, ihre
+  Helligkeit die Deckung je Schlag gegen die typische der Spur, so dass sie in jedem Zoom gleich liest und gezoomt jeder
+  Schlag einzeln steht; ein gezoomtes Bild blättert mit dem Abspielkopf weiter, wenn er hinausläuft (nicht, wenn man es
+  von ihm weggeschoben hat); der Streifen oben markiert das Fenster der Arrange-Seite. `TOT_SHOT_ZOOM` ("von:bis" in
+  Schlägen) für die Screenshots.
+- **Der Anfang eines Mixes, gemessen.** 24 Mixe (9 min, Seeds 101-124; `intro_ref.py` und die Stems): 5 begannen als die
+  Kick allein oder mit gedämpften Hats. Die Ursachen: der erste Track eröffnete in 9 von 24 mit *drums* (die Kick ab
+  Takt 1); die eröffnende Percussion war oft ein Tom oder Rim aus der Matrix mit ein bis zwei Schlägen je Takt, am
+  unteren Rand ihres Fensters (Seed 110: der Tom 24 dB unter der Kick, die Percussion des Bodys 13); die Hats lagen in
+  Takt 1-2 hinter dem 4-kHz-Filter noch 34 dB darunter.
+- **Drei Änderungen.** Ein Tom oder Rim, der den Track eröffnet, bekommt eine euklidische Figur auf den zwölf
+  Sechzehnteln neben den Vierteln (E(5,12), E(6,12) oder E(7,12), gedreht; aus dem Strom des Racks), wenn der Rack ihm
+  keinen Zyklus und keine Figur gab -- vier bis sieben Schläge je Takt; seine Spur steht oben in ihrem Balance-Fenster
+  (die oberen 2 dB statt des ganzen, `corrections`); der erste Track eines Mixes eröffnet nie mit der Kick (*percussion
+  first* oder *atmosphere first*, die Kick auf Takt 5 oder 9).
+- **Ergebnis.** Mixe "Kick allein" oder "Kick + Hats" 5 -> 1 von 24 (die eine: ein Roller mit tiefem Tom, den das Maß
+  nicht hört; in den Stems liegt er bei -20 dB, und die Kick kommt erst mit Takt 5), keine Kick vor Takt 5; Seed 110:
+  Takt 1-8 der Tom bei -18 statt -24 dB, die Hats in Takt 1-2 bei -27 statt -34 dB, die Kick ab Takt 9. Einzelne Tracks (vier Stile,
+  sechs Seeds) 3 -> 1 von 24 (ein Hypnotic Tribal mit dunkler Conga unter der Kick ab Takt 1). `testComposer`: ein
+  eröffnender Tom oder Rim mit drei Schlägen je Takt und mehr, der erste Track eines Mixes ohne Kick bis Takt 5 (24
+  Tracks); 187/187.
+- **Nebenbei gefunden:** der Rack zieht für Tom, Rim und Shaker mit p 0,4 E(3,8) doppelt, E(5,16) oder E(7,16) "neben den
+  Vierteln" -- die beiden letzten haben einen Schlag auf jedem Platz des Viertels, keine Drehung hält sie davon frei, und
+  die Spur fällt still auf die Matrix zurück. Nicht angefasst (es änderte die Percussion aller Tracks); als eigene
+  Aufgabe vermerkt.
+- `tot_render`: `--seconds S` rendert nur den Anfang; die Liste eines Sets nennt je Track die Eröffnung, den Einsatz der
+  Kick und ihren Abgang.
+
 **30.09.2026: Phase 20, Anfang und Ende wie auf den Platten.** Der Nutzer: "Ich bin mir sehr sicher, dass nahezu keiner
 mit einer simplen 4-to-the-floor Kick alleine beginnt" -- und dasselbe für das Outro. Bisher: Takt 1 bis 8 die Kick
 allein, dann Closed Hat (9), halbe Rolling Hat (17), eine Percussion (25); im Outro fiel alle 8 Takte etwas weg, die Kick

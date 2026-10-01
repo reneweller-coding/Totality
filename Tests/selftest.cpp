@@ -698,6 +698,13 @@ void testComposer()
                 if (voices.size() < 2) failOpening(who + fmt(": %zu voices beside the kick in bars 1-4 (%s)", voices.size(), kOpeningNames[info.opening]));
                 else if (firstKick > 64.0 + 1e-9 || (held && firstKick < 32.0 - 1e-9) || (!held && firstKick > 1e-9 + 1.0))
                     failOpening(who + fmt(": the kick from beat %.1f (%s)", firstKick, kOpeningNames[info.opening]));
+                // Phase 21: a tom or a rim that opens the track carries it -- three hits a bar or more in bars 1-8 (the
+                // matrix left it one or two).
+                int carry[kPercLanes] = {};
+                for (const NoteEvent& n : s.notes)
+                    if (n.beat < 32.0 && n.part >= Part::Perc1 && n.part <= Part::Perc12) ++carry[static_cast<int>(n.part) - static_cast<int>(Part::Perc1)];
+                for (int lane : { 7, 9, 10 })
+                    if (carry[lane] > 0 && carry[lane] < 24) failOpening(who + fmt(": the opening's lane %d with %d hits in bars 1-8", lane + 1, carry[lane]));
             }
             // One staircase operation at every block boundary -- or, since Phase 8, a hat's or a perc's entry on the
             // block's 8- or 16-bar line in its place (Dok. "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase").
@@ -761,8 +768,30 @@ void testComposer()
     first.clear();
     check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
     check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted; the texture may end a track)", first);
+    // Phase 21: a set's first track opens the mix: never with the kick -- it comes on bar 5 or 9.
+    for (int style = 0; style < 4; ++style) {
+        for (uint64_t seed = 1; seed <= 6; ++seed) {
+            auto p = std::make_unique<ParamStore>();
+            p->set(p->find("compose.style"), static_cast<float>(style));
+            TrackRequest req;
+            req.mixable = true;
+            req.quickStart = true;
+            req.blocks = 6;
+            TrackInfo info;
+            const Score s = composeTrack(*p, seed, req, nullptr, std::string(), &info);
+            double firstKick = 1e30;
+            for (const NoteEvent& n : s.notes) if (n.part == Part::Kick) firstKick = std::min(firstKick, n.beat);
+            if (info.opening == static_cast<int>(Opening::Drums) || firstKick < 16.0 - 1e-9 || firstKick > 32.0 + 1e-9) {
+                ++badOpening;
+                if (firstOpening.empty())
+                    firstOpening = fmt("%s seed %d, a set's first track: %s, the kick from beat %.1f", kStyleNames[style], static_cast<int>(seed),
+                                       kOpeningNames[info.opening], firstKick);
+            }
+        }
+    }
     check(badOpening == 0 && openings.size() == 3,
-          "never the kick alone: two voices beside it in the first and the last four bars, the kick by bar 17; all three openings",
+          "never the kick alone: two voices beside it in the first and the last four bars, the kick by bar 17, a tom or rim that "
+          "opens with three hits a bar; a set's first track without the kick until bar 5 or 9; all three openings",
           firstOpening.empty() ? fmt("%zu openings", openings.size()) : firstOpening);
     check(badEndless == 0, "the Endless without a kick-out", first);
     check(badBass == 0, "a bass line exactly where the sub owns the low end, from the body on", first);

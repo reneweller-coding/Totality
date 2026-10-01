@@ -34,14 +34,17 @@ corona swells with every beat.
 
 == Quick start | | - ==
 
-The standalone plays by itself: press Play. Compose writes a new track with the knobs as they stand, New seed draws a
-fresh one. The status line tells what plays: its style and form, its tempo, its key with the Camelot label a DJ mixes
+The standalone plays by itself: press Play. Track and DJ mix, beside the style, choose what Totality makes: a single
+track, or a DJ mix -- a set of tracks mixed on two decks. A click on either composes it at once; the length beside
+them is the one of what is chosen (a track 2 to 16 minutes, a mix 10 minutes to 12 hours), and the Compose button
+names what it writes (Compose track, Compose mix) with the knobs as they stand; New seed draws a fresh one. The status
+line begins with "single track" or "DJ mix of" and tells what plays: its style and form, its tempo, its key with the Camelot label a DJ mixes
 by, and its length. While a track begins to play, Totality measures its loudest part in the background, sets every
 part against the kick -- each lane of the kit, the figure and the other tonal voices, one or two up front and the rest
 behind them, the room taken back where the mids would stand over the records' -- and brings the track to its style's
 loudness; the status says "levelling" until the corrections have glided in.
 
-For a set, move Set min above zero: Totality then writes a set of that many minutes -- a dramaturgy of tempo and energy,
+A DJ mix of that many minutes is a set: a dramaturgy of tempo and energy,
 tracks in neighbouring keys, blends of 16 or 32 bars with the bass swapped on the 32-bar line where the incoming
 track's figure lands -- its first body block runs under the outgoing track's full groove --, loops of the last track
 under the next on the third deck, breaks from the mixer's effects.
@@ -51,14 +54,16 @@ the host jumps, and plays at the host's tempo (a set's own tempo drift is the st
 output is a finished stereo mix at about -10 LUFS with its true peak under -1 dBTP.
 
 A reroll draws one part of the track again and leaves the rest as it was: form, harmony, rack, layers, blocks,
-events, hands, sounds. In a set the rerolls act on the track under the playhead, and "reroll the whole track" or "the
-set's plan" draw more at once (the Arrange page).
+events, hands, sounds. In a mix the rerolls act on the track under the playhead, and "reroll the whole track" or "the
+mix's plan" draw more at once (the Arrange page).
 
 == The track and the set | compose set djfx | 0 ==
 
 A track has one of three forms. The Arc is the DJ tool: an intro of 32 or 64 bars -- never the kick alone: kick, hats
 and a percussion from the first bar, or hats and percussion, or an atmosphere and percussion, with the kick on bar 9
-or 17, as most of the reference records begin (the plan names the opening) --, a body that builds
+or 17, as most of the reference records begin (the plan names the opening); the percussion that opens it carries it,
+four to seven hits a bar and up front in the balance, and a mix's first track never begins with the kick --, a body
+that builds
 its groove over its first blocks -- a main entry on each block's first bar and further hats and percussion on its
 8-bar lines, full by about bar 97 --, an outro that takes them away again -- so it mixes. The Peak builds to a
 kick-out and returns into its densest block. The Endless is full from the first bar and changes only by exchanging layers, as the
@@ -124,10 +129,15 @@ sound: the knobs show the incoming track while the outgoing one plays on as it w
 
 == Arrange | | 1 ==
 
-The arrangement across the whole length: in a set the tracks on decks A and B (their swaps marked: from there a track
+The arrangement across the whole length: in a mix the tracks on decks A and B (their swaps marked: from there a track
 owns the low end), in a track its blocks with their names, and under them a lane per group of layers -- kick, hats,
-perc, ping, bass, pads -- lit where it plays. The Arrange page shows the operations of the form by name. A click jumps
-there.
+perc, ping, bass, pads -- lit where it plays, and a ruler: a track's bars (on the Arrange page with the time beside
+them), a mix's minutes. The Arrange page shows the operations of the form by name. A click jumps there.
+
+The mouse wheel zooms in and out around the pointer, down to four bars, where every hit of the kit stands apart; a
+drag, the wheel with Shift or a sideways wheel moves along, a double click shows the whole length again. A zoomed view
+pages on with the playhead when it runs out of it (not when you moved the view away), and the strip on top marks the
+window of the Arrange page.
 
 The row of rerolls acts on the track under the playhead; each part of it is drawn from a stream of its own, so a
 reroll of the blocks keeps the harmony and the sounds, a reroll of the hands (the automation) keeps every note, and a

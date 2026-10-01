@@ -142,6 +142,9 @@ BalanceDb corrections(const Engine& e, const LevelMark& m, const BalanceDb& foun
         balanceWindow(m.styleMix, p, p < kBalLanes ? role[p] : -1, lo, hi);
         lo -= lower[p];
         hi -= lower[p];
+        // (Phase 21: the opening's lane at the top of its window -- at its bottom, a set's first track opened with its tom
+        // 24 dB under the kick, and the mix began as the kick alone.)
+        if (p == m.front) lo = std::max(lo, hi - 2.0f);
         if (los != nullptr) (*los)[static_cast<size_t>(p)] = lo;
         if (his != nullptr) (*his)[static_cast<size_t>(p)] = hi;
         out[static_cast<size_t>(p)] = std::clamp(f < lo ? lo - f : f > hi ? hi - f : 0.0f, kBalDown, kBalUp);
