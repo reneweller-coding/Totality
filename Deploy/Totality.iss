@@ -11,7 +11,7 @@
 ; downloaded and the VST3 needs no copies of anything.
 
 #ifndef Version
-  #define Version "1.0.0"
+  #define Version "1.1.0"
 #endif
 #define AppName "Totality"
 #define Publisher "Rene Weller"

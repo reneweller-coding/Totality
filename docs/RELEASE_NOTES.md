@@ -1,6 +1,6 @@
 # Totality release notes
 
-## Next: the family's panel (01.10.2026, not yet released)
+## 1.1.0 (01.10.2026): the family's panel -- the first public release
 
 **Play it yourself.** A Keyboard group on the Perform page: Keyboard Plays sends the keys of a MIDI keyboard to a voice
 (the kit, the bass, the 303, the ping, the chord, the drone, or by channel), with the sound its page has; Replace leaves that voice's generated notes out, Layer plays over
@@ -50,7 +50,7 @@ leaves the headset silent.
 
 **Words.** The automation is "the moves" now, as in every generator of the family: "reroll moves", DJ Moves.
 
-## 1.0.0 (28.09.2026)
+## 1.0.0 (28.09.2026, built, not published)
 
 The first release: a generator of hypnotic Berlin techno, as a VST3 plugin, a standalone application for Windows, a
 command-line renderer and an app for Meta Quest.
