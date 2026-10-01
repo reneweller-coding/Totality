@@ -55,10 +55,17 @@ Mausrad"; und sein Mix "begann ... wieder mit einer Solo-Kick".
   sechs Seeds) 3 -> 1 von 24 (ein Hypnotic Tribal mit dunkler Conga unter der Kick ab Takt 1). `testComposer`: ein
   eröffnender Tom oder Rim mit drei Schlägen je Takt und mehr, der erste Track eines Mixes ohne Kick bis Takt 5 (24
   Tracks); 187/187.
-- **Nebenbei gefunden:** der Rack zieht für Tom, Rim und Shaker mit p 0,4 E(3,8) doppelt, E(5,16) oder E(7,16) "neben den
-  Vierteln" -- die beiden letzten haben einen Schlag auf jedem Platz des Viertels, keine Drehung hält sie davon frei, und
-  die Spur fällt still auf die Matrix zurück. Nicht angefasst (es änderte die Percussion aller Tracks); als eigene
-  Aufgabe vermerkt.
+- **Nebenbei gefunden und am selben Tag behoben:** der Rack zog für Tom, Rim und Shaker mit p 0,4 E(3,8) doppelt,
+  E(5,16) oder E(7,16) "neben den Vierteln" -- die beiden letzten haben einen Schlag auf jedem Platz des Viertels, keine
+  Drehung hält sie davon frei, und die Spur fiel still auf die Matrix zurück (der Rim mit .4/.2/.2: unter einem Schlag
+  je Takt). Jetzt liegen fünf oder sieben Schläge als E(5,12) und E(7,12) auf den zwölf Sechzehnteln neben den Vierteln
+  (`offQuarterMask`, Rack.h; dieselbe Zahl Ziehungen, so dass alles danach Gezogene bleibt). In 200 Plänen 143
+  euklidische Spuren statt 37 (55 mit fünf, 37 mit sechs, 51 mit sieben Schlägen; `testRackPhase2` prüft alle drei).
+  Die Taktähnlichkeit bleibt (48 Tracks, je Stil ±0,002), je Takt 1 bis 2 Anschläge mehr. Der Test "rerolling the
+  offbeat hat ... keeps the untied layers" verglich auch die Velocity des Pings, der aber dort nachgibt, wo eine Hat ihn
+  trifft (`LayerDef::perc`): er vergleicht beim Ping jetzt Zeiten und Tonhöhen. Dabei auch behoben: die zwei Ziehungen
+  der Eröffnungsfigur standen als Argumente eines Aufrufs (ihre Reihenfolge wäre die des Compilers: MSVC, icx und der
+  Quest-Clang hätten verschiedene Figuren ziehen können).
 - `tot_render`: `--seconds S` rendert nur den Anfang; die Liste eines Sets nennt je Track die Eröffnung, den Einsatz der
   Kick und ihren Abgang.
 

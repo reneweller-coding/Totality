@@ -195,6 +195,17 @@ uint64_t rotateMask(uint64_t mask, int n, int r)
     return out;
 }
 
+uint16_t offQuarterMask(int k, int r)
+{
+    const uint64_t slots = rotateMask(euclidMask(k, 12), 12, r);
+    uint16_t m = 0;
+    for (int j = 0, step = 0; step < kSteps; ++step) {
+        if (step % 4 == 0) continue;   // the quarters are the kick's
+        if ((slots >> j++) & 1u) m = static_cast<uint16_t>(m | (1u << step));
+    }
+    return m;
+}
+
 RackSettings rackSettings(const ParamStore& p)
 {
     RackSettings s;
@@ -285,8 +296,8 @@ RackPlan makeRackPlan(const RackSettings& st, uint64_t seed)
             plan.pingNote[pos] = plan.pingRoot + ((twoTones && rng.uniform() < 0.35f) ? second : 0);
     }
     // Polymeter: one percussion layer with p 0.25, two with p 0.25, of period 3, 5, 6, 7 or 12, reset every 16 bars
-    // (Dok. 8.2: "1-2 Perc-Layer ... p 0.5 pro Track"); the others Euclidean with p 0.4 (E(3,8), E(5,16), E(7,16) off
-    // the quarters) or displaced with p 0.3.
+    // (Dok. 8.2: "1-2 Perc-Layer ... p 0.5 pro Track"); the others Euclidean with p 0.4 -- E(3,8) twice, or five or
+    // seven onsets off the quarters -- or displaced with p 0.3.
     {
         LayerId candidates[] = { LayerId::TomConga, LayerId::Rim, LayerId::Shaker };
         for (int i = 2; i > 0; --i) std::swap(candidates[i], candidates[rng.below(i + 1)]);
@@ -301,15 +312,22 @@ RackPlan makeRackPlan(const RackSettings& st, uint64_t seed)
                 plan.resetBars[li] = 16;
                 plan.cycle[li] = rotateMask(euclidMask(k, period), period, rng.below(period));
             } else if (rng.uniform() < 0.4f) {
-                static const int kE[3][2] = { { 3, 8 }, { 5, 16 }, { 7, 16 } };
-                const int* e = kE[rng.below(3)];
-                uint64_t base = euclidMask(e[0], e[1]);
-                if (e[1] == 8) base |= base << 8;   // E(3,8) twice in a bar
-                // A rotation that keeps every onset off the quarters, searched from a random start.
-                const int start = rng.below(16);
-                for (int r = 0; r < 16; ++r) {
-                    const uint64_t m = rotateMask(base, 16, start + r);
-                    if ((m & 0x1111u) == 0) { plan.euclid[li] = static_cast<uint16_t>(m); break; }
+                const int kind = rng.below(3);
+                if (kind == 0) {
+                    // E(3,8) twice in a bar, at a rotation that keeps every onset off the quarters, searched from a
+                    // random start.
+                    const uint64_t base = euclidMask(3, 8) | (euclidMask(3, 8) << 8);
+                    const int start = rng.below(16);
+                    for (int r = 0; r < 16; ++r) {
+                        const uint64_t m = rotateMask(base, 16, start + r);
+                        if ((m & 0x1111u) == 0) { plan.euclid[li] = static_cast<uint16_t>(m); break; }
+                    }
+                } else {
+                    // Five or seven onsets: E(5,16) and E(7,16) have one on every place of the beat, no rotation
+                    // keeps them off the quarters -- until 01.10.2026 these two of the three draws fell back to the
+                    // matrix unseen (the rim's .4, .2, .2: under one hit a bar). E(5,12) and E(7,12) on the twelve
+                    // sixteenths beside the quarters instead (one draw for the rotation, as before).
+                    plan.euclid[li] = offQuarterMask(kind == 1 ? 5 : 7, rng.below(12));
                 }
             } else if (rng.uniform() < 0.3f) {
                 plan.displace[li] = 1 + rng.below(3);

@@ -651,19 +651,15 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req, 
     // Phase 21 (01.10.2026, the user on a mix: it "begann ... wieder mit einer Solo-Kick"): the voice that opens the
     // track carries it. A tom or a rim left to the matrix played one or two hits a bar (a set's first track: its tom 24 dB
     // under the kick, the body's percussion 13); it gets a Euclidean figure on the twelve sixteenths off the quarters --
-    // E(5,12), E(6,12) or E(7,12), rotated, five to seven hits a bar -- unless the rack gave it a cycle or a figure
-    // already. (E(5,16) and E(7,16) have an onset on every place of the beat: no rotation keeps them off the quarters.)
-    // From the rack's stream, so a reroll of the rack draws it anew.
+    // E(5,12), E(6,12) or E(7,12), rotated, five to seven hits a bar (offQuarterMask) -- unless the rack gave it a cycle
+    // or a figure already. From the rack's stream, so a reroll of the rack draws it anew.
     if ((introPerc == LayerId::TomConga || introPerc == LayerId::Rim) && plan.period[L(introPerc)] == 0 && plan.euclid[L(introPerc)] == 0) {
         Rng er;
         er.seed(mixSeed(streamSeed(tseed, cur, unit, "rack"), 0x4F50454E494E47ull));
-        const uint64_t slots = rotateMask(euclidMask(5 + er.below(3), 12), 12, er.below(12));
-        uint16_t m = 0;
-        for (int j = 0, step = 0; step < 16; ++step) {
-            if (step % 4 == 0) continue;   // the quarters are the kick's
-            if ((slots >> j++) & 1u) m = static_cast<uint16_t>(m | (1u << step));
-        }
-        plan.euclid[L(introPerc)] = m;
+        // (The two draws one after the other: as arguments of one call their order would be the compiler's.)
+        const int onsets = 5 + er.below(3);
+        const int rotation = er.below(12);
+        plan.euclid[L(introPerc)] = offQuarterMask(onsets, rotation);
         plan.displace[L(introPerc)] = 0;
     }
     int bands[kNumParts];

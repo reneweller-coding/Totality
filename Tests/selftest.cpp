@@ -537,14 +537,18 @@ void testRackPhase2()
         if (first != want) { realign = false; detail += fmt("%d: bar %d (want %d) ", period, first, want); }
     }
     check(realign, "a cycle meets the bar again after lcm(p, 16) / 16 bars (15 and 17: after 15 and 17)", detail);
-    // Euclid: the chosen rotations keep the quarters free, the masks are maximally even.
-    int euclidOnQuarter = 0, plans = 0;
+    // Euclid: the chosen rotations keep the quarters free, the masks are maximally even -- and all three kinds come
+    // (six, five and seven onsets; until 01.10.2026 the five and the seven fell back to the matrix unseen).
+    int euclidOnQuarter = 0, plans = 0, onsetKinds[17] = {};
     for (uint64_t seed = 1; seed < 200; ++seed) {
         const RackPlan plan = makeRackPlan(*p, seed);
         for (int li = 0; li < kNumLayers; ++li) {
             if (plan.euclid[li] == 0) continue;
             ++plans;
             if (plan.euclid[li] & 0x1111u) ++euclidOnQuarter;
+            int n = 0;
+            for (int s = 0; s < 16; ++s) n += (plan.euclid[li] >> s) & 1;
+            ++onsetKinds[n];
         }
     }
     const uint64_t e516 = euclidMask(5, 16);
@@ -553,7 +557,9 @@ void testRackPhase2()
     gaps[k++] = 16 - last + firstOn;
     bool even = true;
     for (int i = 0; i < k; ++i) even = even && (gaps[i] == 3 || gaps[i] == 4);
-    check(euclidOnQuarter == 0 && plans > 20, "Euclidean patterns off the quarters", fmt("%d of %d on a quarter", euclidOnQuarter, plans));
+    check(euclidOnQuarter == 0 && plans > 20 && onsetKinds[5] > 0 && onsetKinds[6] > 0 && onsetKinds[7] > 0,
+          "Euclidean patterns off the quarters, with five, six and seven onsets",
+          fmt("%d of %d on a quarter; %d / %d / %d with five / six / seven", euclidOnQuarter, plans, onsetKinds[5], onsetKinds[6], onsetKinds[7]));
     check(even && k == 5, "E(5,16) is 3+3+3+3+4 in some rotation");
     // The ghost chain: after a ghost kick, the next sixteenth's chance is halved.
     const RackPlan plan = makeRackPlan(*p, 21);
@@ -990,7 +996,8 @@ void testCuration()
         }
     check(sameNotes(sa, sk) && !sameNotes(a, k), "rerolling block 4 changes its bars only", where);
     // One layer's patterns drawn again: it changes; the layers no rule ties to it (kick, bass, ping, chord, 303, drone)
-    // stay. (The others may move: one hat per step, the ghost chain, the collision dip.)
+    // stay. (The others may move: one hat per step, the ghost chain, the collision dip.) The ping's velocity aside: it
+    // dips where a hat meets it (LayerDef::perc), and a hat drawn again meets it elsewhere -- its notes and pitches stay.
     Curation lay;
     lay.reroll("rack.ch");
     const Score l = composeTrack(*p, 42, TrackRequest{}, &lay);
@@ -998,9 +1005,10 @@ void testCuration()
     const auto untied = [](Part part) {
         return part == Part::Kick || part == Part::Bass || part == Part::Ping || part == Part::Chord || part == Part::Acid || part == Part::Drone;
     };
+    const auto kept = [](NoteEvent n) { if (n.part == Part::Ping) n.velocity = 0.0f; return n; };
     Score ua, ul, ca, cl;
-    for (const NoteEvent& n : a.notes) { if (untied(n.part)) ua.notes.push_back(n); if (static_cast<int>(n.part) == chPart) ca.notes.push_back(n); }
-    for (const NoteEvent& n : l.notes) { if (untied(n.part)) ul.notes.push_back(n); if (static_cast<int>(n.part) == chPart) cl.notes.push_back(n); }
+    for (const NoteEvent& n : a.notes) { if (untied(n.part)) ua.notes.push_back(kept(n)); if (static_cast<int>(n.part) == chPart) ca.notes.push_back(n); }
+    for (const NoteEvent& n : l.notes) { if (untied(n.part)) ul.notes.push_back(kept(n)); if (static_cast<int>(n.part) == chPart) cl.notes.push_back(n); }
     check(sameNotes(ua, ul) && !sameNotes(ca, cl), "rerolling the offbeat hat changes it and keeps the untied layers",
           fmt("%zu and %zu hat notes", ca.notes.size(), cl.notes.size()));
     // The .totset round trip.

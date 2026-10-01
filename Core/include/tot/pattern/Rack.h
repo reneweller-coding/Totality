@@ -236,6 +236,11 @@ void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float densi
 uint64_t euclidMask(int k, int n);
 /** @brief @p mask of @p n steps rotated later by @p r. */
 uint64_t rotateMask(uint64_t mask, int n, int r);
+/**
+ * @brief @p k onsets spread as evenly as possible over the twelve sixteenths of a bar that are no quarter (1, 2, 3, 5,
+ *        ... 15) -- E(k,12) there, rotated by @p r of them; a bar's mask, bit s for step s.
+ */
+uint16_t offQuarterMask(int k, int r);
 
 /**
  * @brief A layer's bar in Tidal/Strudel mini-notation (PLAN 6.7): sixteen steps as "bd ~ ~ ~ ...", a cyclic layer as a
