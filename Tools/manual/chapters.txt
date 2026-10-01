@@ -213,7 +213,7 @@ The perform controls are live only: an export or tot_render plays the track as i
 
 == Export and cues | cue | 9 ==
 
-[image screenshots/set.png: A set of 40 minutes on the Arrange page: nine tracks on two decks, their blends, the swaps.]
+[image screenshots/set.png: A DJ mix of 40 minutes on the Arrange page: its eleven tracks on two decks, their blends, the swaps, a ruler of minutes.]
 
 The export renders what plays at 48 kHz: a 24-bit WAV with cue markers (the bass's entry, the kick-outs and returns,
 the outro; in a set every track, swap and loop) and the same cues as JSON beside it, for DJ software that does not
