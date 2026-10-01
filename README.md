@@ -1,43 +1,108 @@
+<img src="docs/logo-128.png" width="96" align="left" alt="Totality" />
+
 # Totality
 
-A generator for hypnotic Berlin techno: tracks of 32-bar plateaus and whole DJ sets, composed from a seed and
-synthesised in real time -- as a VST3 plugin, a standalone application, a command-line renderer and an app for Meta
-Quest. The sibling of [Noctuary](../AmbientSynth) (ambient), Phosphene (psytrance) and Ephemeris (Berlin School).
+A generator of hypnotic Berlin techno: tracks of 32-bar plateaus and whole DJ sets, composed from a seed and
+synthesised while they play -- a kick that hands its phase to the rumble under it, a twelve-lane kit, the ping, a
+bass and a 303 through circuit-modelled filters, the dub chord in its echoes and springs, and a DJ who mixes the
+tracks into one long recomposition. Everything is synthesised; nothing is played back from a recording.
 
-![Totality, the Patterns page](docs/screenshot.png)
+**VST3 plugin and standalone application** for Windows (x64), a command-line renderer, and a native app for **Meta
+Quest**. Licence: AGPL-3.0.
 
-**Version 1.0.0 (28.09.2026).** A composer writes tracks in three forms (Arc, Peak, Endless) from four style profiles
-(Hypnotic, Ostgut, Dub, Raw Peak) that morph into each other: one operation per 32-bar block, events on the 8-bar
-lines, automation by two "hands", harmony by the research document's rules, eight candidates per block judged against a
-hypnosis corridor. Every track has a figure -- a ping motif, a stab, a bass riff or a 303 line it is remembered by --
-and its body runs in waves of 32 or 64 bars that build towards a landing, drop something away just before it and
-breathe in between, as often as the reference records change (`Tools/analyze_ref.py`, meso). A track is also of a kind
--- Tool, Roller, Stab, Acid, Bleep, Dub Chord or Tribal --, drawn by its style; a set never plays two of a kind in a row. A set composer mixes them as a Berlin DJ would, as one long recomposition -- five dramaturgies, the tempo drifting
-by at most 1 BPM a track, about twenty tracks an hour of three minutes each, blends with the highs first and the mids
-over the last 16 bars and a hard bass swap on a 32-bar line through the isolator -- where the incoming track's figure
-lands, its first body block under the outgoing track's full groove --, a third deck that borrows (the last
-track's hats carried on, the next one's figure teased in, a loop of the one before layered under), the DJ's hand on
-the EQs, filter and echo between the blends, breaks from the mixer's effects; seven dramaturgies, up to twelve hours. Every part is drawn on its own seed stream and
-can be rerolled alone (`.totset`). The panel chooses a single track or a DJ mix with two buttons and one length, and its
-arrangement zooms with the mouse wheel down to four bars, with a ruler of bars or minutes.
+<br clear="left" />
 
-The sound: the kick (three engines, a 909 top layer), the rumble that continues the kick's phase under its hall, the
-sub bass locked to the kick, a twelve-lane kit with the 909's metal oscillators, the ping (FM through a low-pass gate),
-a bass synth and a 303 line through ten circuit-modelled filters, the dub chord with its chain (tape echo, springs,
-plate), drone, texture and a granular cloud; multiband ducking, a track bus with tilt and parallel glue, a DJ mixer, a
-master with clipper and true-peak limiter, and a leveler that sets every part against the kick -- each kit lane and
-tonal voice in a window around the research's fader levels, the room taken back where the mids would stand over the
-references' -- and brings every track's loudest part to its style's level.
-Every synth has 1024 factory presets in sixteen groups; the composer chooses one per synth and per kit lane for every
-track, by its style, and the knobs show them while the track plays.
-Balance, width and loudness are fitted to 30 reference recordings (`Tools/analyze_ref.py`; only statistics are kept).
+![The Patterns page: the Eclipse -- the kick a dark disc, every part a ring of beads around it](docs/screenshot.png)
 
-What comes out: the WAV with cue markers (and the same cues as JSON), MIDI with the tempo map, stems that sum exactly to
-the mix, seamless DJ loops, and OSC cues for a visualiser such as Kaleidoscope while it plays. Live, the Perform page is
-a mixer: mutes, a master filter, an echo throw, isolator kills, every control learnable from MIDI.
+## Download
 
-The manual: [docs/manual/Totality-Manual.pdf](docs/manual/Totality-Manual.pdf). The plan, in German, with the state of every
-phase: [docs/PLAN.md](docs/PLAN.md). The research it rests on: [docs/research](docs/research).
+**[Totality-1.1.0-Setup.exe](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-1.1.0-Setup.exe)**
+installs the standalone, the VST3, the offline renderer and the manual. Nothing else has to be installed: the runtime
+is linked in. There is a
+**[portable zip](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-1.1.0-portable.zip)**
+for anyone who would rather not run an installer, the
+**[Quest app](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/TotalityQuest-1.1.0.apk)**
+(installed with `adb install -r`, developer mode; not yet run on a headset), and the
+**[manual](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-Manual.pdf)** -- every
+page of the panel as a picture and what each control does.
+
+Requirements: Windows 10 or 11, a 64-bit processor with AVX2 (every x86-64 since 2013), and a VST3 host if you want
+the plugin; Meta Quest 2 or later for the app. The installer is not code-signed: Windows' SmartScreen may warn once.
+
+## How it is put together
+
+![The signal flow](docs/flow.png)
+
+## The composer
+
+* **Tracks in three forms** -- the Arc (the DJ tool: intro, a body that builds its full groove, outro), the Peak (a
+  long kick-out and the densest block after it), the Endless (full from the first bar, changing by exchange) -- from
+  four style profiles, **Hypnotic, Ostgut, Dub and Raw Peak**, which morph into each other, or a style of your own. A
+  track is a seed: the same seed gives the same track, sample for sample.
+* **One operation per 32-bar block**, events on the 8-bar lines, automation by two hands; eight candidates per block,
+  the one chosen that keeps the bar similarity inside a corridor fitted to thirty reference tracks.
+* **A figure and waves.** Every track has a voice it is remembered by -- a ping motif, a dub stab, a bass riff or a
+  303 line --, and its body runs in waves of 32 or 64 bars that build towards a landing, drop something away just
+  before it and breathe in between.
+* **Kinds.** Every track is a Tool, Roller, Stab, Acid, Bleep, Dub Chord or Tribal, drawn by its style; a set never
+  plays two of a kind in a row. The thumbs rate what plays, and with Favor Ratings the liked kinds and sounds come more
+  often.
+* **Reroll any part on its own** -- form, harmony, rack, layers, blocks, events, hands, sounds, figure -- and keep
+  the result as a small `.totset` file.
+
+## Sets
+
+* **One long recomposition**, up to twelve hours: seven dramaturgies of tempo and energy, tracks in neighbouring
+  Camelot keys, the tempo drifting by at most 1 BPM a track, about twenty tracks an hour.
+* **Blends as a Berlin DJ mixes:** the highs first, the mids over the last 16 bars, the bass swapped hard on a 32-bar
+  line through the isolator where the incoming track's figure lands; a third deck that borrows (the last track's hats
+  carried on, the next one's figure teased in, a loop of the one before layered under); the DJ's hand on the EQs,
+  filter and echo between the blends.
+
+## The sound
+
+* **The low end as one system:** a kick of three engines (Sweep, Resonator, 909) with a 909 top layer; the rumble,
+  which continues the kick's phase under its hall; a sub bass whose notes start in the kick's phase.
+* **A twelve-lane kit** with the 909's metal oscillators, noise, modal, tone and FM voices; **the ping**, FM through a
+  low-pass gate; **a bass synth and a 303 line** through ten filters solved as their circuits (Moog ladder, Prophet,
+  Juno, Oberheim SEM, Xpander, diode ladder, Korg35, Polivoks, EDP Wasp, comb); **the dub chord** with its tape echo,
+  springs and plate; drone, texture and a granular cloud.
+* **1024 factory presets per synth** in sixteen groups; the composer chooses one per synth and per kit lane for every
+  track, by its style, and the knobs show them while the track plays.
+* **The mix:** multiband ducking triggered by the kick's events, a track bus with tilt and parallel glue, a DJ mixer
+  with isolators, a master with a clipper at four times the rate and a true-peak limiter, and a leveler that sets
+  every part against the kick and brings every track's loudest part to its style's loudness -- balance, width and
+  loudness fitted to 30 measured reference recordings (only their statistics are kept).
+
+## Playing and export
+
+* **In a DAW** Totality follows the host's transport and tempo. The **Perform** page is a mixer: seven mutes, a
+  master filter, an echo throw, isolator kills and faders per deck, every control learnable from MIDI.
+* **Play it yourself:** a MIDI keyboard plays a voice -- the kit, the bass, the 303, the ping, the chord, the drone, or
+  each on its channel -- with the sound its page has; Replace leaves that voice's generated notes out, Layer plays over
+  them, and with the composer off only what you play sounds, through the mix as composed.
+* **Out:** a 24-bit WAV with cue markers, the cues as JSON and as a rekordbox collection, MIDI with the tempo map, stems
+  that sum exactly to the mix, seamless 4- and 8-bar DJ loops, and OSC cues for a visualiser while it plays.
+
+## The pages
+
+| | |
+|---|---|
+| ![Arrange](docs/screenshots/tab_01.png) | ![A set](docs/screenshots/set.png) |
+| The track: its blocks, the rerolls and the automation | A 40-minute DJ mix, track by track |
+| ![303](docs/screenshots/tab_09.png) | ![Mixer](docs/screenshots/tab_16.png) |
+| The 303: oscillator, a circuit filter, envelopes, sends | The mixer: a strip per voice, the composer's mix on the faders |
+
+The panel is the family's -- [Phosphene](https://github.com/reneweller-coding/Phosphene) (psytrance),
+[Ephemeris](https://github.com/reneweller-coding/Ephemeris) (Berlin School),
+[Parhelion](https://github.com/reneweller-coding/Parhelion) (trance) and, in part,
+[Noctuary](https://github.com/reneweller-coding/Noctuary) (ambient): the same header, the same order of the tabs, the
+same keys (Space, Ctrl+Z / Ctrl+Y, F1, F11), the same controllers (74 the master filter, 11 the echo throw) and the
+same hands on a Meta Quest -- whose controls show only while a headset sends them.
+
+The plan, in German, with the state of every phase: [docs/PLAN.md](docs/PLAN.md). The research it rests on:
+[docs/research](docs/research). The manual is built out of the program itself
+([docs/manual](docs/manual/Totality-Manual.pdf)).
 
 ## Build
 
@@ -64,7 +129,8 @@ Visual Studio's and oneAPI's environment, which `build.ps1` sets up.
 JUCE comes from `ThirdParty/JUCE`, else from the sibling Phosphene's checkout, else it is fetched (tag 9.0.1).
 `TOT_BUILD_PLUGIN=OFF` builds the core, the renderer and the tests alone. The release (tests, pluginval, manual,
 installer, into `dist\`): `powershell -ExecutionPolicy Bypass -File Deploy\build_release.ps1`. The Quest app: see
-[Quest/README.md](Quest/README.md).
+[Quest/README.md](Quest/README.md). `TOT_MUTE=1` starts the standalone or the plugin muted; every automated run uses
+it.
 
 ## Render
 
@@ -77,14 +143,14 @@ bin/msvc/tot_render.exe --seed 7 --reroll block4 --reroll rack.ch --save-set tra
 
 A track's tempo, key, scale and low end are drawn from its style (`compose.auto`); `--bpm`, `--low` and `--form` fix
 them. Before it renders, `tot_render` measures every track -- its parts against the kick (printed as `balance`), its
-loudest part's level against the style's target;
-`--bench` skips that and the loudness meter (`--quality quest`: the headset's level), `--plan` renders nothing. The WAV
-carries cue markers (bass in, kick-outs, returns, outro; in a set every track, swap and loop), also written beside it as
-JSON. `--loops dir` writes seamless 4- and 8-bar loops of the loudest block with kick, hats and perc alone; `--stems dir`
-a WAV per element, their sum the mix before the master; `--decks dir` a set's decks after their channels;
-`--score-json` the score for the evaluation. `--reroll unit` draws one part again (`form`, `harmony`, `rack`,
-`rack.<layer>`, `layers`, `blocks`, `block<n>`, `events`, `hands`, `sounds`, `figure`; in a set `track<n>` and
-`track<n>.<unit>`), leaving everything else as it was; `--save-set` and `--load-set` keep it.
+loudest part's level against the style's target; `--bench` skips that and the loudness meter (`--quality quest`: the
+headset's level), `--plan` renders nothing. The WAV carries cue markers (bass in, kick-outs, returns, outro; in a set
+every track, swap and loop), also written beside it as JSON. `--loops dir` writes seamless 4- and 8-bar loops of the
+loudest block with kick, hats and perc alone; `--stems dir` a WAV per element, their sum the mix before the master;
+`--decks dir` a set's decks after their channels; `--score-json` the score for the evaluation. `--reroll unit` draws
+one part again (`form`, `harmony`, `rack`, `rack.<layer>`, `layers`, `blocks`, `block<n>`, `events`, `hands`,
+`sounds`, `figure`; in a set `track<n>` and `track<n>.<unit>`), leaving everything else as it was; `--save-set` and
+`--load-set` keep it.
 
 `--list` prints every parameter, `--dump-params f.json` describes them; `--set "key=value; ..."` changes them;
 `--patterns` prints the layers in Tidal mini-notation, `--stats` how often each part repeats its bar.

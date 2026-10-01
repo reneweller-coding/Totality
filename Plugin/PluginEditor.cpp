@@ -36,6 +36,16 @@ juce::Colour blockColour(const juce::String& name)
 /** @brief The documents folder of Totality. */
 juce::File documents() { return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Totality"); }
 
+/** @brief The small tabs of a page: the page itself, or the first SubTabs inside it (the Mixer's MixerPage holds its). */
+frame::SubTabs* findSubTabs(juce::Component* c)
+{
+    if (c == nullptr) return nullptr;
+    if (auto* subs = dynamic_cast<frame::SubTabs*>(c)) return subs;
+    for (auto* child : c->getChildren())
+        if (auto* subs = findSubTabs(child)) return subs;
+    return nullptr;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------
@@ -1147,7 +1157,7 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
         if (const char* tab = std::getenv("TOT_TAB")) tabs_.setCurrentTabIndex(juce::String(tab).getIntValue());
         // TOT_SUBTAB: the small tab of a tab of several (Low End, Tones, Dub, Mixer).
         if (const char* st = std::getenv("TOT_SUBTAB"))
-            if (auto* subs = dynamic_cast<frame::SubTabs*>(tabs_.getCurrentContentComponent())) subs->show(juce::String(st).getIntValue());
+            if (auto* subs = findSubTabs(tabs_.getCurrentContentComponent())) subs->show(juce::String(st).getIntValue());
         if (const char* zoom = std::getenv("TOT_SHOT_ZOOM")) {
             const juce::String z(zoom);
             arrangePage->view().zoomTo(z.upToFirstOccurrenceOf(":", false, false).getDoubleValue(), z.fromFirstOccurrenceOf(":", false, false).getDoubleValue());
