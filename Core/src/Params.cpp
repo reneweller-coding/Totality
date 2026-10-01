@@ -20,21 +20,24 @@ const char* const kPercRoleNames[kNumPercRoles] = { "Closed Hat", "Rolling Hat",
 
 namespace {
 
-const char* const kLowOwnerNames[] = { "Rumble", "Sub" };
-const char* const kFormChoiceNames[] = { "Auto", "Arc", "Peak", "Endless" };
-const char* const kMorphToNames[] = { "Off", "Hypnotic", "Ostgut", "Dub", "Raw Peak" };
-const char* const kKickEngineNames[] = { "Sweep", "Resonator", "909" };
-const char* const kKickTuneNames[] = { "Free", "Key", "Fifth", "Flat Seventh" };
-const char* const kKickClipNames[] = { "Soft", "Hard" };
-const char* const kLockNames[] = { "Off", "Kick" };
-const char* const kPercEngineNames[] = { "Noise", "Metal", "Modal", "Tone", "FM" };
-const char* const kModeSetNames[] = { "Membrane", "Bar", "Harmonic" };
-const char* const kPercFilterNames[] = { "Low Pass", "Band Pass", "High Pass" };
-const char* const kNoiseTypeNames[] = { "White", "909 Metal" };
+const char* const kLowOwnerNames[] = { "Rumble", "Sub" };   ///< compose.low_owner: who owns the low end
+const char* const kFormChoiceNames[] = { "Auto", "Arc", "Peak", "Endless" };   ///< compose.form: the track's form
+const char* const kMorphToNames[] = { "Off", "Hypnotic", "Ostgut", "Dub", "Raw Peak" };   ///< compose.morph_to: the style a track morphs into
+const char* const kKeyboardPartNames[] = { "Off", "Kit", "Bass", "303", "Ping", "Chord", "Drone", "By channel" };   ///< perform::keys
+const char* const kKeyboardModeNames[] = { "Replace", "Layer" };   ///< perform.keyboard_mode
+const char* const kKickEngineNames[] = { "Sweep", "Resonator", "909" };   ///< kick.engine
+const char* const kKickTuneNames[] = { "Free", "Key", "Fifth", "Flat Seventh" };   ///< kick.tune (KickTune)
+const char* const kKickClipNames[] = { "Soft", "Hard" };   ///< kick.clip
+const char* const kLockNames[] = { "Off", "Kick" };   ///< sub.lock: the sub's phase locked to the kick or not
+const char* const kPercEngineNames[] = { "Noise", "Metal", "Modal", "Tone", "FM" };   ///< perc.engine (PercEngine)
+const char* const kModeSetNames[] = { "Membrane", "Bar", "Harmonic" };   ///< perc.modes: the modal engine's mode sets
+const char* const kPercFilterNames[] = { "Low Pass", "Band Pass", "High Pass" };   ///< perc.filter: the lane filter's output
+const char* const kNoiseTypeNames[] = { "White", "909 Metal" };   ///< perc.noise_type
+/** @brief synth.model (FilterModel). */
 const char* const kFilterModelNames[] = { "Moog Ladder", "Prophet (SSM2040)", "Juno (IR3109)", "Oberheim SEM", "Xpander",
                                           "Diode Ladder (303)", "Korg35 (MS-20)", "Polivoks", "EDP Wasp", "Comb" };
-const char* const kBandModeNames[] = { "Band Pass", "High Pass" };
-const char* const kEchoTimeNames[] = { "1/16", "1/8", "3/16", "1/4", "3/8", "1/2" };
+const char* const kBandModeNames[] = { "Band Pass", "High Pass" };   ///< chord.band_mode: the bus's band or high pass
+const char* const kEchoTimeNames[] = { "1/16", "1/8", "3/16", "1/4", "3/8", "1/2" };   ///< the echo times, in notes
 
 /**
  * Aeolian 0.6, Dorian 0.15, the Aeolian-Dorian hexachord (no sixth) 0.1, Phrygian 0.1, minor pentatonic 0.05 is the
@@ -50,6 +53,7 @@ const ScaleDef kScales[static_cast<int>(Scale::Count)] = {
 
 /** Phase 13: the archetypes (Composer.h), Auto first. */
 const char* const kArchetypeChoiceNames[] = { "Auto", "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal" };
+/** @brief The compose module: what the composer is asked for. */
 const ParamDesc kComposeParams[compose::Count] = {
     { "bpm",       "Tempo",     "BPM", 100.0f, 160.0f, 130.0f, Curve::Linear },
     { "key",       "Key",       "",      0.0f,  11.0f,   9.0f, Curve::Choice, kKeyNames },
@@ -365,9 +369,9 @@ const ParamDesc kDjFxParams[djfx::Count] = {
     { "hall_return", "Hall Return", "dB", -60.0f, 12.0f, 6.0f, Curve::Linear },
 };
 
-const char* const kDramaturgyChoiceNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat", "Cruise", "Marathon" };
-const char* const kJourneyNames[] = { "Stay", "Wander" };
-const char* const kBlendNames[] = { "16 bars", "32 bars" };
+const char* const kDramaturgyChoiceNames[] = { "Warm-up", "Peak", "Closing", "Sunday", "Flat", "Cruise", "Marathon" };   ///< set.dramaturgy: the set's arc
+const char* const kJourneyNames[] = { "Stay", "Wander" };   ///< set.journey: the key stays or wanders
+const char* const kBlendNames[] = { "16 bars", "32 bars" };   ///< set.blend: how long two tracks overlap
 /** The set (PLAN 7.1, 7.7). */
 const ParamDesc kSetParams[set::Count] = {
     { "dramaturgy", "Dramaturgy", "", 0.0f, 6.0f, 1.0f, Curve::Choice, kDramaturgyChoiceNames },
@@ -391,6 +395,10 @@ const ParamDesc kPerformParams[perform::Count] = {
     { "mute_ping",  "Mute Ping",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
     { "mute_bass",  "Mute Bass",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
     { "mute_pads",  "Mute Pads",     "",   0.0f, 1.0f, 0.0f, Curve::Toggle },
+    // 01.10.2026: a MIDI keyboard plays a voice (Engine::queueLive); the composer can be switched off.
+    { "keyboard_part", "Keyboard Plays", "", 0.0f, 7.0f, 0.0f, Curve::Choice, kKeyboardPartNames },
+    { "keyboard_mode", "Keyboard Mode",  "", 0.0f, 1.0f, 0.0f, Curve::Choice, kKeyboardModeNames },
+    { "composer",      "Composer",       "", 0.0f, 1.0f, 1.0f, Curve::Toggle },
 };
 
 /** The OSC cues (Cue.h). */
@@ -528,13 +536,15 @@ const char* const kDefaultKit =
     "perc12.role=Noise; perc12.engine=Noise; perc12.noise_decay=2500; perc12.filter=Band Pass; perc12.cutoff=2000;"
     "perc12.resonance=0.4; perc12.low_cut=300; perc12.level=-7.0\n";
 
+/** @brief A module of the store: its key prefix, its parameters, how many instances. */
 struct ModuleSpec {
-    const char* prefix;
-    const ParamDesc* descs;
-    int count;
-    int instances;
+    const char* prefix;   ///< the key prefix ("kick", "perc" ...)
+    const ParamDesc* descs;   ///< its parameters
+    int count;   ///< how many
+    int instances;   ///< how many instances
 };
 
+/** @brief The modules, in the order of Module. */
 const ModuleSpec kModules[static_cast<int>(Module::Count)] = {
     { "compose", kComposeParams, compose::Count, 1 },
     { "kick",    kKickParams,    kick::Count,    1 },
@@ -561,8 +571,10 @@ const ModuleSpec kModules[static_cast<int>(Module::Count)] = {
     { "custom",  kCustomParams,  custom::Count,  1 },
 };
 
+/** @brief Whether a curve takes whole steps (Int, Choice, Toggle). */
 bool isDiscrete(Curve c) { return c == Curve::Int || c == Curve::Choice || c == Curve::Toggle; }
 
+/** @brief @p s without spaces, tabs and carriage returns at either end. */
 std::string_view trim(std::string_view s)
 {
     while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r')) s.remove_prefix(1);

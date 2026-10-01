@@ -17,26 +17,30 @@
 namespace tot {
 
 namespace {
-constexpr double kRate = 48000.0;
-constexpr int kBlock = 512;
+constexpr double kRate = 48000.0;   ///< the rate the parts are rendered at to be measured, Hz
+constexpr int kBlock = 512;   ///< the block they are rendered in
 constexpr double kWarm = 4.0;       ///< seconds before the part: the rooms fill, the notes sounding on are found again
 constexpr float kMostDb = 4.0f;     ///< the largest correction either way
 constexpr double kBalSeconds = 12.0;   ///< Phase 18: how much the balance reads in each of its places (6 bars at 128)
 constexpr double kBalWarm = 2.0;       ///< and before it (the notes sounding on found again)
-constexpr float kBalDown = -8.0f, kBalUp = 15.0f;   ///< the largest corrections of a part
+constexpr float kBalDown = -8.0f;   ///< the largest correction of a part down, dB
+constexpr float kBalUp = 15.0f;   ///< the largest correction of a part up, dB
 constexpr float kRoomDown = -12.0f;                 ///< the guard takes the room's return down at most this far
 
 /** @brief Phase 18: a band of the guard -- two second-order Butterworth high passes and two low passes, as the
  *         references were measured (Tools, 28.09.2026) -- and the energy through it. */
 struct BandMeter {
-    Svf hp[2], lp[2];
-    double sum = 0.0;
+    Svf hp[2];   ///< the two high passes
+    Svf lp[2];   ///< the two low passes
+    double sum = 0.0;   ///< the energy through the band
+    /** @brief Sets the band from @p lo to @p hi Hz and clears it. */
     void prepare(float lo, float hi)
     {
         for (Svf& f : hp) { f.setQ(lo, 0.70710678f, static_cast<float>(kRate)); f.ic1 = f.ic2 = 0.0f; }
         for (Svf& f : lp) { f.setQ(hi, 0.70710678f, static_cast<float>(kRate)); f.ic1 = f.ic2 = 0.0f; }
         sum = 0.0;
     }
+    /** @brief One sample @p x through the band; with @p count its energy is summed. */
     void run(float x, bool count)
     {
         float l, b, h;
@@ -48,8 +52,8 @@ struct BandMeter {
 
 /** @brief What the balance reads in its places: the loudest samples (the larger of what they held and what is found). */
 struct PartPeaks {
-    float kick = 0.0f;
-    float part[kBalParts] = {};
+    float kick = 0.0f;   ///< the kick's loudest sample
+    float part[kBalParts] = {};   ///< every part's loudest sample
 };
 
 /**

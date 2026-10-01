@@ -84,22 +84,38 @@ public:
     double subPhase() const { return subPhase_; }
 
 private:
-    double sr_ = 48000.0;
-    Svf split1_, split2_;        ///< the LR4 high pass at the split (two Butterworth sections)
+    double sr_ = 48000.0;   ///< the sample rate, Hz
+    Svf split1_;   ///< the LR4 high pass at the split: its first Butterworth section
+    Svf split2_;   ///< ... its second section
     Reverb hall_;                ///< the hall
     Oversampler4 os_;            ///< the clip at four times the rate
     bool oversample_ = true;     ///< setOversampling()
-    Svf postHp_, postLp_;        ///< the band's filters after the clip
+    Svf postHp_;   ///< the band's high pass after the clip
+    Svf postLp_;   ///< the band's low pass after the clip
     Ducker duck_;                ///< the kick's duck
-    std::vector<float> in_, hallL_, hallR_, band_, subOut_, pre_;   ///< per-block buffers
-    float level_ = 0.0f, subGain_ = 0.0f, clipGain_ = 1.0f;   ///< linear
-    float envAtt_ = 0.01f, envRel_ = 0.001f, env_ = 0.0f;       ///< the band's envelope follower
-    double subPhase_ = 0.0, subInc_ = 0.0;                     ///< the sub's phase and step, cycles
+    std::vector<float> in_;   ///< the kick's body, the input
+    std::vector<float> hallL_;   ///< the hall's return, left
+    std::vector<float> hallR_;   ///< the hall's return, right
+    std::vector<float> band_;   ///< the band above the split
+    std::vector<float> subOut_;   ///< the sub under it
+    std::vector<float> pre_;   ///< the band before the clip
+    float level_ = 0.0f;   ///< the level, linear
+    float subGain_ = 0.0f;   ///< the sub's gain, linear
+    float clipGain_ = 1.0f;   ///< the gain into the clip, linear
+    float envAtt_ = 0.01f;   ///< the band's envelope follower: attack coefficient
+    float envRel_ = 0.001f;   ///< ... release coefficient
+    float env_ = 0.0f;   ///< the follower's envelope
+    double subPhase_ = 0.0;   ///< the sub's phase, cycles
+    double subInc_ = 0.0;   ///< the sub's step, cycles per sample
     double f0_ = 50.0;                                         ///< the pitch the sub runs at
     int resetIn_ = -1;             ///< samples until the sub's phase is set anew (-1: nothing pending)
     int sinceKick_ = 0;            ///< samples since the last kick's trigger
-    double kickLate_ = 0.0, kickC_ = 0.0, kickF0_ = 50.0;   ///< the last kick's sub-sample offset, asymptote and pitch
-    float duckDepth_ = 0.5f, duckHoldMs_ = 80.0f, duckReleaseMs_ = 220.0f;   ///< the duck's settings
+    double kickLate_ = 0.0;   ///< the last kick's sub-sample offset
+    double kickC_ = 0.0;   ///< the last kick's asymptotic phase, cycles
+    double kickF0_ = 50.0;   ///< the last kick's end pitch, Hz
+    float duckDepth_ = 0.5f;   ///< the duck's depth, 0..1
+    float duckHoldMs_ = 80.0f;   ///< the duck's hold, ms
+    float duckReleaseMs_ = 220.0f;   ///< the duck's release, ms
     static constexpr float kDuckAttackMs = 1.0f;   ///< the duck's attack: the sub's gate shuts within it
 };
 

@@ -36,6 +36,7 @@ using namespace tot;
 
 namespace {
 
+/** @brief Prints the command line. */
 void usage()
 {
     std::printf("tot_render [--seed N] [--minutes M] [--bpm B] [--low rumble|sub] [--form arc|peak|endless]\n"
@@ -47,6 +48,7 @@ void usage()
 }
 
 
+/** @brief @p s escaped for a JSON string. */
 std::string jsonEscape(const std::string& s)
 {
     std::string o;
@@ -134,6 +136,7 @@ std::string balanceText(const LevelReading& r)
     return t.empty() ? std::string(" none measured") : t;
 }
 
+/** @brief Renders what the command line asks for; the exit code is 0 on success. */
 int main(int argc, char** argv)
 {
     uint64_t seed = 1;

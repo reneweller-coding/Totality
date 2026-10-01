@@ -88,26 +88,27 @@ extern const char* const kLoopKindNames[];     ///< "carry", "tease", "layer"
 struct SetLoop {
     int from = 0;              ///< the track it comes from
     double start = 0.0;        ///< set beat
-    double end = 0.0;
+    double end = 0.0;   ///< set beat where it ends
     int bars = 4;              ///< the loop's length
-    LoopKind kind = LoopKind::Carry;
+    LoopKind kind = LoopKind::Carry;   ///< what it does (LoopKind)
 };
 
 /** @brief A move of the DJ's hand on a channel (Phase 9). */
 enum class MoveKind : int { LowKill = 0, HighSwell, MidDip, FilterBuild, EchoThrow, Count };
 extern const char* const kMoveNames[];         ///< "low kill", "high swell", "mid dip", "filter build", "echo throw"
 
+/** @brief A move of the DJ's hand: where, on which deck, which. */
 struct SetMove {
     double beat = 0.0;         ///< the line it leads into (or starts on)
-    int deck = 0;
-    MoveKind kind = MoveKind::LowKill;
+    int deck = 0;   ///< the deck it moves
+    MoveKind kind = MoveKind::LowKill;   ///< which move
 };
 
 /** @brief What a set tells. */
 struct SetInfo {
-    Dramaturgy dramaturgy = Dramaturgy::Peak;
-    std::vector<SetTrack> tracks;
-    std::vector<SetLoop> loops;
+    Dramaturgy dramaturgy = Dramaturgy::Peak;   ///< the set's arc
+    std::vector<SetTrack> tracks;   ///< its tracks, in order
+    std::vector<SetLoop> loops;   ///< the loops on the third deck
     std::vector<double> breaks;   ///< set beats of the mixer's breaks
     std::vector<SetMove> moves;   ///< Phase 9: the DJ's hand
 };

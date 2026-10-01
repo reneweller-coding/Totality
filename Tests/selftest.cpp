@@ -61,7 +61,7 @@ using namespace tottest;
 
 namespace {
 
-constexpr double kPiD = 3.141592653589793;
+constexpr double kPiD = 3.141592653589793;   ///< pi
 
 /** The tempo map converts beats to seconds in closed form; checked against a numerical integral over a ramp. */
 void testTempoMap()
@@ -128,6 +128,7 @@ double phaseAt(const std::vector<float>& x, double hz, int from, int len, double
     return std::atan2(re, im) / (2.0 * kPiD);
 }
 
+/** @brief Phase @p c in cycles, wrapped into -0.5 .. 0.5. */
 double wrapCycles(double c) { return c - std::round(c); }
 
 /**
@@ -392,6 +393,7 @@ float lanePeak(const ParamStore& p, int lane)
     return pk;
 }
 
+/** @brief Every kit lane's peak against the kick's, at the level the lane's role asks for. */
 void testKitLevels()
 {
     section("the kit's levels against the kick");
@@ -1271,6 +1273,7 @@ void testCues()
     check(heard == want, "the sender's datagram arrives through the loopback, byte for byte", fmt("%zu bytes", heard.size()));
 }
 
+/** @brief The bass synth and the 303: pitch, glide, slides and the accent. */
 void testSynth()
 {
     section("the bass synth and the 303");
@@ -1876,9 +1879,14 @@ void testBlockSizes()
     check(firstE == d.size() && firstF == d.size(), "every voice at once: 1 and 37 equal 512, bit for bit", where);
 }
 
+/** @brief What renderStems() gives. */
+struct StemRun {
+    std::vector<float> out;   ///< the output, interleaved
+    std::vector<float> sum;   ///< the stems' sum
+    std::vector<float> pre;   ///< the mix as it enters the master
+};
 /** Renders @p beats from @p from of a set with block size @p block: the output, and with @p stems the stems' sum and the
  *  mix as it enters the master (Engine::setPremasterTap). */
-struct StemRun { std::vector<float> out, sum, pre; };
 StemRun renderStems(const SetScore& set, const ParamStore& knobs, double from, double beats, int block, bool stems)
 {
     auto e = std::make_unique<Engine>();
@@ -2007,6 +2015,43 @@ void testPerform()
     e->load(score);
     check(e->cueMarks().size() == cueMarksOf(score, e->params()).size() && !e->cueMarks().empty(), "the engine has the score's cue marks",
           fmt("%zu marks", e->cueMarks().size()));
+}
+
+/** The keyboard (01.10.2026, Engine::queueLive): with the composer off nothing generated sounds; a played key sounds on
+ *  the voice the keyboard plays, from its sample; without live play the keys do nothing. */
+void testKeyboard()
+{
+    section("keyboard (live)");
+    auto p = std::make_unique<ParamStore>();
+    const Score score = composeTrack(*p, 9);
+    auto run = [&](bool live, const char* knobs, bool key) {
+        auto e = std::make_unique<Engine>();
+        e->params().parseText(knobs);
+        e->setLive(live);
+        e->prepare(48000.0, 256);
+        e->load(score);
+        e->seek(128.0);
+        std::vector<float> L(256), R(256);
+        double sum = 0.0;
+        for (int b = 0; b < 48000 * 4 / 256; ++b) {
+            if (key && b == 100) e->queueLive(17, 48, 110, 0, true);   // C3 on the bass, 17 samples into the block
+            if (key && b == 300) e->queueLive(3, 48, 0, 0, false);
+            e->process(L.data(), R.data(), 256);
+            if (b >= 100)
+                for (int i = 0; i < 256; ++i) sum += static_cast<double>(L[static_cast<size_t>(i)]) * L[static_cast<size_t>(i)]
+                                                   + static_cast<double>(R[static_cast<size_t>(i)]) * R[static_cast<size_t>(i)];
+        }
+        return sum;
+    };
+    const double composed = run(true, "", false);
+    const double silent = run(true, "perform.composer=0", false);
+    const double played = run(true, "perform.composer=0; perform.keyboard_part=2", true);
+    const double offline = run(false, "perform.composer=0; perform.keyboard_part=2", true);
+    const double plainOffline = run(false, "", false);
+    check(silent < 1e-4 * composed, "the composer off: nothing generated sounds", fmt("%.3g of %.3g", silent, composed));
+    check(played > 1e3 * std::max(silent, 1e-9), "a played key sounds on the bass", fmt("energy %.3g, silence %.3g", played, silent));
+    check(offline == plainOffline, "without live play the keyboard and the composer switch do nothing (renders, exports)",
+          fmt("%.6g against %.6g", offline, plainOffline));
 }
 
 /** The factory presets (Presets.h): 1024 per engine, every name unique in its engine, every value in its knob's range, the
@@ -2192,11 +2237,13 @@ void testMidi()
     check(ons == s.notes.size(), "a note-on for every note", fmt("%zu of %zu", ons, s.notes.size()));
 }
 
+/** @brief A section of the tests, as main() can run it alone. */
 struct TestSection {
-    const char* name;
-    std::function<void()> fn;
+    const char* name;   ///< its name, as the command line names it
+    std::function<void()> fn;   ///< the section
 };
 
+/** @brief Every section, in the order they run. */
 const TestSection kSections[] = {
     { "testTempoMap", testTempoMap },
     { "testParams", testParams },
@@ -2229,12 +2276,14 @@ const TestSection kSections[] = {
     { "testCues", testCues },
     { "testStems", testStems },
     { "testPerform", testPerform },
+    { "testKeyboard", testKeyboard },
     { "testPresets", testPresets },
     { "testKnobs", testKnobs },
 };
 
 } // namespace
 
+/** @brief Runs every section, or those the command line names; the exit code is the number of failures. */
 int main(int argc, char** argv)
 {
     std::string only;

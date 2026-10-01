@@ -14,8 +14,12 @@ using namespace tot;
 
 namespace {
 
-const juce::Colour kBack = totui::colour::bg, kPanel = totui::colour::panel, kInk = totui::colour::ink, kDim = totui::colour::dim,
-                   kAccent = totui::colour::accent, kOnset = totui::colour::onset;
+const juce::Colour kBack = totui::colour::bg;           ///< the skin's background
+const juce::Colour kPanel = totui::colour::panel;       ///< the skin's panel
+const juce::Colour kInk = totui::colour::ink;           ///< the skin's ink
+const juce::Colour kDim = totui::colour::dim;           ///< the skin's dim ink
+const juce::Colour kAccent = totui::colour::accent;     ///< the skin's accent
+const juce::Colour kOnset = totui::colour::onset;       ///< the onsets' red
 
 /** @brief Colour of a block by its marker: the edges dark, the body brighter towards the peak, a reduction the motion's teal. */
 juce::Colour blockColour(const juce::String& name)

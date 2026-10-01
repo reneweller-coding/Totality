@@ -16,6 +16,7 @@ namespace tot {
 
 namespace {
 
+/** @brief @p s escaped for a JSON string. */
 std::string jsonEscape(const std::string& s)
 {
     std::string o;
@@ -74,6 +75,7 @@ bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, doub
 
 namespace {
 
+/** @brief @p s escaped for XML. */
 std::string xmlEscape(const std::string& s)
 {
     std::string o;

@@ -10,8 +10,8 @@
 namespace tot {
 
 namespace {
-constexpr double kTwoPiD = 6.283185307179586;
-constexpr double kLn1000 = 6.907755278982137;
+constexpr double kTwoPiD = 6.283185307179586;   ///< 2 pi
+constexpr double kLn1000 = 6.907755278982137;   ///< ln 1000: a decay of 60 dB
 constexpr int kCoefEvery = 4;   ///< the gate's low pass is retuned every four samples
 }
 

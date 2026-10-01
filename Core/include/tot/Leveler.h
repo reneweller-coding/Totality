@@ -44,7 +44,8 @@ struct LevelReading {
     float after = 0.0f;      ///< the part with the correction, LUFS
     BalanceDb found{};       ///< Phase 18: every part's loudest sample against the kick's as composed, dB (NaN: silent)
     BalanceDb bal{};         ///< the parts' corrections set, dB
-    BalanceDb lo{}, hi{};    ///< the windows they were set for (ranked), dB
+    BalanceDb lo{};   ///< the lower ends of the windows they were set for (ranked), dB
+    BalanceDb hi{};   ///< the upper ends, dB
     bool guarded = false;    ///< the guard took the room or boosts down (the mids stood over the references')
 };
 

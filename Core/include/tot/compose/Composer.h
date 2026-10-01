@@ -110,10 +110,11 @@ struct TrackRequest {
 
 /** @brief What a track tells the set, the cues and the displays. */
 struct TrackInfo {
-    FormType form = FormType::Arc;
+    FormType form = FormType::Arc;   ///< the track's form
     std::string style;           ///< the profile's name
-    float bpm = 130.0f;
-    int key = 9, scale = 0;
+    float bpm = 130.0f;   ///< the tempo
+    int key = 9;   ///< the key's root, 0 = C
+    int scale = 0;   ///< the scale (compose.scale)
     bool monotonic = false;      ///< no pitched layer
     bool subOwns = false;        ///< the sub bass owns the low end
     int bars = 0;                ///< length

@@ -18,6 +18,7 @@ const char* const kLayerNames[kNumLayers] = { "kick", "ghost kick", "closed hat"
 
 namespace {
 
+/** @brief A MIDI velocity as 0..1. */
 constexpr float V(int midi) { return static_cast<float>(midi) / 127.0f; }
 
 /**
@@ -129,9 +130,11 @@ float roll(uint64_t seed, uint64_t a, uint64_t b, uint64_t c)
     return static_cast<float>((h >> 40) * (1.0 / 16777216.0));
 }
 
+/** @brief The salts of the rack's random streams, one per kind of decision. */
 enum Salt : uint64_t { kBase = 11, kMutA = 12, kMutB = 13, kMotion = 14, kVel = 15, kJitter = 16, kCycle = 17, kFill = 18,
                        kAcid = 19 };
 
+/** @brief Whether layer @p li plays a cycle of its own period (not the sixteen-step matrix). */
 bool isCyclic(const RackPlan& plan, int li) { return plan.period[li] > 0; }
 
 /** @brief The seed of layer @p li's rolls in a block of candidate @p variant (0: the layer's own seed). */

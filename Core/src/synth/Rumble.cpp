@@ -10,7 +10,7 @@
 namespace tot {
 
 namespace {
-constexpr double kTwoPiD = 6.283185307179586;
+constexpr double kTwoPiD = 6.283185307179586;   ///< 2 pi
 /** @brief Gain on the hall's return before the clip (calibrated, see Rumble.h). */
 constexpr float kHallGain = 3.98f;   // +12 dB: the return's peaks at the defaults near -1 dBFS
 /** @brief Gain on the band after its filters (calibrated, see Rumble.h). */

@@ -10,7 +10,11 @@ using namespace tot;
 namespace {
 
 /** The references' medians per style (docs/eval/kalibrierung-phase4.md, Tools/ref_stats.json; 30 titles, 27.09.2026). */
-struct RefRow { const char* what; const char* values[4]; };
+struct RefRow {
+    const char* what;        ///< the measure
+    const char* values[4];   ///< its median per style
+};
+/** @brief the references' medians, a row per measure */
 const RefRow kRefs[] = {
     { "Centroid, Hz",            { "252", "331", "182", "170" } },
     { "Width S/M, dB",           { "-4.5", "-6.2", "-7.9", "-8.1" } },
@@ -20,6 +24,7 @@ const RefRow kRefs[] = {
     { "Bar similarity (audio)",  { "0.87", "0.955", "0.931", "0.924" } },
 };
 
+/** @brief @p v (0..1) as a percentage. */
 juce::String pct(float v) { return juce::String(juce::roundToInt(100.0f * v)) + " %"; }
 
 } // namespace

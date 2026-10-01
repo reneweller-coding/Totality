@@ -42,7 +42,7 @@ const juce::Colour green     { 0xff7fd49a };   ///< a meter in range
 const juce::Colour red       { 0xffe06a5f };   ///< a meter over
 } // namespace colour
 
-using Family = frame::Family;
+using Family = frame::Family;   ///< The module families (the frame's).
 /** @brief The colour of a family. */
 juce::Colour familyColour(Family f);
 /** @brief The colour of deck @p d (A, B, C). */
@@ -55,9 +55,9 @@ const frame::Skin& skin();
  *        "~wave": a narrow menu).
  */
 struct GroupSpec {
-    const char* title;
-    Family family;
-    std::vector<const char*> keys;
+    const char* title;   ///< the group's title
+    Family family;   ///< its family: the colour
+    std::vector<const char*> keys;   ///< its parameters by key
 };
 /** @brief The panel of a module: its groups, in order (empty: one group of everything). */
 const std::vector<GroupSpec>& layoutOf(tot::Module m);

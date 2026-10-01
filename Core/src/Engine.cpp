@@ -13,7 +13,7 @@ namespace tot {
 
 namespace {
 constexpr float kClipCeiling = 0.97f;   ///< where the soft clipper's curve flattens (-0.26 dBFS)
-constexpr float kSqrt2 = 1.41421356f;
+constexpr float kSqrt2 = 1.41421356f;   ///< sqrt 2
 }
 
 const char* Engine::stemName(int s)
@@ -432,6 +432,8 @@ bool Engine::process(float* L, float* R, int n)
         }
         if (cell) updateCell();
         for (int d = 0; d < kDecks; ++d) if (playing_[d]) decks_[d].dispatchUntil(sample_);
+        // The keys played on a MIDI keyboard, on their samples (queueLive, 01.10.2026).
+        while (liveCursor_ < liveCount_ && liveQueue_[liveCursor_].at <= sample_) playLive(liveQueue_[liveCursor_++]);
         int64_t end = std::min<int64_t>(sample_ + (n - done), (sample_ / kRaster + 1) * kRaster);
         for (const Deck& d : decks_) {
             if (!d.loaded()) continue;
@@ -440,6 +442,7 @@ bool Engine::process(float* L, float* R, int n)
             if (r < end) end = r;
         }
         if (stepCursor_ < steps_.size() && steps_[stepCursor_] < end) end = steps_[stepCursor_];
+        if (liveCursor_ < liveCount_ && liveQueue_[liveCursor_].at < end) end = liveQueue_[liveCursor_].at;
         const int len = static_cast<int>(end - sample_);
         if (stemL_ != nullptr)
             for (int s = 0; s < kStems; ++s)
@@ -456,7 +459,55 @@ bool Engine::process(float* L, float* R, int n)
         done += len;
         sample_ += len;
     }
+    while (liveCursor_ < liveCount_) playLive(liveQueue_[liveCursor_++]);   // a key past the block's end: now
+    liveCount_ = liveCursor_ = 0;
     return sample_ < endSample_;
+}
+
+int Engine::keyboardTarget(int channel) const
+{
+    const int part = params_.getInt(params_.id(Module::Perform, 0, perform::KeyboardPart));
+    if (part != perform::keys::ByChannel) return std::clamp(part, 0, static_cast<int>(perform::keys::ByChannel) - 1);
+    if (channel == 9) return perform::keys::Kit;   // General MIDI's drum channel
+    return channel >= 0 && channel < 6 ? 1 + channel : perform::keys::Off;
+}
+
+void Engine::queueLive(int offset, int pitch, int velocity, int channel, bool on)
+{
+    if (!live_ || pitch < 0 || pitch > 127 || liveCount_ >= kLiveQueue) return;
+    LiveKey k;
+    k.at = sample_ + std::max(0, offset);
+    k.pitch = pitch;
+    k.velocity = static_cast<float>(std::clamp(velocity, 1, 127)) / 127.0f;
+    k.target = on ? keyboardTarget(channel) : liveTarget_[pitch] - 1;
+    k.on = on;
+    if (k.target <= perform::keys::Off) return;
+    liveQueue_[liveCount_++] = k;
+}
+
+void Engine::playLive(const LiveKey& k)
+{
+    if (!k.on) { releaseLive(k.pitch); return; }
+    if (liveTarget_[k.pitch] != 0) releaseLive(k.pitch);
+    const int d = std::max(0, lead_.load(std::memory_order_relaxed));
+    if (!decks_[d].loaded()) return;
+    decks_[d].liveNote(sample_, k.target, k.pitch, k.velocity, true);
+    liveTarget_[k.pitch] = static_cast<uint8_t>(k.target + 1);
+    liveDeck_[k.pitch] = static_cast<uint8_t>(d);
+}
+
+void Engine::releaseLive(int pitch)
+{
+    if (liveTarget_[pitch] == 0) return;
+    decks_[liveDeck_[pitch]].liveNote(sample_, liveTarget_[pitch] - 1, pitch, 0.0f, false);
+    liveTarget_[pitch] = 0;
+}
+
+void Engine::liveAllOff()
+{
+    liveCount_ = liveCursor_ = 0;
+    for (int k = 0; k < 128; ++k) releaseLive(k);
+    for (Deck& d : decks_) d.liveAllOff();
 }
 
 } // namespace tot

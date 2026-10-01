@@ -19,8 +19,9 @@ const char* const kMoveNames[] = { "low kill", "high swell", "mid dip", "filter 
 
 namespace {
 
-constexpr double kBar = 4.0;
+constexpr double kBar = 4.0;   ///< beats per bar
 
+/** @brief The FNV-1a hash of @p s. */
 uint64_t hashName(const std::string& s)
 {
     uint64_t h = 1469598103934665603ull;   // FNV-1a
@@ -56,6 +57,7 @@ void appendShifted(Score& dst, const Score& src, double offset)
     for (SoundPick s : src.sounds) { s.beat += offset; dst.sounds.push_back(s); }
 }
 
+/** @brief A step of knob @p id to @p value at @p beat, as an offset from the knob in @p p. */
 Gesture stepOf(const ParamStore& p, int id, double beat, float value)
 {
     Gesture g;
@@ -67,6 +69,7 @@ Gesture stepOf(const ParamStore& p, int id, double beat, float value)
     return g;
 }
 
+/** @brief A ramp of knob @p id from @p beat over @p length beats, @p from to @p to in @p shape, as offsets from the knob. */
 Gesture rampOf(const ParamStore& p, int id, double beat, double length, float from, float to, GestureShape shape)
 {
     Gesture g;

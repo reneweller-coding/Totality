@@ -10,8 +10,8 @@
 namespace tot {
 
 namespace {
-constexpr float kSqrt2 = 1.41421356f;
-const double kEchoBeats[] = { 0.25, 0.5, 0.75, 1.0, 1.5, 2.0 };   // dub.echo_time: 1/16, 1/8, 3/16, 1/4, 3/8, 1/2
+constexpr float kSqrt2 = 1.41421356f;   ///< sqrt 2
+const double kEchoBeats[] = { 0.25, 0.5, 0.75, 1.0, 1.5, 2.0 };   ///< dub.echo_time: 1/16, 1/8, 3/16, 1/4, 3/8, 1/2
 }
 
 void DubChain::prepare(double sampleRate, int maxBlock)

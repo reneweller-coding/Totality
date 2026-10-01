@@ -31,9 +31,9 @@ namespace tot {
 
 /** @brief One preset: its group (a submenu), its name, and the values it sets (knob index in its module, value). */
 struct SoundPreset {
-    std::string group;
-    std::string name;
-    std::vector<std::pair<int, float>> values;
+    std::string group;   ///< its group (a submenu)
+    std::string name;   ///< its name
+    std::vector<std::pair<int, float>> values;   ///< the values it sets: knob index in its module, value
     float styles[4] = { 1.0f, 1.0f, 1.0f, 1.0f };   ///< its group's fit to Hypnotic, Ostgut, Dub, Raw (0..1)
     uint32_t roles = 0;                              ///< a kit lane's roles it is made for (bit PercRole), 0: any
 };

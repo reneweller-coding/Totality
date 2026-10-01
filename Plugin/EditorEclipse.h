@@ -19,18 +19,26 @@
 /** @brief The Patterns tab. */
 class EclipsePage final : public juce::Component, private juce::Timer {
 public:
+    /** @brief The tab for @p p. */
     explicit EclipsePage(TotalityProcessor& p);
+    /** @brief The eclipse of the bar that plays and the grid beside it. */
     void paint(juce::Graphics& g) override;
 
 private:
+    /** @brief Gathers the bar that plays when it changes, and repaints. */
     void timerCallback() override;
     /** @brief The onsets of the bar at @p beat: per part, (position in the bar 0..1, velocity). */
     void gather(double beat);
-    TotalityProcessor& proc_;
-    int version_ = -1;
-    Playing playing_;
-    struct Ring { int part; std::vector<std::pair<float, float>> onsets; };
-    std::vector<Ring> rings_;
-    int bar_ = -1, deck_ = 0;
+    TotalityProcessor& proc_;   ///< the processor: what plays, where it is
+    int version_ = -1;   ///< the score playing_ was copied from
+    Playing playing_;   ///< a copy of what plays
+    /** @brief One part's ring: its onsets in the bar. */
+    struct Ring {
+        int part;                                       ///< the part (Part)
+        std::vector<std::pair<float, float>> onsets;    ///< position in the bar 0..1 and velocity of each onset
+    };
+    std::vector<Ring> rings_;   ///< the rings of the bar shown, in part order
+    int bar_ = -1;   ///< the bar shown, -1 none
+    int deck_ = 0;   ///< the deck it is taken from
     std::vector<float> kick_;   ///< the kick's onsets in the bar (0..1)
 };

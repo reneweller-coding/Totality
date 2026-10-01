@@ -60,7 +60,7 @@ struct StyleProfile {
     float reroll;                        ///< RackPlan::reroll
     float polymeterChance;               ///< one or two cyclic percussion layers in a track
     float swingLow;                      ///< MPC swing range, per cent
-    float swingHigh;
+    float swingHigh;   ///< the swing range's upper end, per cent
     float fillChance;                    ///< a fill at the end of an eight-bar phrase
     float toolReductionChance;           ///< an Arc has a short kick-out at all (Dok. 8.5: 0.5)
     float edgeChance;                    ///< the intro and outro filtered by the group high pass (their loudness moving)

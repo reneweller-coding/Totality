@@ -67,7 +67,7 @@ struct LayerDef {
     float vel[kSteps];       ///< velocity per step (0..1; 0 where p is 0)
     float velRandom;         ///< +- random velocity (0..1 units)
     float offsetLoMs;        ///< the feel offset's range, ms (drawn per track)
-    float offsetHiMs;
+    float offsetHiMs;   ///< the feel offset's upper end, ms
     float swing;             ///< share of the swing: 0, 0.5 or 1
     double length;           ///< note length in beats
     bool perc;               ///< dips when it meets a kick or a hat
@@ -79,7 +79,8 @@ const LayerDef& layerDef(LayerId id);
 struct TrigCond {
     LayerId layer = LayerId::OpenHat;   ///< which layer
     int step = 0;                       ///< on which sixteenth
-    int a = 1, b = 4;                   ///< plays in bar a of every b (1-based)
+    int a = 1;   ///< plays in bar a ...
+    int b = 4;   ///< ... of every b (1-based)
 };
 
 /** @brief What a track decides once about its layers. */
@@ -93,7 +94,7 @@ struct RackPlan {
     int scale = 0;                      ///< compose.scale
     int bassRoot = 45;                  ///< the bass line's root as a MIDI note (41 .. 82 Hz)
     int bassSet[4] = { 0, 0, 0, 0 };    ///< the bass alphabet (semitones above the root, Dok. 4); bassSize of them
-    int bassSize = 1;
+    int bassSize = 1;   ///< how many notes of bassSet the alphabet has
     float swing = 53.0f;                ///< MPC swing, per cent
     float humanizeMs = 3.0f;            ///< jitter's standard deviation
     // Phase 2.
@@ -105,7 +106,7 @@ struct RackPlan {
     int pingRoot = 57;                  ///< the ping's root note (220 .. 415 Hz)
     int pingNote[64] = {};              ///< the ping's pitch at each position of its period
     TrigCond conds[4];                  ///< trig conditions
-    int nConds = 0;
+    int nConds = 0;   ///< how many of conds are in use
     float fillChance = 0.25f;           ///< a fill at the end of an eight-bar phrase (Dok. 8.2)
     /**
      * @name The style's restlessness (27.09.2026, the reference measurement, PLAN 13.4)

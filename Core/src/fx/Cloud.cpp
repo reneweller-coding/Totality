@@ -10,7 +10,7 @@
 namespace tot {
 
 namespace {
-constexpr double kTwoPiD = 6.283185307179586;
+constexpr double kTwoPiD = 6.283185307179586;   ///< 2 pi
 /** The ping is percussive: most of the history a grain reads is the silence between its hits. Raised to -9 dB through a
  *  reduction the cloud measured 24 dB under the ping (27.09.2026); with +12 dB and the study's rise to -3 dB it sits 9 to
  *  12 dB under it, a background. */

@@ -58,31 +58,49 @@ public:
     bool active() const;
 
 private:
+    /** @brief One struck note: its phases, its envelopes, its vactrol, its place. */
     struct Voice {
-        bool active = false;
-        double pc = 0.0, pm = 0.0;     ///< carrier and modulator phase, cycles
+        bool active = false;   ///< it sounds
+        double pc = 0.0;   ///< the carrier's phase, cycles
+        double pm = 0.0;   ///< the modulator's phase, cycles
         double f0 = 440.0;             ///< the note
-        double ep = 1.0, dp = 1.0;     ///< pitch envelope and its per-sample factor
-        double ei = 1.0, di = 1.0;     ///< index envelope and factor
-        double ea = 1.0, da = 1.0;     ///< amplitude envelope and factor
+        double ep = 1.0;   ///< the pitch envelope
+        double dp = 1.0;   ///< its per-sample factor
+        double ei = 1.0;   ///< the index envelope
+        double di = 1.0;   ///< its per-sample factor
+        double ea = 1.0;   ///< the amplitude envelope
+        double da = 1.0;   ///< its per-sample factor
         double vac = 0.0;              ///< the vactrol's state
-        float vel = 1.0f;
-        float gl = 0.7f, gr = 0.7f;    ///< pan gains
+        float vel = 1.0f;   ///< the note's velocity
+        float gl = 0.7f;   ///< the pan's gain, left
+        float gr = 0.7f;   ///< the pan's gain, right
         Svf lpg;                       ///< the gate's low pass
         int age = 0;                   ///< samples since the start
     };
-    double sr_ = 48000.0;
-    Voice v_[kVoices];
-    int next_ = 0;
+    double sr_ = 48000.0;   ///< the sample rate, Hz
+    Voice v_[kVoices];   ///< the voices
+    int next_ = 0;   ///< the voice the next note takes
     // Settings.
-    float level_ = 0.5f, pan_ = 0.0f, width_ = 0.5f;
-    double ratio_ = 1.414, index_ = 2.0, pitchAmt_ = 0.8;
-    double pitchTau_ = 0.045, indexTau_ = 0.06, decayS_ = 0.12, lpgRelease_ = 0.15;
-    float lpgMix_ = 0.6f, damping_ = 1.3f;
-    float bandHz_ = 900.0f, bandK_ = 1.0f, sweepOct_ = 0.5f, bandMix_ = 0.5f;
-    double sweepRate_ = 0.07;
+    float level_ = 0.5f;   ///< ping.level, linear
+    float pan_ = 0.0f;   ///< the centre of the notes' places, -1 .. 1
+    float width_ = 0.5f;   ///< how far the notes spread around it
+    double ratio_ = 1.414;   ///< the modulator's frequency ratio
+    double index_ = 2.0;   ///< the modulation index at the hit
+    double pitchAmt_ = 0.8;   ///< how far above the note the carrier starts (times the note - 1)
+    double pitchTau_ = 0.045;   ///< the pitch sweep's time constant, s
+    double indexTau_ = 0.06;   ///< the index's time constant, s
+    double decayS_ = 0.12;   ///< the plain amplitude decay, s
+    double lpgRelease_ = 0.15;   ///< the vactrol's release, s
+    float lpgMix_ = 0.6f;   ///< gate against plain decay, 0..1
+    float damping_ = 1.3f;   ///< the gate's low pass damping (from Resonance)
+    float bandHz_ = 900.0f;   ///< the bus's band pass, Hz
+    float bandK_ = 1.0f;   ///< its damping, 1 / Q
+    float sweepOct_ = 0.5f;   ///< the band's sweep, octaves either way
+    float bandMix_ = 0.5f;   ///< band pass against the dry sum
+    double sweepRate_ = 0.07;   ///< the sweep's rate, Hz
     double vacAttack_ = 0.0;   ///< per-sample factor of the vactrol's 1 ms attack
-    Svf bandL_, bandR_;
+    Svf bandL_;   ///< the bus's band pass, left
+    Svf bandR_;   ///< the bus's band pass, right
 };
 
 } // namespace tot

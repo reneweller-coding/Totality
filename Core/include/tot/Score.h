@@ -103,7 +103,7 @@ extern const char* const kOpNames[];   ///< "add", "remove", "swap", "hold", "ki
  */
 enum class BalPart : int { Ping = 12, Bass, Acid, Chord, Drone, Texture, Room, Count };   ///< (the room's return: the guard's)
 constexpr int kBalLanes = 12;   ///< the kit's lanes come first
-constexpr int kBalParts = static_cast<int>(BalPart::Count);
+constexpr int kBalParts = static_cast<int>(BalPart::Count);   ///< how many parts the balance corrects
 /** @brief A correction per part, dB (0: none). */
 using BalanceDb = std::array<float, kBalParts>;
 extern const char* const kBalPartNames[kBalParts];   ///< "perc1" .. "perc12", "ping", "bass", "acid", "chord", "drone", "texture", "room"

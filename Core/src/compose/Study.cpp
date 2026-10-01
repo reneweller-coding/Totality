@@ -40,6 +40,7 @@ Gesture home(int id, double beat)
     return g;
 }
 
+/** @brief The index of layer @p id. */
 int L(LayerId id) { return static_cast<int>(id); }
 
 /** @brief Whether a layer is tonal (none in the first and last 32 bars, Dok. 8.5). */
@@ -49,6 +50,7 @@ bool tonal(LayerId id)
         || id == LayerId::Texture || id == LayerId::Ping;
 }
 
+/** @brief Accepts every layer. */
 bool anyLayer(LayerId) { return true; }
 
 } // namespace

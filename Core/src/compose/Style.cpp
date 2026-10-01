@@ -13,9 +13,9 @@ namespace tot {
 
 namespace {
 
-using L = LayerId;
+using L = LayerId;   ///< The layers, shortly.
 
-// Designated initialisers (C++20): every value stands by its name, in the order of Style.h.
+/// Designated initialisers (C++20): every value stands by its name, in the order of Style.h.
 const StyleProfile kProfiles[] = {
     // Hypnotic: the centre. The rumble owns the low end (0.7); a processed, rolling 909 kick; two or three cyclic layers;
     // the ping's ostinato, drones and texture; the chord seldom. Tool 0.5, Endless 0.3, Peak 0.2 (PLAN 2.8).
@@ -187,7 +187,9 @@ const StyleProfile kProfiles[] = {
     },
 };
 
+/** @brief @p a to @p b at @p t. */
 float lerp(float a, float b, float t) { return a + (b - a) * t; }
+/** @brief @p a to @p b at @p t, rounded. */
 int lerpi(int a, int b, float t) { return static_cast<int>(std::lround(lerp(static_cast<float>(a), static_cast<float>(b), t))); }
 
 } // namespace

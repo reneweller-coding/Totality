@@ -194,8 +194,21 @@ enum : int { Dramaturgy, Journey, Loops, FxBreaks, BlendBars,
  *        ring out. Live only (Engine::setLive): a render or an export plays the score as it was composed.
  */
 namespace perform {
-enum : int { Filter, Throw, MuteKick, MuteSub, MuteHats, MutePerc, MutePing, MuteBass, MutePads, Count };
+enum : int { Filter, Throw, MuteKick, MuteSub, MuteHats, MutePerc, MutePing, MuteBass, MutePads,
+             KeyboardPart,   ///< what a MIDI keyboard plays (perform::keys, 01.10.2026); off: the keys toggle the mutes
+             KeyboardMode,   ///< 0 Replace: the played voice's generated notes are left out; 1 Layer: it plays over them
+             Composer,       ///< on: the composer's notes play; off: only what the keyboard plays
+             Count };
 constexpr int kMutes = MutePads - MuteKick + 1;   ///< the groups: kick (and its rumble), sub, hats, perc, ping, bass and 303, pads
+/**
+ * @brief The keyboard's targets (perform.keyboard_part, 01.10.2026, Engine::queueLive): the kit -- C1 (36) the kick,
+ *        C#1 .. C2 the twelve lanes --, the bass (its sub with it where the sub owns the low end), the 303, the ping, the
+ *        chord, the drone, or by channel (1 the kit, 2 the bass, 3 the 303, 4 the ping, 5 the chord, 6 the drone; 10 the
+ *        kit as well, General MIDI's drum channel).
+ */
+namespace keys {
+enum : int { Off, Kit, Bass, Acid, Ping, Chord, Drone, ByChannel, Count };
+}
 }
 /** @brief The OSC cues (Cue.h): on or off, and the UDP port. */
 namespace cue {
@@ -352,18 +365,19 @@ public:
     std::string format(int id) const;
 
 private:
+    /** @brief One parameter of the store: its description, its key, its module and instance. */
     struct Entry {
-        const ParamDesc* desc;
-        std::string key;
-        Module module;
-        int instance;
+        const ParamDesc* desc;   ///< its description
+        std::string key;   ///< its key ("kick.decay", "perc3.level")
+        Module module;   ///< its module
+        int instance;   ///< its instance
     };
-    std::vector<Entry> entries_;
-    std::unique_ptr<std::atomic<float>[]> values_;
-    std::vector<float> defaults_;
-    std::unordered_map<std::string, int> index_;
-    static constexpr int kMaxInstances = 16;
-    int bases_[static_cast<int>(Module::Count)][kMaxInstances] = {};
+    std::vector<Entry> entries_;   ///< the parameters, by id
+    std::unique_ptr<std::atomic<float>[]> values_;   ///< their values, real units (atomic: any thread)
+    std::vector<float> defaults_;   ///< their defaults
+    std::unordered_map<std::string, int> index_;   ///< key -> id
+    static constexpr int kMaxInstances = 16;   ///< the most instances a module can have
+    int bases_[static_cast<int>(Module::Count)][kMaxInstances] = {};   ///< per module and instance: the id of its first parameter, -1 none
 };
 
 } // namespace tot

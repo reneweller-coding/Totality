@@ -21,8 +21,8 @@ namespace tot {
 
 /** @brief One bar's onset profile: velocity per band (0 low, 1 mid, 2 high) and sixteenth, and its onset count. */
 struct BarProfile {
-    float v[3][kSteps] = {};
-    int onsets = 0;
+    float v[3][kSteps] = {};   ///< velocity per band (0 low, 1 mid, 2 high) and sixteenth
+    int onsets = 0;   ///< how many onsets the bar has
 };
 
 /** @brief The band of every part for a plan's lanes (-1: not counted: the drone, the texture, the noise lane). */

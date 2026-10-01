@@ -38,7 +38,10 @@ struct Scope {
 #define TOT_PROF_BEGIN(slot) const auto totProfT_##slot = std::chrono::steady_clock::now()
 #define TOT_PROF_END(slot)     (::tot::prof::ns[::tot::prof::slot] += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - totProfT_##slot).count())
 #else
+/** @brief Times the enclosing scope into @p slot (nothing without TOT_PROFILE). */
 #define TOT_PROF(slot) ((void)0)
+/** @brief Starts timing into @p slot (nothing without TOT_PROFILE). */
 #define TOT_PROF_BEGIN(slot) ((void)0)
+/** @brief Ends timing into @p slot (nothing without TOT_PROFILE). */
 #define TOT_PROF_END(slot) ((void)0)
 #endif

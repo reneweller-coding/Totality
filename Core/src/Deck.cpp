@@ -12,7 +12,7 @@
 namespace tot {
 
 namespace {
-constexpr double kPiD = 3.141592653589793;
+constexpr double kPiD = 3.141592653589793;   ///< pi
 constexpr float kBassMinCut = 100.0f;   ///< the bass synth's and the 303's lowest low cut: under it only kick, rumble, sub
 constexpr float kGlueMix = 0.35f;       ///< the glue in parallel (PLAN 8.4)
 /** The room's makeup: the FDN returns quietly (Ephemeris: +4 dB at sends of 0.3); +12 dB made it audible in Phase 2, the
@@ -241,6 +241,11 @@ void Deck::updateCell(int64_t sample)
     if (live_)
         for (int k = 0; k < perform::kMutes; ++k)
             if (params_->getBool(params_->id(Module::Perform, 0, perform::MuteKick + k))) mutes_ |= 1u << k;
+    // The keyboard (live only, 01.10.2026): what it plays, whether that replaces the composer's notes, whether the
+    // composer plays at all.
+    keyTarget_ = live_ ? params_->getInt(params_->id(Module::Perform, 0, perform::KeyboardPart)) : perform::keys::Off;
+    keyReplace_ = !live_ || params_->getInt(params_->id(Module::Perform, 0, perform::KeyboardMode)) == 0;
+    composerOff_ = live_ && !params_->getBool(params_->id(Module::Perform, 0, perform::Composer));
 
     float c[64];
     readPlayed(Module::Compose, 0, c);
@@ -393,6 +398,7 @@ void Deck::dispatchUntil(int64_t sample)
 void Deck::dispatch(const Ev& e)
 {
     const Part part = static_cast<Part>(e.part);
+    if (e.on != 0 && !liveEvent_ && silenced(part)) return;   // the keyboard's or nobody's (01.10.2026)
     switch (part) {
     case Part::Kick: {
         if (muted(perform::MuteKick)) return;
@@ -721,6 +727,85 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
             }
         }
     }
+}
+
+int Deck::targetOf(Part part)
+{
+    switch (part) {
+    case Part::Kick: return perform::keys::Kit;
+    case Part::Sub:
+    case Part::Bass: return perform::keys::Bass;
+    case Part::Acid: return perform::keys::Acid;
+    case Part::Ping: return perform::keys::Ping;
+    case Part::Chord: return perform::keys::Chord;
+    case Part::Drone: return perform::keys::Drone;
+    default: return laneOf(part) >= 0 ? perform::keys::Kit : perform::keys::Off;
+    }
+}
+
+bool Deck::silenced(Part part) const
+{
+    if (composerOff_) return true;
+    if (keyTarget_ == perform::keys::Off || !keyReplace_) return false;
+    const int t = targetOf(part);
+    if (t == perform::keys::Off) return false;
+    // By channel, a part is the player's from its first played key on (until liveAllOff).
+    if (keyTarget_ == perform::keys::ByChannel) return ((keyPlayed_ >> t) & 1u) != 0;
+    return keyTarget_ == t;
+}
+
+void Deck::liveNote(int64_t sample, int target, int pitch, float velocity, bool on)
+{
+    if (!loaded_ || target <= perform::keys::Off || target >= perform::keys::ByChannel || pitch < 0 || pitch > 127) return;
+    Ev e{};
+    e.sample = sample;
+    e.on = on ? 1 : 0;
+    e.pitch = pitch;
+    e.velocity = std::clamp(velocity, 0.0f, 1.0f);
+    e.accent = velocity > 0.86f;   // a hard key is the 303's accent
+    e.id = 0x40000000 + pitch;     // a key's own id: its release finds its note
+    switch (target) {
+    case perform::keys::Kit:
+        if (!on) return;   // one-shots: a release does nothing
+        if (pitch == 36) e.part = static_cast<uint8_t>(Part::Kick);
+        else if (pitch > 36 && pitch <= 36 + kPercLanes) e.part = static_cast<uint8_t>(percPart(pitch - 37));
+        else return;
+        break;
+    case perform::keys::Bass: e.part = static_cast<uint8_t>(Part::Bass); break;
+    case perform::keys::Acid: e.part = static_cast<uint8_t>(Part::Acid); break;
+    case perform::keys::Ping:
+        if (!on) return;
+        e.part = static_cast<uint8_t>(Part::Ping);
+        break;
+    case perform::keys::Chord:
+        e.part = static_cast<uint8_t>(Part::Chord);
+        liveChord_[pitch] = on ? 1 : 0;
+        break;
+    case perform::keys::Drone: e.part = static_cast<uint8_t>(Part::Drone); break;
+    default: return;
+    }
+    if (target == perform::keys::Bass || target == perform::keys::Acid || target == perform::keys::Drone) {
+        // A mono voice: one id for all its keys; a key pressed while another is held slides there, the release of a
+        // key that no longer sounds does nothing.
+        int& held = liveHeld_[target];
+        e.id = 0x40000000;
+        if (on) { e.slide = held != 0; held = pitch + 1; }
+        else if (held != pitch + 1) return;
+        else held = 0;
+    }
+    liveEvent_ = true;
+    dispatch(e);
+    liveEvent_ = false;
+    if (on) keyPlayed_ |= 1u << target;
+}
+
+void Deck::liveAllOff()
+{
+    for (int t : { perform::keys::Bass, perform::keys::Acid, perform::keys::Drone })
+        if (liveHeld_[t] != 0) liveNote(0, t, liveHeld_[t] - 1, 0.0f, false);
+    for (int k = 0; k < 128; ++k)
+        if (liveChord_[k] != 0) liveNote(0, perform::keys::Chord, k, 0.0f, false);
+    keyPlayed_ = 0;
 }
 
 } // namespace tot

@@ -28,12 +28,13 @@ std::string camelotOf(int key)
 
 namespace {
 
-constexpr int kCandidates = 8;
+constexpr int kCandidates = 8;   ///< how many variants of a block's form are drawn; the one nearest the plan is taken
 constexpr int kBar = 4;   ///< beats per bar
 /** The names of the layers in a unit ("rack.clap"). */
 const char* const kLayerUnit[kNumLayers] = { "kick", "ghost", "ch", "rolling", "oh", "ride", "clap", "clapb", "clapghost",
                                              "shaker", "tom", "rim", "bass", "ping", "chord", "drone", "acid", "texture" };
 
+/** @brief The FNV-1a hash of @p s. */
 uint64_t hashName(const std::string& s)
 {
     uint64_t h = 1469598103934665603ull;   // FNV-1a
@@ -48,6 +49,7 @@ uint64_t streamSeed(uint64_t seed, const Curation* cur, const std::string& unit,
     return mixSeed(mixSeed(seed, hashName(name)), static_cast<uint64_t>(n));
 }
 
+/** @brief A random stream seeded for unit @p unit's @p name (streamSeed). */
 Rng streamOf(uint64_t seed, const Curation* cur, const std::string& unit, const std::string& name)
 {
     Rng r;
@@ -55,8 +57,10 @@ Rng streamOf(uint64_t seed, const Curation* cur, const std::string& unit, const 
     return r;
 }
 
+/** @brief The index of layer @p id. */
 int L(LayerId id) { return static_cast<int>(id); }
 
+/** @brief Whether layer @p id plays notes of the key (bass, 303, chord, drone, texture, ping). */
 bool isTonal(LayerId id)
 {
     return id == LayerId::Bass || id == LayerId::Acid || id == LayerId::Chord || id == LayerId::Drone
@@ -89,6 +93,7 @@ const float kArchetypeW[4][static_cast<int>(Archetype::Count)] = {
     { 0.15f, 0.10f, 0.05f, 0.30f, 0.10f, 0.00f, 0.30f },
 };
 
+/** @brief Sets layer @p id's chance in @p prof's pool (adds it where it is missing). */
 void setChance(StyleProfile& prof, LayerId id, float chance)
 {
     for (LayerChance& c : prof.pool) if (c.layer == id) { c.chance = chance; return; }
@@ -176,11 +181,16 @@ const std::vector<int>& managedKnobs(const ParamStore& p)
 
 /** @brief The values a track sets on the knobs, and gestures in those values (offsets from the knobs underneath). */
 struct TrackKnobs {
-    const ParamStore& p;
+    const ParamStore& p;   ///< the knobs underneath
     std::map<int, float> value;   ///< real units
+    /** @brief The track's value of @p id where it sets one, else the knob's. */
     float get(int id) const { const auto it = value.find(id); return it == value.end() ? p.get(id) : it->second; }
     /** @brief A gesture's offset: from the track's own value where it sets the knob (a KnobSet), else from the knob. */
     float offset(int id, float v) const { return p.toNormalised(id, v) - p.toNormalised(id, get(id)); }
+    /**
+     * @brief A gesture on @p id from @p beat over @p length beats, from @p from to @p to (real units) in @p shape, by hand @p
+     *        hand.
+     */
     Gesture ramp(int id, double beat, double length, float from, float to, GestureShape shape, uint8_t hand) const
     {
         Gesture g;
@@ -193,6 +203,7 @@ struct TrackKnobs {
         g.hand = hand;
         return g;
     }
+    /** @brief A step of @p id to @p v at @p beat. */
     Gesture step(int id, double beat, float v) const { return ramp(id, beat, 0.0, v, v, GestureShape::Step, 0); }
     /** @brief Back to the track's own value at @p beat. */
     Gesture home(int id, double beat) const { return step(id, beat, get(id)); }
@@ -200,8 +211,8 @@ struct TrackKnobs {
 
 /** @brief Which layers play, and how densely. */
 struct LayerState {
-    bool active[kNumLayers] = {};
-    float density[kNumLayers];
+    bool active[kNumLayers] = {};   ///< per layer: it plays
+    float density[kNumLayers];   ///< per layer: how densely, 0..1
     LayerState() { for (float& d : density) d = 1.0f; }
     /** @brief Layers sounding beside the kick; the rolling hat counts once it plays in full. */
     int count() const
@@ -221,7 +232,9 @@ struct BarMods {
     uint32_t muteLayers = 0;  ///< Phase 8: whole layers out for the bar (bit LayerId): Mills' mutes, a breath, the centre out
 };
 
+/** @brief The bit of layer @p id in a mask. */
 uint32_t bitOf(LayerId id) { return 1u << static_cast<int>(id); }
+/** @brief " for n bars", for the log of what a block does. */
 std::string fmtBars(int n) { return " for " + std::to_string(n) + (n == 1 ? " bar" : " bars"); }
 /** @brief The centre (The Acid Mind's "removing the center"): everything but the kick and the hats. */
 constexpr uint32_t kCentre = (1u << static_cast<int>(LayerId::ClapA)) | (1u << static_cast<int>(LayerId::ClapB))

@@ -6,7 +6,7 @@
 #include "TotalityData.h"
 #include <cmath>
 
-void drawLogo(juce::Graphics& g, juce::Rectangle<float> r);   // PluginEditor.cpp
+void drawLogo(juce::Graphics& g, juce::Rectangle<float> r);   ///< PluginEditor.cpp
 
 namespace totui {
 

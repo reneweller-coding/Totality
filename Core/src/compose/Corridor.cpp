@@ -10,6 +10,7 @@ namespace tot {
 
 namespace {
 
+/** @brief The band layer @p id counts in: 0 low, 1 mid, 2 high. */
 int bandOfLayer(LayerId id)
 {
     switch (id) {
