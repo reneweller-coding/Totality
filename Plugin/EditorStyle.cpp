@@ -82,11 +82,11 @@ void StylePage::resized()
 void StylePage::paint(juce::Graphics& g)
 {
     using namespace totui::colour;
-    g.fillAll(panel);
+
     const StyleProfile pr = profileOf(proc_.store());
     const bool own = proc_.store().getBool(proc_.store().id(Module::Custom, 0, custom::Use));
     auto r = getLocalBounds().withWidth(430).reduced(14, 10);
-    g.setColour(amber);
+    g.setColour(accent);
     g.setFont(juce::FontOptions(15.0f, juce::Font::bold));
     g.drawText(own ? juce::String("Your style (over ") + pr.name + ")" : juce::String("The profile: ") + pr.name, r.removeFromTop(22), juce::Justification::left);
     g.setFont(juce::FontOptions(12.5f));
@@ -114,7 +114,7 @@ void StylePage::paint(juce::Graphics& g)
     for (const LayerChance& l : pr.pool) if (l.chance >= 0.5f) pool << (pool.isEmpty() ? "" : ", ") << kLayerNames[static_cast<int>(l.layer)];
     row("Likely layers", pool);
     r.removeFromTop(12);
-    g.setColour(amber);
+    g.setColour(accent);
     g.setFont(juce::FontOptions(13.5f, juce::Font::bold));
     g.drawText("The references (medians, 30 titles)", r.removeFromTop(20), juce::Justification::left);
     g.setFont(juce::FontOptions(12.0f));
@@ -123,7 +123,7 @@ void StylePage::paint(juce::Graphics& g)
         head.removeFromLeft(150);
         const int cw = head.getWidth() / 4;
         for (int s = 0; s < 4; ++s) {
-            g.setColour(s == static_cast<int>(proc_.store().getInt(proc_.store().id(Module::Compose, 0, compose::Style))) ? amber : dim);
+            g.setColour(s == static_cast<int>(proc_.store().getInt(proc_.store().id(Module::Compose, 0, compose::Style))) ? accent : dim);
             g.drawText(kStyleNames[s], head.removeFromLeft(cw), juce::Justification::centred);
         }
     }

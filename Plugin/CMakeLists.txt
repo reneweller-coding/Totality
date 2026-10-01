@@ -16,7 +16,12 @@ juce_add_plugin(Totality
     PRODUCT_NAME                "Totality"
     ICON_BIG                    "${CMAKE_SOURCE_DIR}/Deploy/totality.png")
 target_sources(Totality PRIVATE PluginProcessor.cpp PluginEditor.cpp EditorTheme.cpp EditorEclipse.cpp EditorPerform.cpp
-                             EditorStyle.cpp UpdateCheck.cpp)
+                             EditorStyle.cpp UpdateCheck.cpp Frame.cpp)
+# The frame's pieces (01.10.2026): the picture behind the panel and the manual's prose for the help (F1).
+juce_add_binary_data(TotalityData
+    HEADER_NAME TotalityData.h
+    NAMESPACE TotalityData
+    SOURCES Resources/backdrop.jpg ${CMAKE_SOURCE_DIR}/Tools/manual/chapters.txt)
 target_compile_definitions(Totality PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
@@ -27,7 +32,9 @@ target_compile_definitions(Totality PUBLIC
 target_link_libraries(Totality
     PRIVATE
         TotalityCore
+        TotalityData
         juce::juce_audio_utils
+        juce::juce_osc
     PUBLIC
         juce::juce_recommended_config_flags
         juce::juce_recommended_warning_flags)

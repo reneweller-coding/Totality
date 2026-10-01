@@ -47,11 +47,33 @@
 #include "tot/synth/Rumble.h"
 #include "tot/synth/SubBass.h"
 #include "tot/synth/Synth.h"
+#include <atomic>
 #include <cstdint>
 #include <limits>
 #include <vector>
 
 namespace tot {
+
+/**
+ * @brief Where the decks add the levels of the mixer's strips while the plugin's mixer page looks (01.10.2026): per strip
+ *        the loudest sample and the sum of squares since the page last took them. Written by the audio thread (both decks
+ *        into one), read and reset by the message thread; null in a deck: nothing is measured, nothing costs.
+ */
+struct MeterSink {
+    enum Strip : int { Kick = 0, Rumble, Sub, Hats, Perc, Ping, Bass, Acid, Chord, Drone, Texture, Room, Dub, Cloud, kStrips };
+    std::atomic<float> peak[kStrips] = {};
+    std::atomic<double> sum[kStrips] = {};
+    /** @brief Adds one block's readings (audio thread). */
+    void add(const float* pk, const double* ss, int from, int to)
+    {
+        for (int s = from; s < to; ++s) {
+            float was = peak[s].load(std::memory_order_relaxed);
+            while (pk[s] > was && !peak[s].compare_exchange_weak(was, pk[s], std::memory_order_relaxed)) {}
+            double w = sum[s].load(std::memory_order_relaxed);
+            while (!sum[s].compare_exchange_weak(w, w + ss[s], std::memory_order_relaxed)) {}
+        }
+    }
+};
 
 /** @brief One deck. */
 class Deck {
@@ -124,6 +146,8 @@ public:
     float partPeak(int p) const { return partPeak_[p]; }
     /** @brief The kick (for the tests). */
     const Kick& kick() const { return kick_; }
+    /** @brief From now on adds the strips' levels into @p sink (null: stops). */
+    void setMeterSink(MeterSink* sink) { meter_ = sink; }
 
 private:
     /** @brief A note event on the sample grid. */
@@ -220,6 +244,7 @@ private:
     float balTarget_[kBalParts] = {};
     bool watch_ = false;
     float kickPeak_ = 0.0f, partPeak_[kBalParts] = {};
+    MeterSink* meter_ = nullptr;     ///< setMeterSink
     std::vector<BalanceDb> lateBal_;   ///< setLevelBalance: the parts' corrections found while playing
 
     std::vector<float> kickBuf_, bodyBuf_, rumbleBuf_, subBuf_;

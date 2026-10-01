@@ -54,8 +54,54 @@ the host jumps, and plays at the host's tempo (a set's own tempo drift is the st
 output is a finished stereo mix at about -10 LUFS with its true peak under -1 dBTP.
 
 A reroll draws one part of the track again and leaves the rest as it was: form, harmony, rack, layers, blocks,
-events, hands, sounds. In a mix the rerolls act on the track under the playhead, and "reroll the whole track" or "the
+events, moves, sounds. In a mix the rerolls act on the track under the playhead, and "reroll the whole track" or "the
 mix's plan" draw more at once (the Arrange page).
+
+== The panel | | - ==
+
+Totality shares its panel with the other generators of the family -- Phosphene, Ephemeris and Parhelion (and, in part, Noctuary) -- so that what is learned on one holds
+on the others: the same places, the same keys, the same controllers, the same hands. Each keeps its own colours, its
+own letters and the picture behind its panel (Settings > Picture behind the panel takes it away).
+
+The header's first row: the logo, the style, the key and the scale, what is composed and its length, Compose, New
+seed, Play and Mute. Its second row: the thumbs -- a verdict on what plays, for the curation --, the status line, and at the right Undo, Redo, Help and the settings.
+Under the header the whole track or set at a glance; a click jumps there. The tabs come in one order everywhere: Set,
+Arrange, the instrument's own pages -- a page of several has small tabs of its own --, Mixer, Perform, Export, Style.
+
+A colour says what a control does, the same on every page and in every generator of the family: the sources, the
+filters, the envelopes, what moves by itself, the room and the mix. A knob the composer moves has a thin ring round
+it that shows where it stands at this moment. A double click sets a control to its default; a right click offers
+MIDI learn, forgetting the controller, and the default.
+
+Undo and Redo take back and bring back what was changed -- a knob, a new seed, a reroll, a preset, a loaded set --
+one step at a time; the button's tooltip names the step. Help opens this manual by topic, with the page in front, the
+keys and the headset as topics of their own. The settings hold the update check (it asks GitHub once a day whether a
+newer Totality is out; nothing else is sent), the picture behind the panel, the headset, the window's size, full
+screen, the keys and About.
+
+    Space                 play / stop
+    Ctrl+Z                undo
+    Ctrl+Y, Ctrl+Shift+Z  redo
+    F1                    help
+    F11                   full screen (the standalone); Esc leaves it and closes the help
+    Ctrl+S, Ctrl+O        save the set, open one
+    Ctrl+E                export
+
+The controllers every generator of the family listens to without learning: controller 74 (brightness) moves the master filter, 11 (the expression pedal) the echo throw; the mod wheel is left free. The keys from middle C up toggle the mutes (Perform).
+
+The headset. The controls of a Meta Quest's hands are shown only while a headset sends them -- or always, if the
+settings say so (Headset > Always show them); Off stops listening. The Quest app sends its hands to this computer in
+bridge mode: bridge_host = this computer's address in its tot.cfg (audio=0 leaves the headset silent), and Totality
+listens on port 9103. The hands mean the same in every generator of the family, on the headset alone and here:
+
+    left pinch            play / stop
+    both hands pinched    the next track (or set)
+    right pinch           kick out / kick in
+    left hand up, down    the master filter: low pass below the middle, high pass above
+    right hand up         the echo throw
+
+A pinch acts when it opens again, so a pinch of both hands is never also one of each; a hand moves its control only
+while it does not pinch, and both glide and are centred: a hand at mid height plays what was composed.
 
 == The track and the set | compose set djfx | 0 ==
 
@@ -140,7 +186,7 @@ pages on with the playhead when it runs out of it (not when you moved the view a
 window of the Arrange page.
 
 The row of rerolls acts on the track under the playhead; each part of it is drawn from a stream of its own, so a
-reroll of the blocks keeps the harmony and the sounds, a reroll of the hands (the automation) keeps every note, and a
+reroll of the blocks keeps the harmony and the sounds, a reroll of the moves (the automation) keeps every note, and a
 reroll of the figure draws another motif for the same voice.
 
 The + and - beside the status line rate the track under the playhead. The ratings are kept in
@@ -189,6 +235,10 @@ the percussion and the ping live in; the grain cloud hears the ping and the chor
 
 == Mixer and Master | mix master motion deck | 7 ==
 
+The Mixer tab has three pages. Console: a channel strip per part -- kick, rumble, sub, the kit's lanes, the tonal
+voices, the dub -- with its level, its mute, its sound and its meter, and the output with its loudness at the end (a
+narrow window scrolls the console sideways). Buses and Master: the parameters below. Decks: the DJ mixer's channels.
+
 The meters: each deck after its mixer channel, the output, and the loudness of the last 400 ms. Each deck's track bus
 has a group high pass (the form's filter sweeps), a tilt of the highs against the lows, and the glue -- a bus
 compressor mixed in at 35 per cent -- after which the loudness correction sits. The master keeps the side under Mono
@@ -206,8 +256,10 @@ effects. In a set the composer moves them as a DJ would; in the plugin they are 
 As at a mixer. Seven mutes: a muted group's notes stop and its tails ring out -- the kick out, the classic move. The
 master filter takes the whole mix, the echo throw sends it into the mixer's tape echo. Each deck has its kills and its
 fader. Every control can be learned from a MIDI controller: click learn, move the controller (a right click forgets
-it). By default the mod wheel moves the filter and the expression pedal the throw, and the keys from middle C up (C
-to F#) toggle the mutes of kick, sub, hats, perc, ping, bass and pads. The bindings are saved with the project.
+it). By default controller 74 (brightness) moves the filter and the expression pedal (11) the throw -- the same in
+every generator of the family --, and the keys from middle C up (C to F#) toggle the mutes of kick, sub, hats, perc,
+ping, bass and pads. The bindings are saved with the project. While a headset sends its hands, a box beside the mutes
+shows what they do (The panel).
 
 The perform controls are live only: an export or tot_render plays the track as it was composed.
 
@@ -246,8 +298,10 @@ loudness the Leveler brings each track to.
 
 The whole generator runs on the headset (build-quest\TotalityQuest.apk, see Quest/README.md). The hands are the hands at
 the mixer: left pinch play and stop, right pinch kick out and in, both hands together the next track; the left hand's
-height the master filter, the right's the echo throw. Above and ahead of the player the Eclipse turns at the size of a
-room. A file tot.cfg in the app's folder sets the seed, the style, a set's length and any knob.
+height the master filter, the right's the echo throw -- the grammar of every generator's headset (The panel). Above
+and ahead of the player the Eclipse turns at the size of a room. A file tot.cfg in the app's folder sets the seed, the
+style, a set's length and any knob; bridge_host (and bridge_port, 9103) send the hands to Totality on a computer
+instead, which then plays with them as with its own; audio=0 leaves the headset silent.
 
 == The command line | | - ==
 

@@ -56,6 +56,12 @@ control only while it is **not** pinching. Height is measured against the head, 
 controls are smoothed over 0.15 s, the filter has a dead zone round the middle, and nothing ever jumps. When a track has
 ended and its rooms have rung out, the next one follows by itself.
 
+**The bridge.** With `bridge_host` set, the app sends its hands to Totality on that computer as well: OSC `/hands` with
+six floats (left and right height, left and right pinch, left and right tracked), 30 times a second, to `bridge_port`
+(9103 by default, the port in the plugin's settings under Headset). The plugin reads them with the same grammar and
+the same numbers -- every generator of the family has them (its `Plugin/Frame.h`) -- and shows its headset controls
+while they arrive. `audio=0` leaves the headset silent, so only the computer plays.
+
 The panel is head-locked (yaw only) and drawn as points: the logo, the track (or the set and its track), style and
 form, the block, key, scale and Camelot label, the kick's and the ping's preset (the composer chooses one of 1024 per
 synth for every track, as in the plugin), the time and the tempo, the level, the filter and the throw, KICK OUT
@@ -85,6 +91,9 @@ style=Hypnotic             Hypnotic, Ostgut, Dub or Raw
 quality=desktop            everything (default here: quest)
 osc_host=192.168.1.20      the score cues to a visualiser (Cue.h: /tot/beat, /tot/bar, /tot/block, /tot/op, /tot/key)
 osc_port=9000
+bridge_host=192.168.1.20   the bridge: the hands to Totality on that computer; empty = off
+bridge_port=9103                its headset port (the plugin's settings, Headset)
+audio=0                    no sound on the headset, the computer plays (the same as mute=1)
 knobs=compose.key=D;mix.hats_level=-5      any knobs, repeatable
 ```
 

@@ -377,7 +377,7 @@ const ParamDesc kSetParams[set::Count] = {
     { "blend",      "Blend",      "", 0.0f, 1.0f, 1.0f, Curve::Choice, kBlendNames },
     { "minutes",    "Set Length", "min", 0.0f, 720.0f, 0.0f, Curve::Linear },
     { "track_minutes", "Track Time", "min", 2.0f, 6.0f, 3.5f, Curve::Linear },   // Berghain 04, 06, Fabric 66: 3.0 .. 4.0 min a track
-    { "dj_hand",    "DJ Hand",    "", 0.0f, 1.0f, 0.5f, Curve::Linear },
+    { "dj_hand",    "DJ Moves",   "", 0.0f, 1.0f, 0.5f, Curve::Linear },
 };
 
 /** The performer's controls (live only). */

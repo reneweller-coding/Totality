@@ -3,6 +3,7 @@
  * @brief The live pages (EditorPerform.h).
  */
 #include "EditorPerform.h"
+#include "tot/Presets.h"
 #include <cmath>
 
 using namespace tot;
@@ -64,7 +65,7 @@ PerformPage::PerformPage(TotalityProcessor& p) : proc_(p)
         addAndMakeVisible(learn_.add(new LearnButton(proc_, id)));
     };
     bigSlider(filter_, s.id(Module::Perform, 0, perform::Filter), totui::familyColour(totui::Family::Filter));
-    filter_.setTooltip("The master filter: left a low pass, right a high pass, the middle open (the mod wheel; double click: open)");
+    filter_.setTooltip("The master filter: left a low pass, right a high pass, the middle open (controller 74; double click: open)");
     bigSlider(throw_, s.id(Module::Perform, 0, perform::Throw), totui::familyColour(totui::Family::Motion));
     throw_.setTooltip("The echo throw: the whole mix into the mixer's tape echo (the expression pedal)");
     for (int d = 0; d < kDecks; ++d) {
@@ -94,6 +95,10 @@ PerformPage::PerformPage(TotalityProcessor& p) : proc_(p)
 
 void PerformPage::timerCallback()
 {
+    // The headset's group: shown while one sends (or always, as the settings say), its hands live.
+    const bool hs = proc_.headset().shown(frame::Settings::of("Totality").headset());
+    if (hs != headset_) { headset_ = hs; resized(); }
+    if (headset_) repaint(headsetArea_);
     const ParamStore& s = proc_.store();
     for (int d = 0; d < kDecks; ++d)
         for (int b = 0; b < 3; ++b)
@@ -139,11 +144,12 @@ void PerformPage::resized()
         learn_[li++]->setBounds(strip.removeFromBottom(26).reduced(10, 3));
         strips_[d].fader.setBounds(strip.reduced(10, 0));
     }
+    headsetArea_ = headset_ ? r.withTrimmedLeft(20) : juce::Rectangle<int>();
 }
 
 void PerformPage::paint(juce::Graphics& g)
 {
-    g.fillAll(totui::colour::panel);
+
     g.setColour(totui::colour::dim);
     g.setFont(juce::FontOptions(13.0f));
     auto r = getLocalBounds().reduced(16);
@@ -158,23 +164,20 @@ void PerformPage::paint(juce::Graphics& g)
         g.drawText(juce::String("DECK ") + juce::String::charToString(static_cast<juce::juce_wchar>('A' + d)) + (d == 2 ? " (loops)" : ""),
                    b.getX(), b.getY() - 22, 200, 18, juce::Justification::left);
     }
+    if (headset_ && !headsetArea_.isEmpty())   // the headset (the frame): what the hands do, and how they stand now
+        frame::drawHeadsetBox(g, headsetArea_, totui::skin(), proc_.headset(), "kick out / in", {});
 }
 
 // ---------------------------------------------------------------------------------------------------
 
-MixerPage::MixerPage(TotalityProcessor& p)
-    : proc_(p),
-      knobs_(std::make_unique<ParamPage>(p, std::vector<std::pair<Module, int>>{ { Module::Mix, 0 }, { Module::Master, 0 }, { Module::Motion, 0 },
-                                                                                  { Module::Deck, 0 }, { Module::Deck, 1 }, { Module::Deck, 2 } }))
+DecksPage::DecksPage(TotalityProcessor& p)
+    : knobs_(std::make_unique<ParamPage>(p, std::vector<std::pair<Module, int>>{ { Module::Deck, 0 }, { Module::Deck, 1 }, { Module::Deck, 2 } }))
 {
     addAndMakeVisible(knobs_);
-    startTimerHz(20);
 }
 
-void MixerPage::timerCallback()
+void DecksPage::meter(const float* pk, const float* rms, float out, float lufs)
 {
-    float pk[kDecks], rms[kDecks], out = 0.0f, lufs = -70.0f;
-    proc_.takeMeters(pk, rms, out, lufs);
     for (int d = 0; d < kDecks; ++d) {
         peak_[d] = std::max(pk[d], peak_[d] * 0.85f);
         rms_[d] = rms[d];
@@ -186,15 +189,14 @@ void MixerPage::timerCallback()
     repaint(getLocalBounds().withWidth(220));
 }
 
-void MixerPage::resized()
+void DecksPage::resized()
 {
     knobs_.setBounds(getLocalBounds().withTrimmedLeft(220));
 }
 
-void MixerPage::paint(juce::Graphics& g)
+void DecksPage::paint(juce::Graphics& g)
 {
     using namespace totui::colour;
-    g.fillAll(panel);
     auto r = getLocalBounds().withWidth(220).reduced(12);
     g.setColour(ink);
     g.setFont(juce::FontOptions(20.0f, juce::Font::bold));
@@ -215,7 +217,7 @@ void MixerPage::paint(juce::Graphics& g)
         g.setColour(group);
         g.fillRect(m);
         const float pdb = toDb(i < kDecks ? peak_[i] : out_), rdb = i < kDecks ? toDb(rms_[i]) : pdb;
-        const juce::Colour c = i < kDecks ? totui::deckColour(i) : amber;
+        const juce::Colour c = i < kDecks ? totui::deckColour(i) : accent;
         g.setColour(c.withAlpha(0.35f));
         g.fillRect(juce::Rectangle<float>(static_cast<float>(m.getX()), yOf(pdb, m), static_cast<float>(m.getWidth()), static_cast<float>(m.getBottom()) - yOf(pdb, m)));
         if (i < kDecks) {
@@ -233,4 +235,132 @@ void MixerPage::paint(juce::Graphics& g)
         const float y = yOf(static_cast<float>(db), r.withTrimmedBottom(22));
         g.fillRect(static_cast<float>(r.getX()), y, static_cast<float>(r.getWidth()), 1.0f);
     }
+}
+
+// ---------------------------------------------------------------------------------------------------
+
+namespace {
+/** @brief A strip of the console: its name, the meter it reads, its synth, its fader, pan and sends, its mute. */
+struct StripSpec {
+    const char* name;
+    int meter;
+    Module synth;
+    const char* fader;
+    std::vector<std::pair<const char*, const char*>> knobs;   ///< key, label; "Pan" is not a send
+    int mute;                                                   ///< perform::Mute* offset from MuteKick, -1 none
+};
+} // namespace
+
+MixerPage::MixerPage(TotalityProcessor& p)
+    : proc_(p), live_([this](int id) { return proc_.playedNormalised(id); }), tabs_(totui::skin())
+{
+    actions_.learn = [this](int id) { proc_.learn(id); };
+    actions_.controllerFor = [this](int id) { return proc_.controllerFor(id); };
+    actions_.forget = [this](int id) { proc_.forget(id); };
+    actions_.reset = [this](int id) { proc_.resetToDefault(id); };
+    actions_.describe = [this](int id) { return juce::String(proc_.store().desc(id).name) + "  (" + proc_.store().key(id) + ")"; };
+    using F = totui::Family;
+    tabs_.add("Console", [this] {
+        auto console = std::make_unique<frame::Console>(totui::skin());
+        console_ = console.get();
+        ParamStore& s = proc_.store();
+        const std::vector<StripSpec> specs = {
+            { "Kick", MeterSink::Kick, Module::Kick, "kick.level", {}, 0 },
+            { "Rumble", MeterSink::Rumble, Module::Rumble, "rumble.level", {}, 0 },
+            { "Sub", MeterSink::Sub, Module::Sub, "sub.level", {}, 1 },
+            { "Hats", MeterSink::Hats, Module::Count, "mix.hats_level", { { "space.hats_send", "Room" }, { "dub.hats_send", "Echo" } }, 2 },
+            { "Perc", MeterSink::Perc, Module::Count, "mix.perc_level", { { "space.perc_send", "Room" }, { "dub.perc_send", "Echo" } }, 3 },
+            { "Ping", MeterSink::Ping, Module::Ping, "ping.level", { { "ping.pan", "Pan" }, { "space.ping_send", "Room" }, { "dub.ping_send", "Echo" }, { "cloud.ping_send", "Cloud" } }, 4 },
+            { "Bass", MeterSink::Bass, Module::Bass, "bass.level", { { "bass.pan", "Pan" }, { "bass.room_send", "Room" }, { "bass.dub_send", "Echo" } }, 5 },
+            { "303", MeterSink::Acid, Module::Acid, "acid.level", { { "acid.pan", "Pan" }, { "acid.room_send", "Room" }, { "acid.dub_send", "Echo" } }, 5 },
+            { "Chord", MeterSink::Chord, Module::Chord, "chord.level", { { "chord.dub_send", "Echo" }, { "chord.plate_send", "Plate" }, { "cloud.chord_send", "Cloud" } }, 6 },
+            { "Drone", MeterSink::Drone, Module::Drone, "drone.level", { { "drone.room_send", "Room" }, { "drone.plate_send", "Plate" } }, 6 },
+            { "Texture", MeterSink::Texture, Module::Texture, "texture.level", {}, -1 },
+            { "Room", MeterSink::Room, Module::Count, "space.level", {}, -1 },
+            { "Dub", MeterSink::Dub, Module::Count, "dub.echo_return", { { "dub.plate_return", "Plate" } }, -1 },
+            { "Cloud", MeterSink::Cloud, Module::Count, "cloud.level", { { "cloud.plate_send", "Plate" } }, -1 },
+        };
+        auto control = [&](const char* key, const juce::String& label, bool send) {
+            frame::ChannelStrip::Control c;
+            c.id = s.find(key);
+            c.param = c.id >= 0 ? proc_.parameter(c.id) : nullptr;
+            c.label = label;
+            c.send = send;
+            return c;
+        };
+        sounds_.clear();
+        for (const StripSpec& sp : specs) {
+            std::vector<frame::ChannelStrip::Control> knobs;
+            for (const auto& [key, label] : sp.knobs) knobs.push_back(control(key, label, juce::String(label) != "Pan"));
+            const F family = sp.meter >= MeterSink::Room ? F::Space : sp.meter <= MeterSink::Perc ? F::Source : sp.meter <= MeterSink::Acid ? F::Filter : F::Envelope;
+            auto& strip = console->add(std::make_unique<frame::ChannelStrip>(totui::skin(), sp.name, totui::familyColour(family),
+                                                                              control(sp.fader, juce::String(sp.name) + " level", false), knobs, &actions_, &live_));
+            sounds_.emplace_back(sp.meter, sp.synth);
+            if (sp.mute >= 0) {
+                auto* m = mutes_.add(new juce::TextButton("M"));
+                m->setClickingTogglesState(true);
+                m->setColour(juce::TextButton::buttonOnColourId, totui::colour::onset.withAlpha(0.6f));
+                m->setTooltip("Mute the group (as on the Perform page)");
+                m->setWantsKeyboardFocus(false);
+                muteLinks_.push_back(std::make_unique<juce::ButtonParameterAttachment>(*proc_.parameter(s.id(Module::Perform, 0, perform::MuteKick + sp.mute)), *m));
+                strip.setHeadButton(m);
+            }
+        }
+        // The output: the master's level, and the meter of what leaves.
+        console->add(std::make_unique<frame::ChannelStrip>(totui::skin(), "Out", totui::colour::accent, control("master.level", "Master level", false),
+                                                           std::vector<frame::ChannelStrip::Control>{}, &actions_, &live_));
+        return std::unique_ptr<juce::Component>(std::move(console));
+    });
+    tabs_.add("Buses and Master", [this] {
+        return std::unique_ptr<juce::Component>(std::make_unique<ScrollingPage>(
+            std::make_unique<ParamPage>(proc_, std::vector<std::pair<Module, int>>{ { Module::Mix, 0 }, { Module::Master, 0 }, { Module::Motion, 0 } })));
+    });
+    tabs_.add("Decks", [this] {
+        auto d = std::make_unique<DecksPage>(proc_);
+        decks_ = d.get();
+        return std::unique_ptr<juce::Component>(std::move(d));
+    });
+    addAndMakeVisible(tabs_);
+    startTimerHz(30);
+}
+
+void MixerPage::timerCallback()
+{
+    if (!isShowing()) return;
+    const double now = juce::Time::getMillisecondCounterHiRes() * 0.001;
+    const double dt = lastPoll_ > 0.0 ? juce::jlimit(0.0, 0.5, now - lastPoll_) : 1.0 / 30.0;
+    lastPoll_ = now;
+    float pk[kDecks], rms[kDecks], out = 0.0f, lufs = -70.0f;
+    proc_.takeMeters(pk, rms, out, lufs);
+    float spk[MeterSink::kStrips], srms[MeterSink::kStrips];
+    proc_.takeStripMeters(spk, srms);
+    if (decks_ != nullptr && decks_->isShowing()) decks_->meter(pk, rms, out, lufs);
+    lufs_ = lufs;
+    if (console_ != nullptr && console_->isShowing()) {
+        for (int i = 0; i < console_->size() && i < static_cast<int>(sounds_.size()); ++i)
+            console_->strip(i).meter(spk[sounds_[static_cast<size_t>(i)].first], srms[sounds_[static_cast<size_t>(i)].first], dt);
+        if (console_->size() > static_cast<int>(sounds_.size())) console_->strip(console_->size() - 1).meter(out, out * 0.7071f, dt);
+        // Now and then: the sound each synth's strip plays.
+        if (++tick_ % 15 == 0)
+            for (size_t i = 0; i < sounds_.size(); ++i) {
+                const Module m = sounds_[i].second;
+                juce::String name;
+                if (m != Module::Count)
+                    if (const int index = proc_.composedPreset(m, 0); index >= 0) name = factoryPresets(m)[static_cast<size_t>(index)].name;
+                console_->strip(static_cast<int>(i)).setSound(name);
+            }
+        repaint(getLocalBounds().removeFromTop(36));
+    }
+}
+
+void MixerPage::resized() { tabs_.setBounds(getLocalBounds()); }
+
+void MixerPage::paint(juce::Graphics& g)
+{
+    // The loudness at the console's top right.
+    if (tabs_.current() != 0) return;
+    g.setColour(totui::colour::ink);
+    g.setFont(juce::FontOptions(15.0f, juce::Font::bold));
+    g.drawText(lufs_ > -69.0f ? juce::String(lufs_, 1) + " LUFS" : juce::String("-- LUFS"), getLocalBounds().removeFromTop(36).reduced(14, 0),
+               juce::Justification::centredRight);
 }

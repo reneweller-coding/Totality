@@ -571,6 +571,29 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
         drumR_[k] = dr;
     }
     TOT_PROF_END(Buses);
+    // The mixer page's meters, while it looks: the sources after their levels and corrections, the drums by bus.
+    float meterPk[MeterSink::kStrips] = {};
+    double meterSs[MeterSink::kStrips] = {};
+    const auto measure = [&](int strip, float l, float r) {
+        meterPk[strip] = std::max(meterPk[strip], std::max(std::fabs(l), std::fabs(r)));
+        meterSs[strip] += 0.5 * (static_cast<double>(l) * l + static_cast<double>(r) * r);
+    };
+    if (meter_ != nullptr) {
+        for (int i = 0; i < n; ++i) {
+            const size_t k = static_cast<size_t>(i);
+            measure(MeterSink::Kick, kickBuf_[k], kickBuf_[k]);
+            measure(MeterSink::Rumble, rumbleBuf_[k], rumbleBuf_[k]);
+            measure(MeterSink::Sub, subBuf_[k], subBuf_[k]);
+            measure(MeterSink::Hats, busH[0][i], busH[1][i]);
+            measure(MeterSink::Perc, busP[0][i], busP[1][i]);
+            measure(MeterSink::Ping, pingL_[k], pingR_[k]);
+            measure(MeterSink::Bass, bassL_[k], bassR_[k]);
+            measure(MeterSink::Acid, acidL_[k], acidR_[k]);
+            measure(MeterSink::Chord, chordL_[k], chordR_[k]);
+            measure(MeterSink::Drone, droneL_[k], droneR_[k]);
+            measure(MeterSink::Texture, texL_[k], texR_[k]);
+        }
+    }
     TOT_PROF_BEGIN(Cloud);
     // The cloud hears the ping and the chord; half of it goes into the plate.
     for (int i = 0; i < n; ++i) {
@@ -592,6 +615,16 @@ void Deck::render(int64_t sample, float* L, float* R, int n, float* const* stemL
     TOT_PROF_END(Cloud);
     { TOT_PROF(Room); room_.process(roomInL_.data(), roomInR_.data(), roomL_.data(), roomR_.data(), n); }
     { TOT_PROF(Dub); dub_.process(echoInL_.data(), echoInR_.data(), plateInL_.data(), plateInR_.data(), dubL_.data(), dubR_.data(), n); }
+    if (meter_ != nullptr) {   // the returns
+        const float gRoom = roomReturn_ * balGain_[static_cast<int>(BalPart::Room)];
+        for (int i = 0; i < n; ++i) {
+            const size_t k = static_cast<size_t>(i);
+            measure(MeterSink::Room, roomL_[k] * gRoom, roomR_[k] * gRoom);
+            measure(MeterSink::Dub, dubL_[k], dubR_[k]);
+            measure(MeterSink::Cloud, cloudL_[k], cloudR_[k]);
+        }
+        meter_->add(meterPk, meterSs, 0, MeterSink::kStrips);
+    }
     if (stems) {
         // The parts of the pads and of the returns, before their ducks.
         for (int i = 0; i < n; ++i) {

@@ -21,7 +21,7 @@ juce::Colour partColour(Part p)
     case Part::Bass: return totui::familyColour(Family::Filter);
     case Part::Acid: return totui::colour::onset;
     case Part::Chord: case Part::Drone: case Part::Texture: return totui::familyColour(Family::Envelope);
-    default: return totui::colour::amber;
+    default: return totui::colour::accent;
     }
 }
 
@@ -108,7 +108,7 @@ void EclipsePage::paint(juce::Graphics& g)
         if (d >= 0.0f && d < 0.12f) kickGlow = std::max(kickGlow, 1.0f - d / 0.12f);
     }
     const float coronaR = disc * (1.9f + 0.35f * kickGlow);
-    g.setGradientFill(juce::ColourGradient(amber.withAlpha(0.55f + 0.35f * kickGlow), c.x, c.y, amber.withAlpha(0.0f), c.x + coronaR, c.y, true));
+    g.setGradientFill(juce::ColourGradient(accent.withAlpha(0.55f + 0.35f * kickGlow), c.x, c.y, accent.withAlpha(0.0f), c.x + coronaR, c.y, true));
     g.fillEllipse(c.x - coronaR, c.y - coronaR, 2.0f * coronaR, 2.0f * coronaR);
     for (int s = 0; s < 16; ++s) {
         if (count[s] < 3) continue;
@@ -118,7 +118,7 @@ void EclipsePage::paint(juce::Graphics& g)
         const float w = 0.07f;
         ray.addPieSegment(c.x - outer, c.y - outer, 2.0f * outer, 2.0f * outer, a + juce::MathConstants<float>::halfPi - w,
                           a + juce::MathConstants<float>::halfPi + w, disc / outer);
-        g.setColour(amber.withAlpha(0.10f * lit));
+        g.setColour(accent.withAlpha(0.10f * lit));
         g.fillPath(ray);
     }
     // The rings and their beads.
