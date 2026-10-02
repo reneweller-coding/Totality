@@ -44,6 +44,7 @@ jobs:
           codesign --force --deep -s - "$out/Totality.app"
           codesign --force --deep -s - "$out/Totality.vst3"
           cp LICENSE "$out/LICENSE.txt"
+          if [ -f docs/manual/Totality-Manual.pdf ]; then cp docs/manual/Totality-Manual.pdf "$out/"; fi
           cat > "$out/README-macOS.txt" <<'EOF'
           Totality for macOS (Apple Silicon)
 
