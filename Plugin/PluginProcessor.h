@@ -318,6 +318,15 @@ private:
     std::vector<float> tapBuf_;                      ///< kDecks x 2 x block (prepareToPlay)
     std::array<float*, tot::kDecks> tapL_{};   ///< per deck: its tap's left channel in tapBuf_
     std::array<float*, tot::kDecks> tapR_{};   ///< per deck: its tap's right channel in tapBuf_
+    // The stems as outputs of their own (02.10.2026): a stereo bus per stem (Engine::stemName) besides the main output,
+    // off until the host switches one on; then the engine writes every stem (Engine::setStems) and each bus that is on
+    // gets its own. Pre-master, as the export's stems: they sum to the mix before the master.
+    std::vector<float> stemBuf_;                                ///< kStems x 2 x block (prepareToPlay)
+    std::array<float*, tot::Engine::kStems> stemL_{};       ///< per stem: its left channel in stemBuf_
+    std::array<float*, tot::Engine::kStems> stemR_{};       ///< per stem: its right channel in stemBuf_
+    bool stemsOn_ = false;                                      ///< audio thread: the engine writes the stems now
+    /** @brief The buses: the main stereo output, then one stereo output per stem, those off by default. */
+    static BusesProperties busLayout();
     std::array<std::atomic<float>, tot::kDecks> meterPeak_{};   ///< audio thread raises, the editor takes (exchange 0)
     std::array<std::atomic<double>, tot::kDecks> meterSum_{};   ///< sums of squares since the editor last took them
     std::atomic<int> meterCount_{ 0 };               ///< samples in those sums
