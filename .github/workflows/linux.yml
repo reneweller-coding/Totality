@@ -63,7 +63,9 @@ jobs:
           mkdir -p "$out"
           cp "$app" "$cli" "$out/"
           cp -R "$vst" "$lv2" "$out/"
-          strip "$out/Totality" "$out/tot_render" "$out/Totality.vst3/Contents/x86_64-linux/Totality.so" "$out/Totality.lv2/Totality.so"
+          strip "$out/Totality" "$out/tot_render" "$out/Totality.vst3/Contents/x86_64-linux/Totality.so"
+          find "$out/Totality.lv2" -name "*.so" -exec strip {} +
+          ls "$out/Totality.lv2"
           cp LICENSE "$out/LICENSE.txt"
           if [ -f docs/manual/Totality-Manual.pdf ]; then cp docs/manual/Totality-Manual.pdf "$out/"; fi
           cat > "$out/README-Linux.txt" <<'EOF'
