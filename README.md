@@ -16,21 +16,21 @@ Quest**. Licence: AGPL-3.0.
 
 ## Download
 
-**[Totality-1.2.0-Setup.exe](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-Setup.exe)**
+**[Totality-1.3.0-Setup.exe](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/Totality-1.3.0-Setup.exe)**
 installs the standalone, the VST3, the offline renderer and the manual. Nothing else has to be installed: the runtime
 is linked in. There is a
-**[portable zip](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-portable.zip)**
+**[portable zip](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/Totality-1.3.0-portable.zip)**
 for anyone who would rather not run an installer, the
-**[Quest app](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/TotalityQuest-1.2.0.apk)**
+**[Quest app](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/TotalityQuest-1.3.0.apk)**
 (installed with `adb install -r`, developer mode; not yet run on a headset), and the
-**[manual](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-Manual.pdf)** -- every
+**[manual](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/Totality-Manual.pdf)** -- every
 page of the panel as a picture and what each control does.
 
-**[macOS zip](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-macOS.zip)** for Apple Silicon (macOS 12 or newer): the standalone,
+**[macOS zip](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/Totality-1.3.0-macOS.zip)** for Apple Silicon (macOS 12 or newer): the standalone,
 the VST3 and the Audio Unit, built on GitHub's runners and attached to the release within the hour after it; signed ad hoc,
 not notarized (README-macOS.txt inside says how to open it), and not yet tried on a real Mac.
 
-**[Linux archive](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-linux-x86_64.tar.gz)** for x86-64 (glibc 2.35 or newer: Ubuntu 22.04, Debian 12,
+**[Linux archive](https://github.com/reneweller-coding/Totality/releases/download/v1.3.0/Totality-1.3.0-linux-x86_64.tar.gz)** for x86-64 (glibc 2.35 or newer: Ubuntu 22.04, Debian 12,
 Fedora 36 and later): the standalone, the VST3, the LV2 and the renderer, built and tested on GitHub's Ubuntu runners
 and tried under WSL; README-Linux.txt inside says where everything goes.
 
