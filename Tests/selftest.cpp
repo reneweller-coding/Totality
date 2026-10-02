@@ -13,6 +13,7 @@
 #include "tot/Leveler.h"
 #include "tot/Loudness.h"
 #include "tot/Midi.h"
+#include "tot/NoteTap.h"
 #include "tot/Params.h"
 #include "tot/Presets.h"
 #include "tot/Score.h"
@@ -2054,6 +2055,49 @@ void testKeyboard()
           fmt("%.6g against %.6g", offline, plainOffline));
 }
 
+/** MIDI out (02.10.2026, NoteTap.h): in live play every deck writes the composer notes it plays into the tap, each on its
+ *  sample inside the block; a muted group's notes are not written, and with the composer off nothing is. */
+void testNoteTap()
+{
+    section("MIDI out (note tap)");
+    auto p = std::make_unique<ParamStore>();
+    const Score score = composeTrack(*p, 9);
+    struct Count { int ons = 0, kicks = 0, offs = 0; bool inBlock = true; };
+    auto run = [&](const char* knobs) {
+        auto e = std::make_unique<Engine>();
+        e->params().parseText(knobs);
+        e->setLive(true);
+        e->prepare(48000.0, 256);
+        e->load(score);
+        e->seek(128.0);
+        auto tap = std::make_unique<NoteTap>();
+        e->setNoteTap(tap.get());
+        std::vector<float> L(256), R(256);
+        Count c;
+        for (int b = 0; b < 48000 * 8 / 256; ++b) {
+            tap->clear();
+            const int64_t s0 = e->samplePosition();
+            e->process(L.data(), R.data(), 256);
+            for (int i = 0; i < tap->count; ++i) {
+                const NoteTap::Note& nt = tap->notes[i];
+                if (nt.sample < s0 || nt.sample >= s0 + 256) c.inBlock = false;
+                if (nt.velocity == 0) { ++c.offs; continue; }
+                ++c.ons;
+                if (nt.part == static_cast<uint8_t>(Part::Kick)) ++c.kicks;
+            }
+        }
+        return c;
+    };
+    const Count all = run("");
+    const Count noKick = run("perform.mute_kick=1");
+    const Count off = run("perform.composer=0");
+    check(all.kicks >= 8 && all.ons > all.kicks, "the composer's notes are tapped, the kick among them",
+          fmt("%d notes, %d kicks, %d offs", all.ons, all.kicks, all.offs));
+    check(all.inBlock && noKick.inBlock, "every tapped note lies in the block it was played in");
+    check(noKick.kicks == 0 && noKick.ons > 0, "a muted group's notes are not tapped", fmt("%d kicks of %d", noKick.kicks, noKick.ons));
+    check(off.ons == 0, "the composer off: nothing tapped", fmt("%d notes", off.ons));
+}
+
 /** The factory presets (Presets.h): 1024 per engine, every name unique in its engine, every value in its knob's range, the
  *  mix and the pitch left alone, the same presets every time; the composer's choice follows the style and a lane's role. */
 void testPresets()
@@ -2277,6 +2321,7 @@ const TestSection kSections[] = {
     { "testStems", testStems },
     { "testPerform", testPerform },
     { "testKeyboard", testKeyboard },
+    { "testNoteTap", testNoteTap },
     { "testPresets", testPresets },
     { "testKnobs", testKnobs },
 };

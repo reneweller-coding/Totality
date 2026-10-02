@@ -69,6 +69,10 @@ public:
     const Score& score() const { return decks_[0].score(); }
     /** @brief Current position in seconds. */
     double seconds() const { return static_cast<double>(sample_) / sampleRate_; }
+    /** @brief Current position in samples (the clock of NoteTap's notes). */
+    int64_t samplePosition() const { return sample_; }
+    /** @brief Every deck writes the composer notes it plays into @p tap from now on (null: stops; MIDI out, 02.10.2026). */
+    void setNoteTap(NoteTap* tap) { for (Deck& d : decks_) d.setNoteTap(tap); }
     /** @brief Current position in beats. */
     double beat() const { return tempo_.beatAt(seconds()); }
     /** @brief Length of the track or set in seconds. */

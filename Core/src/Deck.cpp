@@ -399,6 +399,9 @@ void Deck::dispatch(const Ev& e)
 {
     const Part part = static_cast<Part>(e.part);
     if (e.on != 0 && !liveEvent_ && silenced(part)) return;   // the keyboard's or nobody's (01.10.2026)
+    // MIDI out (02.10.2026): the composer's notes as they are played -- a muted group's note-ons are not, offs always.
+    if (noteTap_ != nullptr && !liveEvent_ && (e.on == 0 || muteOf(part) < 0 || !muted(muteOf(part))))
+        noteTap_->add(e.sample, e.part, e.pitch, e.velocity, e.on != 0, isOneShot(part));
     switch (part) {
     case Part::Kick: {
         if (muted(perform::MuteKick)) return;
@@ -740,6 +743,24 @@ int Deck::targetOf(Part part)
     case Part::Chord: return perform::keys::Chord;
     case Part::Drone: return perform::keys::Drone;
     default: return laneOf(part) >= 0 ? perform::keys::Kit : perform::keys::Off;
+    }
+}
+
+int Deck::muteOf(Part part) const
+{
+    switch (part) {
+    case Part::Kick: return perform::MuteKick;
+    case Part::Sub: return perform::MuteSub;
+    case Part::Bass:
+    case Part::Acid: return perform::MuteBass;
+    case Part::Chord:
+    case Part::Drone:
+    case Part::Texture: return perform::MutePads;
+    case Part::Ping: return perform::MutePing;
+    default: {
+        const int lane = laneOf(part);
+        return lane < 0 ? -1 : laneIsHat_[lane] ? perform::MuteHats : perform::MutePerc;
+    }
     }
 }
 

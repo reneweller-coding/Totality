@@ -34,6 +34,7 @@
 #pragma once
 #include "tot/Oversample.h"
 #include "tot/Params.h"
+#include "tot/NoteTap.h"
 #include "tot/Score.h"
 #include "tot/fx/Cloud.h"
 #include "tot/fx/Dub.h"
@@ -121,6 +122,8 @@ public:
     void liveNote(int64_t sample, int target, int pitch, float velocity, bool on);
     /** @brief Releases every played key (a stop, another keyboard target), and forgets which parts were played. */
     void liveAllOff();
+    /** @brief From now on every composer note it plays is also written to @p tap (null: stops; NoteTap.h, MIDI out). */
+    void setNoteTap(NoteTap* tap) { noteTap_ = tap; }
     /** @brief Where the engine keeps what it wrote on the knobs (Engine.h; NaN: never), read by played(). */
     void setShown(const float* shown) { shown_ = shown; }
     /** @brief The beat of the knob settings this deck plays from (Score::knobs), -1 before any. */
@@ -214,6 +217,9 @@ private:
     bool composerOff_ = false;       ///< perform.composer off: no generated note at all
     uint32_t keyPlayed_ = 0;         ///< by channel: the targets played since the last liveAllOff (bit = target)
     bool liveEvent_ = false;         ///< dispatch() plays a key now: no mute, no silencing
+    NoteTap* noteTap_ = nullptr;     ///< where the composer's played notes go for MIDI out (setNoteTap), or null
+    /** @brief The perform mute (perform::MuteKick ..) that silences @p part's notes, -1 for none. */
+    int muteOf(Part part) const;
     int liveHeld_[perform::keys::Count] = {};   ///< a mono target's sounding key + 1 (0 none)
     uint8_t liveChord_[128] = {};    ///< the chord's keys that sound (1) -- released by liveAllOff
     /** @brief Whether the composer's note-ons of @p part are left out (the composer off, or the keyboard replaces it). */

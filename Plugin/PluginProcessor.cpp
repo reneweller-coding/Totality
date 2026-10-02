@@ -465,6 +465,7 @@ void TotalityProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
         tapR_[static_cast<size_t>(d)] = tapBuf_.data() + static_cast<size_t>((2 * d + 1) * blockSize_);
     }
     engine_.setDeckTaps(tapL_.data(), tapR_.data());
+    engine_.setNoteTap(&noteTap_);   // MIDI out (02.10.2026)
     // The K-weighting of BS.1770 at this rate (the pre-filter's shelf and the RLB high pass, as pyloudnorm designs them).
     {
         const double fs = sampleRate;
@@ -532,11 +533,17 @@ void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
         keyboardSeen_ = target;
     }
     if (!play || buffer.getNumChannels() < 2 || n > blockSize_) {
+        silenceMidi(midi);
         buffer.clear();
         return;
     }
     const double before = engine_.beat();
+    const int64_t start = engine_.samplePosition();
+    if (start != midiExpect_) silenceMidi(midi);   // a jump: whatever sounded is released
+    noteTap_.clear();
     engine_.process(buffer.getWritePointer(0), buffer.getWritePointer(1), n);
+    emitMidi(midi, start, n);
+    midiExpect_ = engine_.samplePosition();
     stripSamples_.fetch_add(n, std::memory_order_relaxed);
     position_ = engine_.beat();
     if (cues_.running()) {
@@ -584,6 +591,44 @@ void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
     if (mute_.load(std::memory_order_relaxed)) buffer.clear();   // after the meters and the recording
     // The standalone stops at the end, with the rooms rung out.
     if (wrapperType == wrapperType_Standalone && engine_.seconds() > engine_.lengthSeconds() + 8.0) playing_ = false;
+}
+
+void TotalityProcessor::silenceMidi(juce::MidiBuffer& midi)
+{
+    pendingOffs_ = 0;
+    midiExpect_ = -1;
+    if (!midiSounding_) return;
+    midiSounding_ = false;
+    for (int ch = 1; ch <= 16; ++ch) midi.addEvent(juce::MidiMessage::allNotesOff(ch), 0);
+}
+
+void TotalityProcessor::emitMidi(juce::MidiBuffer& midi, int64_t start, int n)
+{
+    const int64_t end = start + n;
+    auto at = [&](int64_t s) { return static_cast<int>(std::clamp<int64_t>(s - start, 0, n - 1)); };
+    // The one-shots' offs that are due (an off and an on at one sample: the off first).
+    for (int i = 0; i < pendingOffs_;) {
+        const PendingOff& p = pendingOff_[static_cast<size_t>(i)];
+        if (p.sample < end) {
+            midi.addEvent(juce::MidiMessage::noteOff(p.channel, p.pitch), at(p.sample));
+            pendingOff_[static_cast<size_t>(i)] = pendingOff_[static_cast<size_t>(--pendingOffs_)];
+        } else {
+            ++i;
+        }
+    }
+    const int64_t hold = std::max<int64_t>(1, static_cast<int64_t>(sampleRate_ * 0.05));
+    for (int i = 0; i < noteTap_.count; ++i) {
+        const tot::NoteTap::Note& nt = noteTap_.notes[i];
+        const int channel = tot::midiChannelOf(static_cast<tot::Part>(nt.part)) + 1;
+        if (nt.velocity == 0) {
+            midi.addEvent(juce::MidiMessage::noteOff(channel, nt.pitch), at(nt.sample));
+            continue;
+        }
+        midi.addEvent(juce::MidiMessage::noteOn(channel, nt.pitch, static_cast<juce::uint8>(nt.velocity)), at(nt.sample));
+        midiSounding_ = true;
+        if (nt.oneShot && pendingOffs_ < static_cast<int>(pendingOff_.size()))
+            pendingOff_[static_cast<size_t>(pendingOffs_++)] = PendingOff{ nt.sample + hold, static_cast<uint8_t>(channel), nt.pitch };
+    }
 }
 
 bool TotalityProcessor::saveSet(const juce::File& file)
