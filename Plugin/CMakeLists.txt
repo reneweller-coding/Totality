@@ -16,7 +16,7 @@ juce_add_plugin(Totality
     PRODUCT_NAME                "Totality"
     ICON_BIG                    "${CMAKE_SOURCE_DIR}/Deploy/totality.png")
 target_sources(Totality PRIVATE PluginProcessor.cpp PluginEditor.cpp EditorTheme.cpp EditorEclipse.cpp EditorPerform.cpp
-                             EditorStyle.cpp UpdateCheck.cpp Frame.cpp)
+                             EditorStyle.cpp UpdateCheck.cpp Frame.cpp LinkClock.cpp)
 # The frame's pieces (01.10.2026): the picture behind the panel and the manual's prose for the help (F1).
 juce_add_binary_data(TotalityData
     HEADER_NAME TotalityData.h
@@ -42,3 +42,5 @@ target_link_libraries(Totality
 # Into bin/<preset> after every build (cmake/Family.cmake, 01.10.2026): the standalone and the VST3 bundle.
 family_bin(Totality_Standalone)
 family_bin(Totality_VST3 VST3)
+
+family_link(Totality)   # Ableton Link in the standalone (cmake/Family.cmake, 02.10.2026)

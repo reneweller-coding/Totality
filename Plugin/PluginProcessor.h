@@ -46,6 +46,7 @@
 #include "tot/compose/Composer.h"
 #include "tot/compose/Set.h"
 #include "Frame.h"
+#include "LinkClock.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <array>
@@ -131,6 +132,8 @@ public:
     // Transport (the standalone's; a host drives its own).
     void setPlaying(bool on) { playing_ = on; }      ///< play or stop (the standalone's transport)
     bool isPlaying() const { return playing_.load(); }   ///< whether the standalone plays
+    /** @brief The standalone's Ableton Link, as the settings menu says it: off, alone, or how many apps are with it. */
+    juce::String linkStatus() const;
     /** @brief Jumps to @p beat at the next block (the display goes there at once, also while nothing plays). */
     void seekTo(double beat) { seekRequest_ = beat; position_ = beat; }
     double positionBeats() const { return position_.load(); }   ///< where the audio thread is, in beats
@@ -349,6 +352,12 @@ private:
     bool forceMute_ = false;                         ///< muteForced()
     std::atomic<double> hostBpm_{ 0.0 };             ///< the host's tempo as the audio thread last saw it, 0 outside a host
     std::atomic<double> playedBpm_{ 0.0 };           ///< the tempo the engine's score was loaded with, 0 as composed
+    // Ableton Link in the standalone (02.10.2026, LinkClock.h; Settings > Ableton Link).
+    frame::LinkClock link_;                          ///< the session (joined on the timer when the setting is on)
+    std::atomic<bool> linkFollowing_{ false };       ///< other apps are in the session: it rules tempo and phase as a host does
+    bool linkPlayed_ = false;                        ///< audio thread: the transport last told to or taken from the session
+    /** @brief Whether a clock outside rules the tempo: a host's playhead, or a Link session with other apps in it. */
+    bool followsClock() const { return wrapperType != wrapperType_Standalone || linkFollowing_.load(std::memory_order_relaxed); }
     uint32_t toldSounds_ = 0;                        ///< the engine's soundsVersion() the host was last told of
     frame::UndoHistory history_;                     ///< undo and redo (message thread)
     bool restoring_ = false;                         ///< an undo or the headset moves knobs: no step of their own
