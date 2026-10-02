@@ -401,7 +401,8 @@ void Deck::dispatch(const Ev& e)
     if (e.on != 0 && !liveEvent_ && silenced(part)) return;   // the keyboard's or nobody's (01.10.2026)
     // MIDI out (02.10.2026): the composer's notes as they are played -- a muted group's note-ons are not, offs always.
     if (noteTap_ != nullptr && !liveEvent_ && (e.on == 0 || muteOf(part) < 0 || !muted(muteOf(part))))
-        noteTap_->add(e.sample, e.part, e.pitch, e.velocity, e.on != 0, isOneShot(part));
+        noteTap_->add(e.sample, e.part, e.pitch, e.velocity, e.on != 0,
+                      isOneShot(part) ? e.sample + static_cast<int64_t>(sampleRate_ * 0.05) : -1);
     switch (part) {
     case Part::Kick: {
         if (muted(perform::MuteKick)) return;

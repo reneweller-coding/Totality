@@ -261,7 +261,7 @@ private:
     int keyboardSeen_ = 0;   ///< the keyboard target of the last block (audio thread): a change releases every key
     // MIDI out (02.10.2026): the composer's notes as the decks play them, on the channels of the MIDI export (Midi.h).
     tot::NoteTap noteTap_;   ///< what the decks played in the last process() call (audio thread)
-    /** @brief A note-off due later: a one-shot (the kick, the kit, the ping) gets its own 50 ms after the on. */
+    /** @brief A note-off due later, for a note whose part has none of its own (NoteTap::Note::offSample). */
     struct PendingOff {
         int64_t sample;    ///< when, on the engine's sample counter
         uint8_t channel;   ///< MIDI channel, 1..16

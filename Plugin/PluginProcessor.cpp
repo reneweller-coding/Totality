@@ -616,7 +616,6 @@ void TotalityProcessor::emitMidi(juce::MidiBuffer& midi, int64_t start, int n)
             ++i;
         }
     }
-    const int64_t hold = std::max<int64_t>(1, static_cast<int64_t>(sampleRate_ * 0.05));
     for (int i = 0; i < noteTap_.count; ++i) {
         const tot::NoteTap::Note& nt = noteTap_.notes[i];
         const int channel = tot::midiChannelOf(static_cast<tot::Part>(nt.part)) + 1;
@@ -626,8 +625,8 @@ void TotalityProcessor::emitMidi(juce::MidiBuffer& midi, int64_t start, int n)
         }
         midi.addEvent(juce::MidiMessage::noteOn(channel, nt.pitch, static_cast<juce::uint8>(nt.velocity)), at(nt.sample));
         midiSounding_ = true;
-        if (nt.oneShot && pendingOffs_ < static_cast<int>(pendingOff_.size()))
-            pendingOff_[static_cast<size_t>(pendingOffs_++)] = PendingOff{ nt.sample + hold, static_cast<uint8_t>(channel), nt.pitch };
+        if (nt.offSample >= 0 && pendingOffs_ < static_cast<int>(pendingOff_.size()))
+            pendingOff_[static_cast<size_t>(pendingOffs_++)] = PendingOff{ std::max(nt.offSample, nt.sample + 1), static_cast<uint8_t>(channel), nt.pitch };
     }
 }
 
