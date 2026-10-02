@@ -1,0 +1,88 @@
+{
+ "render": "tot_render",
+ "mix_tol": 1.0,
+ "stem_tol": 3.0,
+ "quiet": -40.0,
+ "cases": {
+  "dub": {
+   "mix": -12.32,
+   "stems": {
+    "acid": null,
+    "bass": null,
+    "chord": -16.05,
+    "cloud": null,
+    "djfx": null,
+    "drone": -11.13,
+    "dub": -20.5,
+    "hats": -22.31,
+    "kick": -2.28,
+    "perc": -20.04,
+    "ping": null,
+    "room": -21.53,
+    "rumble": -7.57,
+    "sub": null,
+    "texture": -33.39
+   }
+  },
+  "hypnotic": {
+   "mix": -11.41,
+   "stems": {
+    "acid": null,
+    "bass": null,
+    "chord": null,
+    "cloud": null,
+    "djfx": null,
+    "drone": null,
+    "dub": -32.28,
+    "hats": -15.78,
+    "kick": -2.98,
+    "perc": -15.33,
+    "ping": -10.89,
+    "room": -5.93,
+    "rumble": -13.69,
+    "sub": null,
+    "texture": -29.02
+   }
+  },
+  "ostgut": {
+   "mix": -10.47,
+   "stems": {
+    "acid": null,
+    "bass": null,
+    "chord": null,
+    "cloud": -18.05,
+    "djfx": null,
+    "drone": null,
+    "dub": -32.49,
+    "hats": -16.12,
+    "kick": -1.5,
+    "perc": -6.34,
+    "ping": -15.28,
+    "room": -9.98,
+    "rumble": -10.24,
+    "sub": null,
+    "texture": null
+   }
+  },
+  "rawpeak": {
+   "mix": -10.42,
+   "stems": {
+    "acid": null,
+    "bass": -14.69,
+    "chord": null,
+    "cloud": null,
+    "djfx": null,
+    "drone": null,
+    "dub": -33.88,
+    "hats": -20.92,
+    "kick": -3.88,
+    "perc": -17.03,
+    "ping": null,
+    "room": -9.04,
+    "rumble": -18.34,
+    "sub": -5.54,
+    "texture": null
+   }
+  }
+ }
+}
