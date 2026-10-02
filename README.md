@@ -7,7 +7,7 @@ synthesised while they play -- a kick that hands its phase to the rumble under i
 bass and a 303 through circuit-modelled filters, the dub chord in its echoes and springs, and a DJ who mixes the
 tracks into one long recomposition. Everything is synthesised; nothing is played back from a recording.
 
-**VST3 plugin and standalone application** for Windows (x64), a command-line renderer, and a native app for **Meta
+**VST3 plugin and standalone application** for Windows (x64) and macOS (Apple Silicon), a command-line renderer, and a native app for **Meta
 Quest**. Licence: AGPL-3.0.
 
 <br clear="left" />
@@ -16,18 +16,31 @@ Quest**. Licence: AGPL-3.0.
 
 ## Download
 
-**[Totality-1.1.0-Setup.exe](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-1.1.0-Setup.exe)**
+**[Totality-1.2.0-Setup.exe](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-Setup.exe)**
 installs the standalone, the VST3, the offline renderer and the manual. Nothing else has to be installed: the runtime
 is linked in. There is a
-**[portable zip](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-1.1.0-portable.zip)**
+**[portable zip](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-portable.zip)**
 for anyone who would rather not run an installer, the
-**[Quest app](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/TotalityQuest-1.1.0.apk)**
+**[Quest app](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/TotalityQuest-1.2.0.apk)**
 (installed with `adb install -r`, developer mode; not yet run on a headset), and the
-**[manual](https://github.com/reneweller-coding/Totality/releases/download/v1.1.0/Totality-Manual.pdf)** -- every
+**[manual](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-Manual.pdf)** -- every
 page of the panel as a picture and what each control does.
+
+**[macOS zip](https://github.com/reneweller-coding/Totality/releases/download/v1.2.0/Totality-1.2.0-macOS.zip)** for Apple Silicon (macOS 12 or newer): the standalone and
+the VST3, built on GitHub's runners and attached to the release within the hour after it; signed ad hoc,
+not notarized (README-macOS.txt inside says how to open it), and not yet tried on a real Mac.
 
 Requirements: Windows 10 or 11, a 64-bit processor with AVX2 (every x86-64 since 2013), and a VST3 host if you want
 the plugin; Meta Quest 2 or later for the app. The installer is not code-signed: Windows' SmartScreen may warn once.
+
+## Demos
+
+[![Totality, the Ostgut demo, with pictures by KaleidoscopeEnhanced (click for the video)](docs/demo.jpg)](https://github.com/reneweller-coding/Totality/releases/download/demos/ostgut.mp4)
+
+A track per style, rendered by `tot_render` and nothing else: [Hypnotic](https://github.com/reneweller-coding/Totality/releases/download/demos/hypnotic.mp3), [Ostgut](https://github.com/reneweller-coding/Totality/releases/download/demos/ostgut.mp3), [Dub](https://github.com/reneweller-coding/Totality/releases/download/demos/dub.mp3), [Raw Peak](https://github.com/reneweller-coding/Totality/releases/download/demos/rawpeak.mp3) (MP3). The video is the Ostgut demo with pictures by
+[KaleidoscopeEnhanced](https://github.com/reneweller-coding/KaleidoscopeEnhanced), its cuts placed by the
+track's own score cues (the bars, the sections, the drops). `Tools/demo/make_demos.py` renders them all again; they live on the release
+[demos](https://github.com/reneweller-coding/Totality/releases/tag/demos).
 
 ## How it is put together
 
@@ -104,6 +117,14 @@ The plan, in German, with the state of every phase: [docs/PLAN.md](docs/PLAN.md)
 [docs/research](docs/research). The manual is built out of the program itself
 ([docs/manual](docs/manual/Totality-Manual.pdf)).
 
+## With a DAW and other apps
+
+In a DAW Totality sends what it plays as MIDI -- every part on a channel of its own, as in the MIDI export -- and has a
+stereo output per stem besides the main one, off until the host switches them on, so a part can be recorded as
+notes or mixed on a channel of its own. The standalone joins an **Ableton Link** session (Settings > Ableton
+Link): the session's tempo, its bars, its start and stop. A MIDI keyboard can be split between two voices,
+locked to the scale and given a velocity curve (the Keyboard group). The manual has the details (With a DAW and other apps).
+
 ## Build
 
 The same in every instrument of the family (`build.ps1`, `CMakePresets.json`, `cmake/Family.cmake`):
@@ -163,6 +184,11 @@ python Tools/analyze_ref.py                # statistics of the references into T
 python Tools/analyze_ref.py track.wav      # a render, measured the same way
 python Tools/eval_report.py --score track.json --wav track.wav --out report.md   # the evaluation (PLAN 13.5)
 ```
+
+## The family
+
+Totality is one of five instruments that share their build, their panel and the hands of a Meta Quest: [Noctuary](https://github.com/reneweller-coding/Noctuary) (ambient), [Phosphene](https://github.com/reneweller-coding/Phosphene) (psytrance), [Ephemeris](https://github.com/reneweller-coding/Ephemeris) (Berlin School), [Totality](https://github.com/reneweller-coding/Totality) (techno) and [Parhelion](https://github.com/reneweller-coding/Parhelion) (trance).
+All five, with their demos, on one page: **[reneweller-coding.github.io/VRAudio](https://reneweller-coding.github.io/VRAudio/)**.
 
 ## Licence
 
