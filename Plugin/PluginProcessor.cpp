@@ -9,6 +9,7 @@
 #include "tot/Midi.h"
 #include "tot/Presets.h"
 #include "tot/WavWriter.h"
+#include <cstring>
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -167,6 +168,10 @@ Playing TotalityProcessor::composeNow(ParamStore& snapshot)
         TrackInfo info;
         TrackRequest req;
         req.prefs = useRatings ? &prefs : nullptr;
+        if (const int k = jamComposeKey_.load(); k >= 0) {   // following the family jam: the leader's key and mode
+            req.key = k;
+            req.scale = jamComposeScale_.load();
+        }
         out.set.decks[0] = composeTrack(snapshot, seed, req, &cur, std::string(), &info);
         out.set.lengthBeats = out.set.decks[0].lengthBeats;
         out.tracks.push_back({ 0.0, 0.0, out.set.lengthBeats, 0, info });
@@ -365,6 +370,24 @@ void TotalityProcessor::timerCallback()
     link_.setEnabled(wrapperType == wrapperType_Standalone && (frame::Settings::of("Totality").link() || frame::LinkClock::forcedOn()));
     link_.tick();
     if (!link_.enabled()) linkFollowing_ = false;
+    // The family jam (02.10.2026, Jam.h): the role from the settings; a follower composes its next track in the
+    // leader's key and mode.
+    jam_.setRole(frame::Settings::of("Totality").jamRole());
+    // FAMILY_JAM_LOG=<file>: what the jam does here, a line whenever it changes (a test aid).
+    if (const char* logFile = std::getenv("FAMILY_JAM_LOG")) {
+        const juce::String line = jam_.status() + "; transposed " + juce::String(jamTransposeOut_.load());
+        if (line != jamLogged_) {
+            jamLogged_ = line;
+            juce::File(logFile).appendText(juce::Time::getCurrentTime().toString(false, true, true, true) + "  " + line + "\n");
+        }
+    }
+    if (jam_.role() == frame::Settings::JamRole::Follow && jam_.leaderRoot() >= 0) {
+        jamComposeKey_ = jam_.leaderRoot();
+        jamComposeScale_ = scaleOfMode(jam_.leaderMode());
+    } else {
+        jamComposeKey_ = -1;
+        jamComposeScale_ = -1;
+    }
     // The cue sender follows its two parameters (message thread: the socket is opened and closed here).
     {
         const ParamStore& s = store();
@@ -570,6 +593,7 @@ void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
                 playing_ = play;
             }
             hostBpm_ = ln.bpm;
+            linkBeat_ = ln.beat;
             const bool tempoPending = std::fabs(hostBpm_.load() - playedBpm_.load()) > 1.0e-3;
             if (play && !tempoPending) {
                 double d = std::fmod(ln.beat - engine_.beat(), 4.0);
@@ -584,6 +608,10 @@ void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
     }
     const double seek = seekRequest_.exchange(-1.0);
     if (seek >= 0.0) engine_.seek(seek);
+    // The family jam's shared timeline (Jam.h): the host's beat in a DAW, Link's with others in the session; none alone.
+    double shared = -1.0;
+    if (play && wrapperType != wrapperType_Standalone) shared = engine_.beat();
+    else if (play && linkFollowing_.load(std::memory_order_relaxed)) shared = linkBeat_;
     {   // Stopped, or another keyboard target: every played key is released (01.10.2026).
         const int target = store().getInt(store().id(Module::Perform, 0, perform::KeyboardPart));
         if (!play || target != keyboardSeen_) engine_.liveAllOff();
@@ -607,7 +635,9 @@ void TotalityProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::Mid
             stemsOn_ = want;
         }
     }
+    jamFollow(before, shared);
     engine_.process(buffer.getWritePointer(0), buffer.getWritePointer(1), n);
+    jamLead(before, engine_.beat(), shared);
     emitMidi(midi, start, n);
     if (stemsOn_)
         for (int b = 1; b < getBusCount(false) && b - 1 < Engine::kStems; ++b) {
@@ -705,6 +735,109 @@ void TotalityProcessor::emitMidi(juce::MidiBuffer& midi, int64_t start, int n)
         if (nt.offSample >= 0 && pendingOffs_ < static_cast<int>(pendingOff_.size()))
             pendingOff_[static_cast<size_t>(pendingOffs_++)] = PendingOff{ std::max(nt.offSample, nt.sample + 1), static_cast<uint8_t>(channel), nt.pitch };
     }
+}
+
+int TotalityProcessor::scaleOfMode(const juce::String& mode)
+{
+    const juce::String m = mode.trim();
+    for (int i = 0; i < static_cast<int>(tot::Scale::Count); ++i)
+        if (m.equalsIgnoreCase(tot::kScaleNames[i])) return i;
+    // The family's other names for its scales: a minor is an Aeolian, the just minor too.
+    if (m.containsIgnoreCase("minor") && !m.containsIgnoreCase("penta")) return scaleOfMode("Aeolian");
+    if (m.containsIgnoreCase("penta")) return scaleOfMode("Minor Pentatonic");
+    if (m.containsIgnoreCase("major") || m.containsIgnoreCase("ionian")) return scaleOfMode("Ionian");   // where there is one
+    return -1;
+}
+
+int TotalityProcessor::homeRootAt(double beat) const
+{
+    int root = engine_.score().keyRoot;
+    for (const CueMark& m : engine_.cueMarks()) {
+        if (m.beat > beat + 1.0e-6) break;
+        if (m.kind != CueKind::Key) continue;
+        const int n = std::atoi(m.text);   // a Camelot label: "8A" the minor key 7 (n - 5) (mod 12), "8B" its relative major
+        if (n >= 1 && n <= 12) root = ((7 * (n - 5) + (std::strchr(m.text, 'B') != nullptr ? 3 : 0)) % 12 + 12) % 12;
+    }
+    return root;
+}
+
+void TotalityProcessor::jamFollow(double before, double shared)
+{
+    if (jam_.role() != frame::Settings::JamRole::Follow) {
+        if (jamFollowing_) engine_.setJam(0, -1.0f, false);
+        jamFollowing_ = false;
+        jamTranspose_ = 0;
+        jamTransposeOut_ = 0;
+        jamLastBefore_ = before;
+        return;
+    }
+    // The block's length in beats, from the last one (none after a jump or a stop).
+    const double step = (jamLastBefore_ >= 0.0 && before > jamLastBefore_ && before - jamLastBefore_ < 1.0) ? before - jamLastBefore_ : 0.0;
+    jamLastBefore_ = before;
+    // What the leader says, as it stands by the end of this block: a drop on a bar line inside it is played on it.
+    const frame::JamState js = jam_.stateAt(shared >= 0.0 ? shared + step : -1.0);
+    int want = 0;
+    if (js.root >= 0) {
+        const int d = ((js.root - homeRootAt(before)) % 12 + 12) % 12;
+        want = d > 6 ? d - 12 : d;   // the shortest way, up to a tritone either side
+    }
+    // The root moves on a bar line: inside this block, or at once when there is no step to tell.
+    const bool barLine = step <= 0.0 || std::floor((before + step) / 4.0) > std::floor(before / 4.0);
+    if (want != jamTranspose_ && barLine) jamTranspose_ = want;
+    jamTransposeOut_ = jamTranspose_;
+    engine_.setJam(jamTranspose_, js.root >= 0 ? js.energy : -1.0f, js.root >= 0 && js.rhythmOut);
+    jamFollowing_ = true;
+}
+
+void TotalityProcessor::jamLead(double before, double after, double shared)
+{
+    if (jam_.role() != frame::Settings::JamRole::Lead) {
+        jamLeadStarted_ = false;
+        return;
+    }
+    const auto& marks = engine_.cueMarks();
+    const char* mode = tot::kScaleNames[juce::jlimit(0, static_cast<int>(tot::Scale::Count) - 1, engine_.score().scale)];
+    const auto barOf = [&](double beat) {
+        return shared >= 0.0 ? static_cast<int64_t>(std::llround((shared + beat - before) / 4.0)) : int64_t(-1);
+    };
+    const auto keyOf = [](const CueMark& m) {
+        const int n = std::atoi(m.text);
+        return n >= 1 && n <= 12 ? ((7 * (n - 5) + (std::strchr(m.text, 'B') != nullptr ? 3 : 0)) % 12 + 12) % 12 : -1;
+    };
+    // The first block, or a jump: where it stands now -- the last section and key at the coming beat, at once.
+    if (!jamLeadStarted_ || std::fabs(before - jamLeadLast_) > 1.0e-6) {
+        const CueMark* block = nullptr;
+        const CueMark* key = nullptr;
+        for (const CueMark& m : marks) {
+            if (m.beat > before + 1.0) break;
+            if (m.kind == CueKind::Block) block = &m;
+            else if (m.kind == CueKind::Key) key = &m;
+        }
+        jam_.postKey(key != nullptr ? keyOf(*key) : engine_.score().keyRoot, mode);
+        if (block != nullptr) {
+            float e = 0.5f;
+            bool drop = false;
+            const frame::JamSection s = frame::jamSectionOf(block->text, e, drop);   // before e is read
+            jam_.postSection(s, e, false, -1);
+        }
+        jamLeadStarted_ = true;
+    } else {
+        // One beat ahead: a follower acts on the very bar line the leader means.
+        for (const CueMark& m : marks) {
+            if (m.beat < before + 1.0) continue;
+            if (m.beat >= after + 1.0) break;
+            if (m.kind == CueKind::Block) {
+                float e = 0.5f;
+                bool drop = false;
+                const frame::JamSection s = frame::jamSectionOf(m.text, e, drop);
+                jam_.postSection(s, e, drop, barOf(m.beat));
+            } else if (m.kind == CueKind::Key) {
+                const int k = keyOf(m);
+                if (k >= 0) jam_.postKey(k, mode);
+            }
+        }
+    }
+    jamLeadLast_ = after;
 }
 
 juce::String TotalityProcessor::linkStatus() const

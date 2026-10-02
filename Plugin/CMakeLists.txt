@@ -18,7 +18,7 @@ juce_add_plugin(Totality
     PRODUCT_NAME                "Totality"
     ICON_BIG                    "${CMAKE_SOURCE_DIR}/Deploy/totality.png")
 target_sources(Totality PRIVATE PluginProcessor.cpp PluginEditor.cpp EditorTheme.cpp EditorEclipse.cpp EditorPerform.cpp
-                             EditorStyle.cpp UpdateCheck.cpp Frame.cpp LinkClock.cpp)
+                             EditorStyle.cpp UpdateCheck.cpp Frame.cpp LinkClock.cpp Jam.cpp)
 # The frame's pieces (01.10.2026): the picture behind the panel and the manual's prose for the help (F1).
 juce_add_binary_data(TotalityData
     HEADER_NAME TotalityData.h
