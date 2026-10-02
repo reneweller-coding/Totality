@@ -15,6 +15,7 @@
  * @note Copied from Ephemeris `Core/include/eph/fx/Plate.h` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
  */
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
