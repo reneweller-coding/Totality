@@ -39,7 +39,8 @@
 #include "tot/pattern/Rack.h"
 #include <cstdint>
 
-namespace tot {
+namespace tot
+{
 
 /**
  * @brief Composes the study.
@@ -47,6 +48,6 @@ namespace tot {
  * @param[in] seed  the seed
  * @return the score, sorted
  */
-Score composeStudy(const ParamStore& p, uint64_t seed);
+Score composeStudy( const ParamStore &p, uint64_t seed );
 
-} // namespace tot
+}   // namespace tot

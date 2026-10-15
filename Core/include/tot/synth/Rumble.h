@@ -44,17 +44,19 @@
 #include "tot/mix/Ducker.h"
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief The rumble generator. */
-class Rumble {
+class Rumble
+{
 public:
     /**
      * @brief Allocates for a sample rate and the longest block process() will see.
      * @param[in] sampleRate  the sample rate in Hz
      * @param[in] maxBlock    the longest block process() will see
      */
-    void prepare(double sampleRate, int maxBlock);
+    void prepare( double sampleRate, int maxBlock );
     /** @brief Silence. */
     void reset();
     /**
@@ -62,42 +64,42 @@ public:
      * @param[in] v   values indexed by rumble::
      * @param[in] f0  the kick's tuned end pitch, Hz
      */
-    void update(const float* v, float f0);
+    void update( const float *v, float f0 );
     /**
      * @brief A kick starts.
      * @param[in] late       how many samples ago it ideally started (0 <= late < 1)
      * @param[in] asymptote  the kick's asymptotic phase c (Kick::asymptoticPhase), cycles
      * @param[in] f0         the kick's end pitch, Hz
      */
-    void kick(double late, double asymptote, double f0);
+    void kick( double late, double asymptote, double f0 );
     /**
      * @brief Renders @p n samples (at most the maxBlock given to prepare()).
      * @param[in]  kickBody  the kick's body after its EQ (Kick::process, @c body)
      * @param[out] out       receives the rumble, mono (replaced)
      * @param[in]  n         how many samples, at most maxBlock
      */
-    void process(const float* kickBody, float* out, int n);
+    void process( const float *kickBody, float *out, int n );
     /**
      * @brief The clip at four times the rate (the default) or at the rate (the Quest's quality, PLAN 11: the band is
      *         low-passed, its harmonics stay far under Nyquist).
      * @param[in] on  true to clip at four times the rate
      */
-    void setOversampling(bool on) { m_oversample = on; }
+    void setOversampling( bool on ) { m_oversample = on; }
     /**
      * @brief The band's part of the last block alone, for the tests (mono, before the level).
      * @return the band's part of the last block
      */
-    const std::vector<float>& lastBand() const { return m_band; }
+    const std::vector<float> &lastBand() const { return m_band; }
     /**
      * @brief The sub's part of the last block alone, for the tests (before the level).
      * @return the sub's part of the last block
      */
-    const std::vector<float>& lastSub() const { return m_subOut; }
+    const std::vector<float> &lastSub() const { return m_subOut; }
     /**
      * @brief The hall's return in front of the clip, of the last block (for the calibration).
      * @return the hall's return of the last block, in front of the clip
      */
-    const std::vector<float>& lastHall() const { return m_pre; }
+    const std::vector<float> &lastHall() const { return m_pre; }
     /**
      * @brief The sub's current phase in cycles (wrapped), for the tests.
      * @return the sub's current phase in cycles, wrapped
@@ -105,39 +107,39 @@ public:
     double subPhase() const { return m_subPhase; }
 
 private:
-    double m_sr = 48000.0;   ///< the sample rate, Hz
-    Svf m_split1;   ///< the LR4 high pass at the split: its first Butterworth section
-    Svf m_split2;   ///< ... its second section
-    Reverb m_hall;                ///< the hall
-    Oversampler4 m_os;            ///< the clip at four times the rate
-    bool m_oversample = true;     ///< setOversampling()
-    Svf m_postHp;   ///< the band's high pass after the clip
-    Svf m_postLp;   ///< the band's low pass after the clip
-    Ducker m_duck;                ///< the kick's duck
-    std::vector<float> m_in;   ///< the kick's body, the input
-    std::vector<float> m_hallL;   ///< the hall's return, left
-    std::vector<float> m_hallR;   ///< the hall's return, right
-    std::vector<float> m_band;   ///< the band above the split
-    std::vector<float> m_subOut;   ///< the sub under it
-    std::vector<float> m_pre;   ///< the band before the clip
-    float m_level = 0.0f;   ///< the level, linear
-    float m_subGain = 0.0f;   ///< the sub's gain, linear
-    float m_clipGain = 1.0f;   ///< the gain into the clip, linear
-    float m_envAtt = 0.01f;   ///< the band's envelope follower: attack coefficient
-    float m_envRel = 0.001f;   ///< ... release coefficient
-    float m_env = 0.0f;   ///< the follower's envelope
-    double m_subPhase = 0.0;   ///< the sub's phase, cycles
-    double m_subInc = 0.0;   ///< the sub's step, cycles per sample
-    double m_f0 = 50.0;                                         ///< the pitch the sub runs at
-    int m_resetIn = -1;             ///< samples until the sub's phase is set anew (-1: nothing pending)
-    int m_sinceKick = 0;            ///< samples since the last kick's trigger
-    double m_kickLate = 0.0;   ///< the last kick's sub-sample offset
-    double m_kickC = 0.0;   ///< the last kick's asymptotic phase, cycles
-    double m_kickF0 = 50.0;   ///< the last kick's end pitch, Hz
-    float m_duckDepth = 0.5f;   ///< the duck's depth, 0..1
-    float m_duckHoldMs = 80.0f;   ///< the duck's hold, ms
-    float m_duckReleaseMs = 220.0f;   ///< the duck's release, ms
-    static constexpr float DuckAttackMs = 1.0f;   ///< the duck's attack: the sub's gate shuts within it
+    double                 m_sr = 48000.0;         ///< the sample rate, Hz
+    Svf                    m_split1;               ///< the LR4 high pass at the split: its first Butterworth section
+    Svf                    m_split2;               ///< ... its second section
+    Reverb                 m_hall;                 ///< the hall
+    Oversampler4           m_os;                   ///< the clip at four times the rate
+    bool                   m_oversample = true;    ///< setOversampling()
+    Svf                    m_postHp;               ///< the band's high pass after the clip
+    Svf                    m_postLp;               ///< the band's low pass after the clip
+    Ducker                 m_duck;                 ///< the kick's duck
+    std::vector<float>     m_in;                   ///< the kick's body, the input
+    std::vector<float>     m_hallL;                ///< the hall's return, left
+    std::vector<float>     m_hallR;                ///< the hall's return, right
+    std::vector<float>     m_band;                 ///< the band above the split
+    std::vector<float>     m_subOut;               ///< the sub under it
+    std::vector<float>     m_pre;                  ///< the band before the clip
+    float                  m_level = 0.0f;         ///< the level, linear
+    float                  m_subGain = 0.0f;       ///< the sub's gain, linear
+    float                  m_clipGain = 1.0f;      ///< the gain into the clip, linear
+    float                  m_envAtt = 0.01f;       ///< the band's envelope follower: attack coefficient
+    float                  m_envRel = 0.001f;      ///< ... release coefficient
+    float                  m_env = 0.0f;           ///< the follower's envelope
+    double                 m_subPhase = 0.0;       ///< the sub's phase, cycles
+    double                 m_subInc = 0.0;         ///< the sub's step, cycles per sample
+    double                 m_f0 = 50.0;            ///< the pitch the sub runs at
+    int                    m_resetIn = -1;         ///< samples until the sub's phase is set anew (-1: nothing pending)
+    int                    m_sinceKick = 0;        ///< samples since the last kick's trigger
+    double                 m_kickLate = 0.0;       ///< the last kick's sub-sample offset
+    double                 m_kickC = 0.0;          ///< the last kick's asymptotic phase, cycles
+    double                 m_kickF0 = 50.0;        ///< the last kick's end pitch, Hz
+    float                  m_duckDepth = 0.5f;     ///< the duck's depth, 0..1
+    float                  m_duckHoldMs = 80.0f;   ///< the duck's hold, ms
+    float                  m_duckReleaseMs = 220.0f;   ///< the duck's release, ms
+    static constexpr float DuckAttackMs = 1.0f;        ///< the duck's attack: the sub's gate shuts within it
 };
 
-} // namespace tot
+}   // namespace tot

@@ -21,10 +21,12 @@
 #include "tot/synth/Oscillator.h"
 #include <cstdint>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief The chord voices and their bus. */
-class ChordSynth {
+class ChordSynth
+{
 public:
     static constexpr int Voices = 8;   ///< two chords of four tones overlapping
 
@@ -32,26 +34,26 @@ public:
      * @brief Prepares for a sample rate.
      * @param[in] sampleRate  the sample rate in Hz
      */
-    void prepare(double sampleRate);
+    void prepare( double sampleRate );
     /** @brief Silence. */
     void reset();
     /**
      * @brief Reads the effective parameter values (indexed by chord::).
      * @param[in] v  the effective parameter values, indexed by chord::
      */
-    void update(const float* v);
+    void update( const float *v );
     /**
      * @brief Starts a tone.
      * @param[in] pitch     the MIDI note
      * @param[in] velocity  the velocity, 0..1
      * @param[in] late      samples since its ideal start
      */
-    void noteOn(int pitch, float velocity, double late);
+    void noteOn( int pitch, float velocity, double late );
     /**
      * @brief Releases every voice playing @p pitch.
      * @param[in] pitch  the MIDI note
      */
-    void noteOff(int pitch);
+    void noteOff( int pitch );
     /**
      * @brief Renders @p n samples of the bus into @p L and @p R (replaced).
      * @param[out] L       receives the left channel (replaced)
@@ -59,59 +61,60 @@ public:
      * @param[in]  n       how many samples
      * @param[in]  sample  the absolute sample of the first one (the modulations' phase)
      */
-    void process(float* L, float* R, int n, int64_t sample);
+    void process( float *L, float *R, int n, int64_t sample );
 
 private:
     /** @brief One tone: two saws, their low passes, its envelopes. */
-    struct Voice {
-        bool m_active = false;           ///< it sounds
-        int m_pitch = -1;                ///< MIDI note, -1 none
+    struct Voice
+    {
+        bool         m_active = false;   ///< it sounds
+        int          m_pitch = -1;       ///< MIDI note, -1 none
         VaOscillator m_a;                ///< the saw on the left
         VaOscillator m_b;                ///< the saw on the right
-        Envelope m_amp;                  ///< the amp envelope
-        double m_fenv = 0.0;             ///< the filter envelope, 1 .. 0
-        float m_vel = 1.0f;              ///< the note's velocity
-        Svf m_lpA;                       ///< saw a's low pass
-        Svf m_lpB;                       ///< saw b's low pass
-        uint32_t m_age = 0;              ///< when it started, in notes (the oldest is taken)
-        uint32_t m_n = 0;                ///< samples since it started
+        Envelope     m_amp;              ///< the amp envelope
+        double       m_fenv = 0.0;       ///< the filter envelope, 1 .. 0
+        float        m_vel = 1.0f;       ///< the note's velocity
+        Svf          m_lpA;              ///< saw a's low pass
+        Svf          m_lpB;              ///< saw b's low pass
+        uint32_t     m_age = 0;          ///< when it started, in notes (the oldest is taken)
+        uint32_t     m_n = 0;            ///< samples since it started
     };
     /**
      * @brief Sets the bus's band pass and the dip for the absolute sample @p sample (the sweep's phase).
      * @param[in] sample  the absolute sample
      */
-    void setBus(int64_t sample);
-    double m_sr = 48000.0;   ///< the sample rate, Hz
-    Voice m_v[Voices];   ///< the voices
-    uint32_t m_clock = 0;   ///< counts the notes started (a voice's age)
+    void setBus( int64_t sample );
+    double   m_sr = 48000.0;   ///< the sample rate, Hz
+    Voice    m_v[Voices];      ///< the voices
+    uint32_t m_clock = 0;      ///< counts the notes started (a voice's age)
     // Settings.
-    float m_detune = 10.0f;   ///< the saws' distance, cents
-    float m_width = 0.6f;   ///< how far the two saws stand apart, 0..1
-    float m_attack = 0.01f;   ///< the amp envelope's attack, seconds
-    float m_decay = 0.3f;   ///< its decay, seconds
-    float m_sustain = 0.15f;   ///< its sustain, 0..1
-    float m_release = 0.4f;   ///< its release, seconds
-    float m_bright = 2500.0f;   ///< the voices' low pass, Hz (Brightness)
-    float m_envAmt = 1.5f;   ///< how far the note's envelope opens it, octaves
-    float m_bandHz = 380.0f;   ///< the bus's band pass, Hz (Band)
-    float m_bandK = 1.4f;   ///< its damping, 1 / Q
-    float m_sweep = 0.5f;   ///< the band's sweep, octaves either way
-    float m_bits = 8.0f;   ///< the crusher's bits
-    float m_crushMix = 0.2f;   ///< the crusher's share
-    float m_phaser = 0.5f;   ///< the phaser's share
-    float m_dipGain = 0.45f;   ///< the dip at 600 Hz, linear
-    double m_sweepRate = 0.2;   ///< the band's sweep rate, Hz
-    double m_phaserRate = 0.5;   ///< the phaser's rate, Hz
+    float  m_detune = 10.0f;      ///< the saws' distance, cents
+    float  m_width = 0.6f;        ///< how far the two saws stand apart, 0..1
+    float  m_attack = 0.01f;      ///< the amp envelope's attack, seconds
+    float  m_decay = 0.3f;        ///< its decay, seconds
+    float  m_sustain = 0.15f;     ///< its sustain, 0..1
+    float  m_release = 0.4f;      ///< its release, seconds
+    float  m_bright = 2500.0f;    ///< the voices' low pass, Hz (Brightness)
+    float  m_envAmt = 1.5f;       ///< how far the note's envelope opens it, octaves
+    float  m_bandHz = 380.0f;     ///< the bus's band pass, Hz (Band)
+    float  m_bandK = 1.4f;        ///< its damping, 1 / Q
+    float  m_sweep = 0.5f;        ///< the band's sweep, octaves either way
+    float  m_bits = 8.0f;         ///< the crusher's bits
+    float  m_crushMix = 0.2f;     ///< the crusher's share
+    float  m_phaser = 0.5f;       ///< the phaser's share
+    float  m_dipGain = 0.45f;     ///< the dip at 600 Hz, linear
+    double m_sweepRate = 0.2;     ///< the band's sweep rate, Hz
+    double m_phaserRate = 0.5;    ///< the phaser's rate, Hz
     double m_fenvDecay = 0.999;   ///< the filter envelope's decay per sample
-    int m_octave = 0;   ///< octaves the notes are moved by
-    bool m_highPass = false;   ///< a high pass on the bus instead of the band pass
-    Svf m_bandL;   ///< the bus's band pass, left
-    Svf m_bandR;   ///< the bus's band pass, right
-    Svf m_dipL;   ///< the dip at 600 Hz, left
-    Svf m_dipR;   ///< the dip at 600 Hz, right
-    float m_apL[4] = {};   ///< the phaser's all-passes, left
-    float m_apR[4] = {};   ///< the phaser's all-passes, right
-    float m_apCoef = 0.0f;   ///< the phaser's all-pass coefficient
+    int    m_octave = 0;          ///< octaves the notes are moved by
+    bool   m_highPass = false;    ///< a high pass on the bus instead of the band pass
+    Svf    m_bandL;               ///< the bus's band pass, left
+    Svf    m_bandR;               ///< the bus's band pass, right
+    Svf    m_dipL;                ///< the dip at 600 Hz, left
+    Svf    m_dipR;                ///< the dip at 600 Hz, right
+    float  m_apL[4] = {};         ///< the phaser's all-passes, left
+    float  m_apR[4] = {};         ///< the phaser's all-passes, right
+    float  m_apCoef = 0.0f;       ///< the phaser's all-pass coefficient
 };
 
-} // namespace tot
+}   // namespace tot

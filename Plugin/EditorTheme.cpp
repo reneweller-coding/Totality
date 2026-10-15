@@ -8,28 +8,30 @@
 #include "TotalityData.h"
 #include <cmath>
 
-namespace totui {
+namespace totui
+{
 
 using namespace colour;
 
-juce::Colour familyColour(Family f)
+juce::Colour familyColour( Family f )
 {
-    switch (f) {
-    case Family::SOURCE:   return juce::Colour(0xffe6c178);   // the corona's gold
-    case Family::FILTER:   return juce::Colour(0xffd9825b);   // copper
-    case Family::ENVELOPE: return juce::Colour(0xff9fbf6f);   // sage
-    case Family::MOTION:   return juce::Colour(0xff6fb8ae);   // teal
-    default:               return juce::Colour(0xff6f8fb8);   // steel blue
+    switch ( f )
+    {
+    case Family::SOURCE: return juce::Colour( 0xffe6c178 );     // the corona's gold
+    case Family::FILTER: return juce::Colour( 0xffd9825b );     // copper
+    case Family::ENVELOPE: return juce::Colour( 0xff9fbf6f );   // sage
+    case Family::MOTION: return juce::Colour( 0xff6fb8ae );     // teal
+    default: return juce::Colour( 0xff6f8fb8 );                 // steel blue
     }
 }
 
-juce::Colour deckColour(int d)
+juce::Colour deckColour( int d )
 {
     static const juce::uint32 Deck[3] = { 0xffe6c178, 0xff6fb8ae, 0xffc47fb0 };
-    return juce::Colour(Deck[static_cast<size_t>(juce::jlimit(0, 2, d))]);
+    return juce::Colour( Deck[static_cast<size_t>( juce::jlimit( 0, 2, d ) )] );
 }
 
-const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
+const std::vector<GroupSpec> &layoutOf( tot::ModuleE m )
 {
     using F = Family;
     using MT = tot::ModuleE;
@@ -37,7 +39,9 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
     static const std::vector<GroupSpec> kick = {
         { "Engine", F::SOURCE, { "~engine", "*tune", "level", "drive", "clip" } },
         { "Pitch", F::ENVELOPE, { "pitch_start", "pitch_end", "pitch_decay" } },
-        { "Punch and Amp", F::ENVELOPE, { "punch", "punch_decay", "amp_attack", "amp_hold", "*amp_decay", "tail_limit" } },
+        { "Punch and Amp",
+          F::ENVELOPE,
+          { "punch", "punch_decay", "amp_attack", "amp_hold", "*amp_decay", "tail_limit" } },
         { "Click", F::SOURCE, { "click_level", "click_tone", "click_decay" } },
         { "Tone", F::FILTER, { "tone", "low_cut", "dip_freq", "dip" } },
         { "Top Layer", F::SOURCE, { "top_level", "top_pitch", "top_decay", "top_drive", "top_cut" } },
@@ -74,13 +78,17 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
         { "Out", F::SPACE, { "*level", "clip", "ceiling" } },
     };
     static const std::vector<GroupSpec> ping = {
-        { "Voice", F::SOURCE, { "*level", "pan", "width", "ratio", "*index", "index_decay", "pitch_amount", "pitch_decay" } },
+        { "Voice",
+          F::SOURCE,
+          { "*level", "pan", "width", "ratio", "*index", "index_decay", "pitch_amount", "pitch_decay" } },
         { "Gate", F::ENVELOPE, { "decay", "lpg", "lpg_release", "resonance" } },
         { "Band", F::FILTER, { "band", "band_q", "band_mix", "sweep", "sweep_rate" } },
     };
     static const std::vector<GroupSpec> synth = {
         { "Oscillator", F::SOURCE, { "*level", "~wave", "pulse_width", "sub_osc", "pan", "glide", "drive" } },
-        { "Filter", F::FILTER, { "~filter", "*cutoff", "*resonance", "env_amount", "decay", "accent", "key_track", "low_cut", "high_cut" } },
+        { "Filter",
+          F::FILTER,
+          { "~filter", "*cutoff", "*resonance", "env_amount", "decay", "accent", "key_track", "low_cut", "high_cut" } },
         { "Amp", F::ENVELOPE, { "amp_attack", "amp_decay", "amp_sustain", "amp_release" } },
         { "Sends and Duck", F::SPACE, { "dub_send", "room_send", "duck", "duck_release" } },
     };
@@ -101,7 +109,9 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
         { "Texture", F::SOURCE, { "*level", "crackle", "hum", "hum_hz", "erosion", "width" } },
     };
     static const std::vector<GroupSpec> dub = {
-        { "Tape Echo", F::MOTION, { "~echo_time", "*feedback", "tone", "low_cut", "wow", "flutter", "drive", "echo_return" } },
+        { "Tape Echo",
+          F::MOTION,
+          { "~echo_time", "*feedback", "tone", "low_cut", "wow", "flutter", "drive", "echo_return" } },
         { "Spring", F::SPACE, { "spring", "spring_decay" } },
         { "Plate", F::SPACE, { "plate_decay", "plate_damping", "plate_predelay", "plate_low_cut", "plate_return" } },
         { "Sends", F::SPACE, { "ping_send", "hats_send", "perc_send" } },
@@ -142,7 +152,8 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
         { "Rack", F::MOTION, { "mutation", "reroll", "polymeter", "fill", "swing_low", "swing_high", "density_cap" } },
         { "Events and Corridor", F::MOTION, { "event_rate", "throw_share", "similarity", "sub_chance", "peak_lufs" } },
     };
-    switch (m) {
+    switch ( m )
+    {
     case MT::KICK: return kick;
     case MT::RUMBLE: return rumble;
     case MT::SUB: return sub;
@@ -152,7 +163,8 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
     case MT::PING: return ping;
     case MT::MOTION: return motion;
     case MT::SPACE: return space;
-    case MT::BASS: case MT::ACID: return synth;
+    case MT::BASS:
+    case MT::ACID: return synth;
     case MT::CHORD: return chord;
     case MT::DRONE: return drone;
     case MT::TEXTURE: return texture;
@@ -170,27 +182,38 @@ const std::vector<GroupSpec>& layoutOf(tot::ModuleE m)
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-const frame::Skin& skin()
+const frame::Skin &skin()
 {
-    static const frame::Skin s = [] {
+    static const frame::Skin s = []
+    {
         frame::Skin k;
         k.m_name = "Totality";
-        k.m_bg = Bg; k.m_panel = Panel; k.m_group = Group; k.m_raised = Raised; k.m_edge = Edge;
-        k.m_ink = Ink; k.m_dim = Dim; k.m_faint = Faint; k.m_accent = Accent; k.m_onset = Onset; k.m_good = Green; k.m_bad = Red;
-        for (int f = 0; f < 5; ++f) k.m_families[f] = familyColour(static_cast<Family>(f));
-        for (int d = 0; d < 3; ++d) k.m_decks[d] = deckColour(d);
-        k.m_radius = 2.0f;               // concrete: hard corners
-        k.m_tracking = 0.32f;            // T O T A L I T Y
-        k.m_typeface = "Bahnschrift";    // a condensed DIN, as on Berlin's signs
+        k.m_bg = Bg;
+        k.m_panel = Panel;
+        k.m_group = Group;
+        k.m_raised = Raised;
+        k.m_edge = Edge;
+        k.m_ink = Ink;
+        k.m_dim = Dim;
+        k.m_faint = Faint;
+        k.m_accent = Accent;
+        k.m_onset = Onset;
+        k.m_good = Green;
+        k.m_bad = Red;
+        for ( int f = 0; f < 5; ++f ) k.m_families[f] = familyColour( static_cast<Family>( f ) );
+        for ( int d = 0; d < 3; ++d ) k.m_decks[d] = deckColour( d );
+        k.m_radius = 2.0f;              // concrete: hard corners
+        k.m_tracking = 0.32f;           // T O T A L I T Y
+        k.m_typeface = "Bahnschrift";   // a condensed DIN, as on Berlin's signs
         k.m_titleBold = false;
         k.m_backdropData = TotalityData::backdrop_jpg;
         k.m_backdropSize = TotalityData::backdrop_jpgSize;
         k.m_backdropTop = 0.85f;
         k.m_backdropPage = 0.5f;
-        k.m_logo = [](juce::Graphics& g, juce::Rectangle<float> r) { drawLogo(g, r); };
+        k.m_logo = []( juce::Graphics &g, juce::Rectangle<float> r ) { drawLogo( g, r ); };
         return k;
     }();
     return s;
 }
 
-} // namespace totui
+}   // namespace totui

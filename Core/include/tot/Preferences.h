@@ -15,29 +15,32 @@
 #include <string>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief One rating of a track. */
-struct Rating {
-    int m_value = 1;                      ///< +1 liked, -1 not
-    int m_archetype = 0;                  ///< its Archetype
-    std::string m_style;                  ///< its profile's name
-    unsigned long long m_seed = 0;        ///< its seed
-    std::vector<std::string> m_groups;    ///< the groups of its presets ("Hypnotic Thud", "Dark Hall" ...)
+struct Rating
+{
+    int                      m_value = 1;       ///< +1 liked, -1 not
+    int                      m_archetype = 0;   ///< its Archetype
+    std::string              m_style;           ///< its profile's name
+    unsigned long long       m_seed = 0;        ///< its seed
+    std::vector<std::string> m_groups;          ///< the groups of its presets ("Hypnotic Thud", "Dark Hall" ...)
 };
 
 /** @brief The weights the ratings give. */
-struct Preferences {
-    float m_archetype[7] = { 1, 1, 1, 1, 1, 1, 1 };   ///< a factor per Archetype
-    std::map<std::string, float> m_groups;             ///< a factor per preset group (1 where absent)
+struct Preferences
+{
+    float                        m_archetype[7] = { 1, 1, 1, 1, 1, 1, 1 };   ///< a factor per Archetype
+    std::map<std::string, float> m_groups;   ///< a factor per preset group (1 where absent)
     /**
      * @brief The factor of preset group @p name.
      * @param[in] name  the preset group
      * @return its factor
      */
-    float group(const std::string& name) const
+    float group( const std::string &name ) const
     {
-        const auto it = m_groups.find(name);
+        const auto it = m_groups.find( name );
         return it == m_groups.end() ? 1.0f : it->second;
     }
 };
@@ -47,14 +50,14 @@ struct Preferences {
  * @param[in] ratings  the ratings
  * @return the weights
  */
-Preferences preferencesFrom(const std::vector<Rating>& ratings);
+Preferences preferencesFrom( const std::vector<Rating> &ratings );
 
 /**
  * @brief Reads the ratings from @p path (none if it does not exist).
  * @param[in] path  the ratings file
  * @return the ratings, empty when the file is missing
  */
-std::vector<Rating> loadRatings(const std::string& path);
+std::vector<Rating> loadRatings( const std::string &path );
 
 /**
  * @brief Appends @p r to the ratings in @p path.
@@ -62,6 +65,6 @@ std::vector<Rating> loadRatings(const std::string& path);
  * @param[in] r     the rating
  * @return false when the file cannot be written
  */
-bool appendRating(const std::string& path, const Rating& r);
+bool appendRating( const std::string &path, const Rating &r );
 
-} // namespace tot
+}   // namespace tot

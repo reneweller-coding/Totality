@@ -40,7 +40,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#if defined(_WIN32)
+#if defined( _WIN32 )
   #ifndef NOMINMAX
     #define NOMINMAX
   #endif
@@ -49,7 +49,7 @@
   #endif
   #include <winsock2.h>
   #include <ws2tcpip.h>
-  using socklen_t = int;
+using socklen_t = int;
 #else
   #include <arpa/inet.h>
   #include <netinet/in.h>
@@ -61,45 +61,49 @@
 using namespace tot;
 using namespace tottest;
 
-namespace {
+namespace
+{
 
 constexpr double PiD = 3.141592653589793;   ///< pi
 
 /** The tempo map converts beats to seconds in closed form; checked against a numerical integral over a ramp. */
 void testTempoMap()
 {
-    section("tempo map against a numerical integral");
+    section( "tempo map against a numerical integral" );
     TempoMap m;
-    m.setConstant(126.0);
-    m.add(64.0, 126.0, true);
-    m.add(1024.0, 134.0, false);
-    double t = 0.0, worst = 0.0;
+    m.setConstant( 126.0 );
+    m.add( 64.0, 126.0, true );
+    m.add( 1024.0, 134.0, false );
+    double       t = 0.0, worst = 0.0;
     const double db = 1.0 / 64.0;
-    for (double b = 0.0; b < 1100.0; b += db) {
-        t += 60.0 / m.bpmAt(b + 0.5 * db) * db;
-        worst = std::max(worst, std::fabs(t - m.secondsAt(b + db)));
+    for ( double b = 0.0; b < 1100.0; b += db )
+    {
+        t += 60.0 / m.bpmAt( b + 0.5 * db ) * db;
+        worst = std::max( worst, std::fabs( t - m.secondsAt( b + db ) ) );
     }
-    check(worst < 1.0e-6, "secondsAt equals the integral", fmt("%.2e s", worst));
+    check( worst < 1.0e-6, "secondsAt equals the integral", fmt( "%.2e s", worst ) );
     double inv = 0.0;
-    for (double b = 0.0; b < 1100.0; b += 7.3) inv = std::max(inv, std::fabs(m.beatAt(m.secondsAt(b)) - b));
-    check(inv < 1.0e-9, "beatAt inverts secondsAt", fmt("%.2e beats", inv));
+    for ( double b = 0.0; b < 1100.0; b += 7.3 ) inv = std::max( inv, std::fabs( m.beatAt( m.secondsAt( b ) ) - b ) );
+    check( inv < 1.0e-9, "beatAt inverts secondsAt", fmt( "%.2e beats", inv ) );
 }
 
 /** The parameter store: text round trip, the kit's defaults, choices by name. */
 void testParams()
 {
-    section("parameters");
+    section( "parameters" );
     auto p = std::make_unique<ParamStore>();
-    check(p->getInt(p->find("perc1.noise_type")) == static_cast<int>(NoiseTypeE::METAL909), "the closed hat plays the metal table");
-    check(p->getInt(p->find("perc5.role")) == static_cast<int>(PercRoleE::CLAP), "lane 5 is the clap");
-    p->parseText("compose.key=F#; kick.engine=909; perc3.decay=250");
-    check(p->getInt(p->find("compose.key")) == 6 && p->getInt(p->find("kick.engine")) == 2, "choices by name");
-    const std::string text = p->toText(true);
-    auto q = std::make_unique<ParamStore>();
-    q->parseText(text);
+    check( p->getInt( p->find( "perc1.noise_type" ) ) == static_cast<int>( NoiseTypeE::METAL909 ),
+           "the closed hat plays the metal table" );
+    check( p->getInt( p->find( "perc5.role" ) ) == static_cast<int>( PercRoleE::CLAP ), "lane 5 is the clap" );
+    p->parseText( "compose.key=F#; kick.engine=909; perc3.decay=250" );
+    check( p->getInt( p->find( "compose.key" ) ) == 6 && p->getInt( p->find( "kick.engine" ) ) == 2,
+           "choices by name" );
+    const std::string text = p->toText( true );
+    auto              q = std::make_unique<ParamStore>();
+    q->parseText( text );
     bool same = true;
-    for (int i = 0; i < p->count(); ++i) same = same && p->get(i) == q->get(i);
-    check(same, "text form round-trips every value", fmt("%d parameters", p->count()));
+    for ( int i = 0; i < p->count(); ++i ) same = same && p->get( i ) == q->get( i );
+    check( same, "text form round-trips every value", fmt( "%d parameters", p->count() ) );
 }
 
 /**
@@ -112,17 +116,18 @@ void testParams()
  * @param[out]    body     receives the body alone, or null
  * @return the rendered kick
  */
-std::vector<float> renderKick(const ParamStore& p, int keyRoot, double late, int n, Kick& k, std::vector<float>* body = nullptr)
+std::vector<float> renderKick( const ParamStore &p, int keyRoot, double late, int n, Kick &k,
+                               std::vector<float> *body = nullptr )
 {
     float v[64];
-    p.readModule(ModuleE::KICK, 0, v);
-    Kick::constrain(v, 0.0, keyRoot);
-    k.prepare(48000.0);
-    k.update(v, keyRoot);
-    k.trigger(1.0f, late);
-    std::vector<float> out(static_cast<size_t>(n)), b(static_cast<size_t>(n));
-    k.process(out.data(), b.data(), n);
-    if (body != nullptr) *body = b;
+    p.readModule( ModuleE::KICK, 0, v );
+    Kick::constrain( v, 0.0, keyRoot );
+    k.prepare( 48000.0 );
+    k.update( v, keyRoot );
+    k.trigger( 1.0f, late );
+    std::vector<float> out( static_cast<size_t>( n ) ), b( static_cast<size_t>( n ) );
+    k.process( out.data(), b.data(), n );
+    if ( body != nullptr ) *body = b;
     return out;
 }
 
@@ -136,16 +141,17 @@ std::vector<float> renderKick(const ParamStore& p, int keyRoot, double late, int
  * @param[in] t0Samples  the time the phase is relative to, in samples
  * @return the phase in cycles
  */
-double phaseAt(const std::vector<float>& x, double hz, int from, int len, double sr, double t0Samples)
+double phaseAt( const std::vector<float> &x, double hz, int from, int len, double sr, double t0Samples )
 {
     double re = 0.0, im = 0.0;
-    for (int i = from; i < from + len; ++i) {
-        const double t = (i + t0Samples) / sr;
-        re += x[static_cast<size_t>(i)] * std::cos(2.0 * PiD * hz * t);
-        im += x[static_cast<size_t>(i)] * std::sin(2.0 * PiD * hz * t);
+    for ( int i = from; i < from + len; ++i )
+    {
+        const double t = ( i + t0Samples ) / sr;
+        re += x[static_cast<size_t>( i )] * std::cos( 2.0 * PiD * hz * t );
+        im += x[static_cast<size_t>( i )] * std::sin( 2.0 * PiD * hz * t );
     }
     // x ~ A sin(2 pi (f t + c)) = A (sin(2 pi f t) cos(2 pi c) + cos(2 pi f t) sin(2 pi c)): im ~ cos c, re ~ sin c.
-    return std::atan2(re, im) / (2.0 * PiD);
+    return std::atan2( re, im ) / ( 2.0 * PiD );
 }
 
 /**
@@ -153,7 +159,10 @@ double phaseAt(const std::vector<float>& x, double hz, int from, int len, double
  * @param[in] c  the phase in cycles
  * @return the phase wrapped into -0.5 .. 0.5
  */
-double wrapCycles(double c) { return c - std::round(c); }
+double wrapCycles( double c )
+{
+    return c - std::round( c );
+}
 
 /**
  * The kick's asymptotic phase (Kick.h): late in the tail the output is a sine at f_e whose phase is f_e t + c. Measured
@@ -161,20 +170,23 @@ double wrapCycles(double c) { return c - std::round(c); }
  */
 void testKickPhase()
 {
-    section("the kick's asymptotic phase");
+    section( "the kick's asymptotic phase" );
     auto p = std::make_unique<ParamStore>();
-    p->parseText("kick.top_level=-60; kick.amp_decay=900; kick.amp_hold=0");
-    for (int engine = 0; engine < 3; ++engine) {
-        p->set(p->find("kick.engine"), static_cast<float>(engine));
-        for (double late : { 0.0, 0.37 }) {
-            Kick k;
-            const std::vector<float> y = renderKick(*p, 9, late, 48000, k);
-            const double f = k.tunedEndHz();
+    p->parseText( "kick.top_level=-60; kick.amp_decay=900; kick.amp_hold=0" );
+    for ( int engine = 0; engine < 3; ++engine )
+    {
+        p->set( p->find( "kick.engine" ), static_cast<float>( engine ) );
+        for ( double late : { 0.0, 0.37 } )
+        {
+            Kick                     k;
+            const std::vector<float> y = renderKick( *p, 9, late, 48000, k );
+            const double             f = k.tunedEndHz();
             // t = 0 is the ideal start, `late` samples before sample 0.
-            const double measured = phaseAt(y, f, 9600, 9600, 48000.0, late);
+            const double measured = phaseAt( y, f, 9600, 9600, 48000.0, late );
             // The 909's triangle has odd harmonics; its fundamental is in phase with the sine (Kick.h).
-            const double err = std::fabs(wrapCycles(measured - k.asymptoticPhase())) * 360.0;
-            check(err < 3.0, fmt("engine %d, late %.2f: tail in phase with f0 t + c", engine, late).c_str(), fmt("%.2f degrees", err));
+            const double err = std::fabs( wrapCycles( measured - k.asymptoticPhase() ) ) * 360.0;
+            check( err < 3.0, fmt( "engine %d, late %.2f: tail in phase with f0 t + c", engine, late ).c_str(),
+                   fmt( "%.2f degrees", err ) );
         }
     }
 }
@@ -182,22 +194,27 @@ void testKickPhase()
 /** The kick's tuning rules (Kick::tuneToKey). */
 void testKickTuning()
 {
-    section("kick tuning");
-    bool keyOk = true, fifthOk = true;
+    section( "kick tuning" );
+    bool        keyOk = true, fifthOk = true;
     std::string detail;
-    for (int root = 0; root < 12; ++root) {
-        const float f = Kick::tuneToKey(root, static_cast<int>(KickTuneE::KEY), 52.0f);
-        const double note = 69.0 + 12.0 * std::log2(f / 440.0);
-        const int pc = ((static_cast<int>(std::lround(note)) % 12) + 12) % 12;
-        const bool tonicFits = root >= 4;   // E .. B have an octave in 41 .. 62 Hz
-        const int want = tonicFits ? root : (root + 7) % 12;
-        if (pc != want || f < 40.0f || f > 66.0f) { keyOk = false; detail += fmt("%s->%.1f ", KeyNames[root], f); }
-        const float g = Kick::tuneToKey(root, static_cast<int>(KickTuneE::FIFTH), 52.0f);
-        const int pg = ((static_cast<int>(std::lround(69.0 + 12.0 * std::log2(g / 440.0))) % 12) + 12) % 12;
-        fifthOk = fifthOk && pg == (root + 7) % 12;
+    for ( int root = 0; root < 12; ++root )
+    {
+        const float  f = Kick::tuneToKey( root, static_cast<int>( KickTuneE::KEY ), 52.0f );
+        const double note = 69.0 + 12.0 * std::log2( f / 440.0 );
+        const int    pc = ( ( static_cast<int>( std::lround( note ) ) % 12 ) + 12 ) % 12;
+        const bool   tonicFits = root >= 4;   // E .. B have an octave in 41 .. 62 Hz
+        const int    want = tonicFits ? root : ( root + 7 ) % 12;
+        if ( pc != want || f < 40.0f || f > 66.0f )
+        {
+            keyOk = false;
+            detail += fmt( "%s->%.1f ", KeyNames[root], f );
+        }
+        const float g = Kick::tuneToKey( root, static_cast<int>( KickTuneE::FIFTH ), 52.0f );
+        const int   pg = ( ( static_cast<int>( std::lround( 69.0 + 12.0 * std::log2( g / 440.0 ) ) ) % 12 ) + 12 ) % 12;
+        fifthOk = fifthOk && pg == ( root + 7 ) % 12;
     }
-    check(keyOk, "Key: the tonic in 41 .. 62 Hz, else the fifth", detail);
-    check(fifthOk, "Fifth: the fifth");
+    check( keyOk, "Key: the tonic in 41 .. 62 Hz, else the fifth", detail );
+    check( fifthOk, "Fifth: the fifth" );
 }
 
 /**
@@ -207,81 +224,94 @@ void testKickTuning()
  */
 void testRumble()
 {
-    section("the rumble continues the kick");
-    for (float f0 : { 46.0f, 55.0f, 61.0f }) {
-        for (float decay : { 1.0f, 3.5f }) {
+    section( "the rumble continues the kick" );
+    for ( float f0 : { 46.0f, 55.0f, 61.0f } )
+    {
+        for ( float decay : { 1.0f, 3.5f } )
+        {
             auto p = std::make_unique<ParamStore>();
-            p->set(p->find("kick.tune"), 0.0f);
-            p->set(p->find("kick.pitch_end"), f0);
-            p->set(p->find("kick.top_level"), -60.0f);
-            p->set(p->find("rumble.decay"), decay);
+            p->set( p->find( "kick.tune" ), 0.0f );
+            p->set( p->find( "kick.pitch_end" ), f0 );
+            p->set( p->find( "kick.top_level" ), -60.0f );
+            p->set( p->find( "rumble.decay" ), decay );
             float kv[64], rv[64];
-            p->readModule(ModuleE::KICK, 0, kv);
-            Kick::constrain(kv, 0.0, 9);
-            p->readModule(ModuleE::RUMBLE, 0, rv);
-            Kick k;
+            p->readModule( ModuleE::KICK, 0, kv );
+            Kick::constrain( kv, 0.0, 9 );
+            p->readModule( ModuleE::RUMBLE, 0, rv );
+            Kick   k;
             Rumble r;
-            k.prepare(48000.0);
-            r.prepare(48000.0, 32);
-            k.update(kv, 9);
-            r.update(rv, k.tunedEndHz());
-            const double beat = 60.0 / 130.0 * 48000.0;   // samples per beat
-            const int beats = 24, n = static_cast<int>(beat * beats);
-            std::vector<float> kick(static_cast<size_t>(n)), sum(static_cast<size_t>(n)), sub(static_cast<size_t>(n));
-            std::vector<float> ko(32), kb(32), ro(32);
+            k.prepare( 48000.0 );
+            r.prepare( 48000.0, 32 );
+            k.update( kv, 9 );
+            r.update( rv, k.tunedEndHz() );
+            const double       beat = 60.0 / 130.0 * 48000.0;   // samples per beat
+            const int          beats = 24, n = static_cast<int>( beat * beats );
+            std::vector<float> kick( static_cast<size_t>( n ) ), sum( static_cast<size_t>( n ) ),
+                sub( static_cast<size_t>( n ) );
+            std::vector<float> ko( 32 ), kb( 32 ), ro( 32 );
             // Kicks on the beat, each with its sub-sample position; spans split at the kicks as the engine splits them.
             int nextBeat = 0;
-            for (int s = 0; s < n;) {
-                while (nextBeat < beats && static_cast<int>(std::ceil(nextBeat * beat)) <= s) {
-                    const double late = std::ceil(nextBeat * beat) - nextBeat * beat;
-                    k.trigger(1.0f, late);
-                    r.kick(late, k.asymptoticPhase(), k.tunedEndHz());
+            for ( int s = 0; s < n; )
+            {
+                while ( nextBeat < beats && static_cast<int>( std::ceil( nextBeat * beat ) ) <= s )
+                {
+                    const double late = std::ceil( nextBeat * beat ) - nextBeat * beat;
+                    k.trigger( 1.0f, late );
+                    r.kick( late, k.asymptoticPhase(), k.tunedEndHz() );
                     ++nextBeat;
                 }
-                int m = std::min(32, n - s);
-                if (nextBeat < beats) m = std::min(m, static_cast<int>(std::ceil(nextBeat * beat)) - s);
-                k.process(ko.data(), kb.data(), m);
-                r.process(kb.data(), ro.data(), m);
-                for (int i = 0; i < m; ++i) {
-                    const size_t o = static_cast<size_t>(s + i);
-                    kick[o] = ko[static_cast<size_t>(i)];
-                    sum[o] = ko[static_cast<size_t>(i)] + ro[static_cast<size_t>(i)];
-                    sub[o] = r.lastSub()[static_cast<size_t>(i)];
+                int m = std::min( 32, n - s );
+                if ( nextBeat < beats ) m = std::min( m, static_cast<int>( std::ceil( nextBeat * beat ) ) - s );
+                k.process( ko.data(), kb.data(), m );
+                r.process( kb.data(), ro.data(), m );
+                for ( int i = 0; i < m; ++i )
+                {
+                    const size_t o = static_cast<size_t>( s + i );
+                    kick[o] = ko[static_cast<size_t>( i )];
+                    sum[o] = ko[static_cast<size_t>( i )] + ro[static_cast<size_t>( i )];
+                    sub[o] = r.lastSub()[static_cast<size_t>( i )];
                 }
                 s += m;
             }
             // Energy under 80 Hz per beat (fourth-order low pass on both), from the fourth beat on.
-            auto lowEnergy = [&](const std::vector<float>& x, int b) {
+            auto lowEnergy = [&]( const std::vector<float> &x, int b )
+            {
                 Svf a, c;
-                a.setK(80.0f, 1.8477590f, 48000.0f);
-                c.setK(80.0f, 0.7653669f, 48000.0f);
-                double e = 0.0;
-                const int from = static_cast<int>((b - 1) * beat), to = static_cast<int>((b + 1) * beat);
-                for (int i = std::max(0, from); i < std::min(n, to); ++i) {
-                    const float y = c.lp(a.lp(x[static_cast<size_t>(i)]));
-                    if (i >= static_cast<int>(b * beat)) e += static_cast<double>(y) * y;
+                a.setK( 80.0f, 1.8477590f, 48000.0f );
+                c.setK( 80.0f, 0.7653669f, 48000.0f );
+                double    e = 0.0;
+                const int from = static_cast<int>( ( b - 1 ) * beat ), to = static_cast<int>( ( b + 1 ) * beat );
+                for ( int i = std::max( 0, from ); i < std::min( n, to ); ++i )
+                {
+                    const float y = c.lp( a.lp( x[static_cast<size_t>( i )] ) );
+                    if ( i >= static_cast<int>( b * beat ) ) e += static_cast<double>( y ) * y;
                 }
                 return e;
             };
             double worst = 1e9;
-            for (int b = 4; b < beats - 1; ++b) worst = std::min(worst, 10.0 * std::log10(lowEnergy(sum, b) / lowEnergy(kick, b)));
-            check(worst >= 0.0, fmt("f0 %.0f Hz, hall %.1f s: under 80 Hz kick + rumble >= kick, every beat", f0, decay).c_str(),
-                  fmt("least gain %+.2f dB", worst));
+            for ( int b = 4; b < beats - 1; ++b )
+                worst = std::min( worst, 10.0 * std::log10( lowEnergy( sum, b ) / lowEnergy( kick, b ) ) );
+            check( worst >= 0.0,
+                   fmt( "f0 %.0f Hz, hall %.1f s: under 80 Hz kick + rumble >= kick, every beat", f0, decay ).c_str(),
+                   fmt( "least gain %+.2f dB", worst ) );
             // Phase: 150 .. 300 ms after every kick, where the kick's tail falls and the sub rises, both projected onto
             // f0. (A correlation of the two signals would read their opposite envelopes, not their phases.)
             const double f = k.tunedEndHz();
-            double worstDeg = 0.0;
-            for (int b = 8; b < beats - 1; ++b) {
-                const int from = static_cast<int>(b * beat + 0.15 * 48000.0), len = static_cast<int>(0.15 * 48000.0);
-                const double d = wrapCycles(phaseAt(kick, f, from, len, 48000.0, 0.0) - phaseAt(sub, f, from, len, 48000.0, 0.0));
-                worstDeg = std::max(worstDeg, std::fabs(d) * 360.0);
+            double       worstDeg = 0.0;
+            for ( int b = 8; b < beats - 1; ++b )
+            {
+                const int    from = static_cast<int>( b * beat + 0.15 * 48000.0 ),
+                             len = static_cast<int>( 0.15 * 48000.0 );
+                const double d = wrapCycles( phaseAt( kick, f, from, len, 48000.0, 0.0 ) -
+                                             phaseAt( sub, f, from, len, 48000.0, 0.0 ) );
+                worstDeg = std::max( worstDeg, std::fabs( d ) * 360.0 );
             }
-            check(worstDeg < 10.0, fmt("f0 %.0f Hz, hall %.1f s: the sub is in phase with the kick's tail", f0, decay).c_str(),
-                  fmt("worst %.1f degrees", worstDeg));
+            check( worstDeg < 10.0,
+                   fmt( "f0 %.0f Hz, hall %.1f s: the sub is in phase with the kick's tail", f0, decay ).c_str(),
+                   fmt( "worst %.1f degrees", worstDeg ) );
         }
     }
 }
-
 
 /**
  * The rumble's calibration (Rumble.cpp, HallGain and BandGain): at the defaults the hall's return reaches the clip
@@ -289,114 +319,124 @@ void testRumble()
  */
 void testRumbleLevel()
 {
-    section("the rumble's level");
+    section( "the rumble's level" );
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("kick.top_level"), -60.0f);
+    p->set( p->find( "kick.top_level" ), -60.0f );
     float kv[64], rv[64];
-    p->readModule(ModuleE::KICK, 0, kv);
-    Kick::constrain(kv, 0.0, 9);
-    p->readModule(ModuleE::RUMBLE, 0, rv);
-    Kick k;
+    p->readModule( ModuleE::KICK, 0, kv );
+    Kick::constrain( kv, 0.0, 9 );
+    p->readModule( ModuleE::RUMBLE, 0, rv );
+    Kick   k;
     Rumble r;
-    k.prepare(48000.0);
-    r.prepare(48000.0, 32);
-    k.update(kv, 9);
-    r.update(rv, k.tunedEndHz());
-    const double beat = 60.0 / 130.0 * 48000.0;
-    const int beats = 16, n = static_cast<int>(beat * beats);
-    std::vector<float> ko(static_cast<size_t>(n)), kb(static_cast<size_t>(n)), ro(static_cast<size_t>(n)), hall(static_cast<size_t>(n));
+    k.prepare( 48000.0 );
+    r.prepare( 48000.0, 32 );
+    k.update( kv, 9 );
+    r.update( rv, k.tunedEndHz() );
+    const double       beat = 60.0 / 130.0 * 48000.0;
+    const int          beats = 16, n = static_cast<int>( beat * beats );
+    std::vector<float> ko( static_cast<size_t>( n ) ), kb( static_cast<size_t>( n ) ), ro( static_cast<size_t>( n ) ),
+        hall( static_cast<size_t>( n ) );
     int nb = 0;
-    for (int s = 0; s < n;) {
-        while (nb < beats && static_cast<int>(std::ceil(nb * beat)) <= s) {
-            const double late = std::ceil(nb * beat) - nb * beat;
-            k.trigger(1.0f, late);
-            r.kick(late, k.asymptoticPhase(), k.tunedEndHz());
+    for ( int s = 0; s < n; )
+    {
+        while ( nb < beats && static_cast<int>( std::ceil( nb * beat ) ) <= s )
+        {
+            const double late = std::ceil( nb * beat ) - nb * beat;
+            k.trigger( 1.0f, late );
+            r.kick( late, k.asymptoticPhase(), k.tunedEndHz() );
             ++nb;
         }
-        int m = std::min(32, n - s);
-        if (nb < beats) m = std::min(m, static_cast<int>(std::ceil(nb * beat)) - s);
-        k.process(&ko[static_cast<size_t>(s)], &kb[static_cast<size_t>(s)], m);
-        r.process(&kb[static_cast<size_t>(s)], &ro[static_cast<size_t>(s)], m);
-        for (int i = 0; i < m; ++i) hall[static_cast<size_t>(s + i)] = r.lastHall()[static_cast<size_t>(i)];
+        int m = std::min( 32, n - s );
+        if ( nb < beats ) m = std::min( m, static_cast<int>( std::ceil( nb * beat ) ) - s );
+        k.process( &ko[static_cast<size_t>( s )], &kb[static_cast<size_t>( s )], m );
+        r.process( &kb[static_cast<size_t>( s )], &ro[static_cast<size_t>( s )], m );
+        for ( int i = 0; i < m; ++i ) hall[static_cast<size_t>( s + i )] = r.lastHall()[static_cast<size_t>( i )];
         s += m;
     }
-    const int from = static_cast<int>(8 * beat);
-    auto rms = [&](const std::vector<float>& x) {
+    const int from = static_cast<int>( 8 * beat );
+    auto      rms = [&]( const std::vector<float> &x )
+    {
         double e = 0.0;
-        for (int i = from; i < n; ++i) e += static_cast<double>(x[static_cast<size_t>(i)]) * x[static_cast<size_t>(i)];
-        return 10.0 * std::log10(e / (n - from) + 1e-30);
+        for ( int i = from; i < n; ++i )
+            e += static_cast<double>( x[static_cast<size_t>( i )] ) * x[static_cast<size_t>( i )];
+        return 10.0 * std::log10( e / ( n - from ) + 1e-30 );
     };
     float peak = 0.0f;
-    for (int i = from; i < n; ++i) peak = std::max(peak, std::fabs(hall[static_cast<size_t>(i)]));
-    const double peakDb = 20.0 * std::log10(peak);
-    check(peakDb > -3.0 && peakDb < 0.0, "the hall's return reaches the clip just under full scale", fmt("peak %.1f dBFS", peakDb));
-    const double rel = rms(ro) - rms(ko);
-    check(std::fabs(rel - rv[rumble::LEVEL]) < 1.5, "Level is the rumble against the kick", fmt("%.1f dB at Level %.0f dB", rel, rv[rumble::LEVEL]));
+    for ( int i = from; i < n; ++i ) peak = std::max( peak, std::fabs( hall[static_cast<size_t>( i )] ) );
+    const double peakDb = 20.0 * std::log10( peak );
+    check( peakDb > -3.0 && peakDb < 0.0, "the hall's return reaches the clip just under full scale",
+           fmt( "peak %.1f dBFS", peakDb ) );
+    const double rel = rms( ro ) - rms( ko );
+    check( std::fabs( rel - rv[rumble::LEVEL] ) < 1.5, "Level is the rumble against the kick",
+           fmt( "%.1f dB at Level %.0f dB", rel, rv[rumble::LEVEL] ) );
 }
 
 /** The sub bass's kick lock: a note at the kick's pitch a sixteenth after the kick starts in the kick's phase. */
 void testSubLock()
 {
-    section("the sub bass starts in the kick's phase");
+    section( "the sub bass starts in the kick's phase" );
     auto p = std::make_unique<ParamStore>();
-    p->parseText("kick.tune=Free; kick.pitch_end=55; kick.top_level=-60; kick.amp_decay=900; sub.duck=0; sub.attack=1");
-    Kick k;
-    std::vector<float> body;
-    const int n = 24000;
-    const std::vector<float> kick = renderKick(*p, 9, 0.0, n, k, &body);
-    float sv[64];
-    p->readModule(ModuleE::SUB, 0, sv);
+    p->parseText(
+        "kick.tune=Free; kick.pitch_end=55; kick.top_level=-60; kick.amp_decay=900; sub.duck=0; sub.attack=1" );
+    Kick                     k;
+    std::vector<float>       body;
+    const int                n = 24000;
+    const std::vector<float> kick = renderKick( *p, 9, 0.0, n, k, &body );
+    float                    sv[64];
+    p->readModule( ModuleE::SUB, 0, sv );
     SubBass s;
-    s.prepare(48000.0);
-    s.update(sv);
-    const int onset = 5539;   // a sixteenth at 130 BPM is 5538.46 samples: the note's ideal start
+    s.prepare( 48000.0 );
+    s.update( sv );
+    const int    onset = 5539;   // a sixteenth at 130 BPM is 5538.46 samples: the note's ideal start
     const double late = onset - 5538.4615;
-    const double hz = s.noteHz(33);   // A1 = 55 Hz
-    const double kickPhase = k.tunedEndHz() * (5538.4615 / 48000.0) + k.asymptoticPhase();
-    double ph = hz / k.tunedEndHz() * kickPhase - s.chainPhase(hz);
-    ph -= std::floor(ph);
-    std::vector<float> y(static_cast<size_t>(n), 0.0f);
-    s.process(y.data(), onset);
-    s.noteOn(33, 1.0f, late, ph);
-    s.process(y.data() + onset, n - onset);
+    const double hz = s.noteHz( 33 );   // A1 = 55 Hz
+    const double kickPhase = k.tunedEndHz() * ( 5538.4615 / 48000.0 ) + k.asymptoticPhase();
+    double       ph = hz / k.tunedEndHz() * kickPhase - s.chainPhase( hz );
+    ph -= std::floor( ph );
+    std::vector<float> y( static_cast<size_t>( n ), 0.0f );
+    s.process( y.data(), onset );
+    s.noteOn( 33, 1.0f, late, ph );
+    s.process( y.data() + onset, n - onset );
     double kk = 0.0, ss = 0.0, ks = 0.0;
-    for (int i = onset + 480; i < onset + 4800; ++i) {
-        kk += static_cast<double>(kick[static_cast<size_t>(i)]) * kick[static_cast<size_t>(i)];
-        ss += static_cast<double>(y[static_cast<size_t>(i)]) * y[static_cast<size_t>(i)];
-        ks += static_cast<double>(kick[static_cast<size_t>(i)]) * y[static_cast<size_t>(i)];
+    for ( int i = onset + 480; i < onset + 4800; ++i )
+    {
+        kk += static_cast<double>( kick[static_cast<size_t>( i )] ) * kick[static_cast<size_t>( i )];
+        ss += static_cast<double>( y[static_cast<size_t>( i )] ) * y[static_cast<size_t>( i )];
+        ks += static_cast<double>( kick[static_cast<size_t>( i )] ) * y[static_cast<size_t>( i )];
     }
-    const double corr = ks / std::sqrt(kk * ss + 1e-30);
-    check(corr > 0.97, "sub and kick tail in phase, 10 .. 100 ms after the note", fmt("correlation %.4f", corr));
+    const double corr = ks / std::sqrt( kk * ss + 1e-30 );
+    check( corr > 0.97, "sub and kick tail in phase, 10 .. 100 ms after the note", fmt( "correlation %.4f", corr ) );
 }
 
 /** The metal table: six bits, the same every time, its energy above 2.5 kHz. */
 void testMetalTable()
 {
-    section("the 909 metal table");
+    section( "the 909 metal table" );
     PercKit a, b;
-    a.prepare(48000.0);
-    b.prepare(44100.0);
-    const std::vector<float>& t = a.metalTable();
-    bool sixBits = true;
-    for (float x : t) sixBits = sixBits && std::fabs(x * 32.0f - std::round(x * 32.0f)) < 1e-6f;
-    check(sixBits, "every value one of 64 levels");
-    check(t == b.metalTable(), "the same table whatever the sample rate");
-    const std::vector<double> ps = powerSpectrum(t.data(), 16384);
-    double low = 0.0, all = 0.0;
-    for (size_t i = 1; i < ps.size(); ++i) {
-        const double hz = static_cast<double>(i) * PercKit::MetalRate / 16384.0;
+    a.prepare( 48000.0 );
+    b.prepare( 44100.0 );
+    const std::vector<float> &t = a.metalTable();
+    bool                      sixBits = true;
+    for ( float x : t ) sixBits = sixBits && std::fabs( x * 32.0f - std::round( x * 32.0f ) ) < 1e-6f;
+    check( sixBits, "every value one of 64 levels" );
+    check( t == b.metalTable(), "the same table whatever the sample rate" );
+    const std::vector<double> ps = powerSpectrum( t.data(), 16384 );
+    double                    low = 0.0, all = 0.0;
+    for ( size_t i = 1; i < ps.size(); ++i )
+    {
+        const double hz = static_cast<double>( i ) * PercKit::MetalRate / 16384.0;
         all += ps[i];
-        if (hz < 2500.0) low += ps[i];
+        if ( hz < 2500.0 ) low += ps[i];
     }
-    check(low / all < 0.05, "less than 5 % of its energy under 2.5 kHz", fmt("%.2f %%", 100.0 * low / all));
+    check( low / all < 0.05, "less than 5 % of its energy under 2.5 kHz", fmt( "%.2f %%", 100.0 * low / all ) );
 }
 
 /**
  * The kit's levels (Params.cpp, DefaultKit): a full-velocity hit of every default lane peaks where Dok. 8.7's reference
  * levels put it against the kick's peak (CH -8, OH -10, perc -15, FX -10 dB; the rest [I], see LaneTargetDb).
  */
-constexpr float LaneTargetDb[PercLanes] = { -8.0f, -12.0f, -10.0f, -14.0f, -10.0f, -16.0f, -14.0f, -15.0f, -15.0f, -15.0f,
-                                              -15.0f, -10.0f };
+constexpr float LaneTargetDb[PercLanes] = { -8.0f,  -12.0f, -10.0f, -14.0f, -10.0f, -16.0f,
+                                            -14.0f, -15.0f, -15.0f, -15.0f, -15.0f, -10.0f };
 
 /**
  * @brief Peak of one hit of lane @p lane at velocity 1 with the store's knobs, stereo.
@@ -404,138 +444,161 @@ constexpr float LaneTargetDb[PercLanes] = { -8.0f, -12.0f, -10.0f, -14.0f, -10.0
  * @param[in] lane  the lane
  * @return the hit's peak
  */
-float lanePeak(const ParamStore& p, int lane)
+float lanePeak( const ParamStore &p, int lane )
 {
     PercKit kit;
-    kit.prepare(48000.0);
-    kit.setTempo(130.0);
-    for (int l = 0; l < PercLanes; ++l) {
+    kit.prepare( 48000.0 );
+    kit.setTempo( 130.0 );
+    for ( int l = 0; l < PercLanes; ++l )
+    {
         float v[64];
-        p.readModule(ModuleE::PERC, l, v);
-        kit.update(l, v, 9, 0);
+        p.readModule( ModuleE::PERC, l, v );
+        kit.update( l, v, 9, 0 );
     }
-    kit.trigger(lane, 1.0f, 0, 0.0);
-    std::vector<float> L(48000), R(48000);
-    kit.process(L.data(), R.data(), 48000);
+    kit.trigger( lane, 1.0f, 0, 0.0 );
+    std::vector<float> L( 48000 ), R( 48000 );
+    kit.process( L.data(), R.data(), 48000 );
     float pk = 0.0f;
-    for (int i = 0; i < 48000; ++i) pk = std::max(pk, std::max(std::fabs(L[static_cast<size_t>(i)]), std::fabs(R[static_cast<size_t>(i)])));
+    for ( int i = 0; i < 48000; ++i )
+        pk = std::max( pk,
+                       std::max( std::fabs( L[static_cast<size_t>( i )] ), std::fabs( R[static_cast<size_t>( i )] ) ) );
     return pk;
 }
 
 /** @brief Every kit lane's peak against the kick's, at the level the lane's role asks for. */
 void testKitLevels()
 {
-    section("the kit's levels against the kick");
-    auto p = std::make_unique<ParamStore>();
-    Kick k;
-    const std::vector<float> kick = renderKick(*p, 9, 0.0, 24000, k);
-    float kp = 0.0f;
-    for (float x : kick) kp = std::max(kp, std::fabs(x));
-    const double kickDb = 20.0 * std::log10(kp);
-    std::string suggest;
-    for (int l = 0; l < PercLanes; ++l) {
-        const double rel = 20.0 * std::log10(lanePeak(*p, l)) - kickDb;
-        const double level = p->get(p->id(ModuleE::PERC, l, perc::LEVEL));
-        const bool ok = std::fabs(rel - LaneTargetDb[l]) < 1.5;
-        if (!ok) suggest += fmt("perc%d.level=%.1f; ", l + 1, level + LaneTargetDb[l] - rel);
-        check(ok, fmt("lane %d (%s) at %.0f dB against the kick", l + 1, PercRoleNames[l], LaneTargetDb[l]).c_str(),
-              fmt("%.1f dB", rel));
+    section( "the kit's levels against the kick" );
+    auto                     p = std::make_unique<ParamStore>();
+    Kick                     k;
+    const std::vector<float> kick = renderKick( *p, 9, 0.0, 24000, k );
+    float                    kp = 0.0f;
+    for ( float x : kick ) kp = std::max( kp, std::fabs( x ) );
+    const double kickDb = 20.0 * std::log10( kp );
+    std::string  suggest;
+    for ( int l = 0; l < PercLanes; ++l )
+    {
+        const double rel = 20.0 * std::log10( lanePeak( *p, l ) ) - kickDb;
+        const double level = p->get( p->id( ModuleE::PERC, l, perc::LEVEL ) );
+        const bool   ok = std::fabs( rel - LaneTargetDb[l] ) < 1.5;
+        if ( !ok ) suggest += fmt( "perc%d.level=%.1f; ", l + 1, level + LaneTargetDb[l] - rel );
+        check( ok, fmt( "lane %d (%s) at %.0f dB against the kick", l + 1, PercRoleNames[l], LaneTargetDb[l] ).c_str(),
+               fmt( "%.1f dB", rel ) );
     }
-    if (!suggest.empty()) std::printf("  levels that would meet the targets: %s\n", suggest.c_str());
+    if ( !suggest.empty() ) std::printf( "  levels that would meet the targets: %s\n", suggest.c_str() );
 }
 
 /** The rack's rules (Rack.h, Dok. 8.2). */
 void testRack()
 {
-    section("the pattern rack");
+    section( "the pattern rack" );
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("compose.humanize"), 0.0f);
-    const RackPlan plan = makeRackPlan(*p, 77);
-    int quarterViolations = 0, hatClashes = 0, bars = 0;
+    p->set( p->find( "compose.humanize" ), 0.0f );
+    const RackPlan         plan = makeRackPlan( *p, 77 );
+    int                    quarterViolations = 0, hatClashes = 0, bars = 0;
     std::vector<NoteEvent> notes;
-    for (int bar = 0; bar < 64; ++bar) {
-        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
-        for (bool& a : spec.m_active) a = true;
+    for ( int bar = 0; bar < 64; ++bar )
+    {
+        BarSpec spec = emptyBar( bar, 4.0 * bar, 130.0 );
+        for ( bool &a : spec.m_active ) a = true;
         notes.clear();
-        realizeBar(plan, spec, notes);
+        realizeBar( plan, spec, notes );
         ++bars;
         std::set<int> hatSteps;
-        for (const NoteEvent& n : notes) {
-            const double pos = (n.m_beat - 4.0 * bar) * 4.0;
-            const int step = static_cast<int>(std::floor(pos + 1e-6));
-            const bool quarter = std::fabs(pos - std::round(pos)) < 0.2 && (static_cast<int>(std::lround(pos)) % 4) == 0;
+        for ( const NoteEvent &n : notes )
+        {
+            const double pos = ( n.m_beat - 4.0 * bar ) * 4.0;
+            const int    step = static_cast<int>( std::floor( pos + 1e-6 ) );
+            const bool   quarter =
+                std::fabs( pos - std::round( pos ) ) < 0.2 && ( static_cast<int>( std::lround( pos ) ) % 4 ) == 0;
             // The clap, the rim, the ping; the chord's stab, the drone and the texture (no bass, no 303).
-            bool allowed = n.m_part == PartE::KICK || n.m_part == percPart(4) || n.m_part == percPart(7) || n.m_part == PartE::PING
-                        || n.m_part == PartE::CHORD || n.m_part == PartE::DRONE || n.m_part == PartE::TEXTURE;
-            for (int li = 0; li < NumLayers; ++li) {
-                const int lane = layerLane(plan, static_cast<LayerIdE>(li));
-                if (plan.m_period[li] > 0 && lane >= 0 && n.m_part == percPart(lane)) allowed = true;   // a cyclic layer crosses them
+            bool allowed = n.m_part == PartE::KICK || n.m_part == percPart( 4 ) || n.m_part == percPart( 7 ) ||
+                           n.m_part == PartE::PING || n.m_part == PartE::CHORD || n.m_part == PartE::DRONE ||
+                           n.m_part == PartE::TEXTURE;
+            for ( int li = 0; li < NumLayers; ++li )
+            {
+                const int lane = layerLane( plan, static_cast<LayerIdE>( li ) );
+                if ( plan.m_period[li] > 0 && lane >= 0 && n.m_part == percPart( lane ) )
+                    allowed = true;   // a cyclic layer crosses them
             }
-            if (quarter && !allowed && n.m_velocity > 0.2f) ++quarterViolations;
-            const int lane = laneOf(n.m_part);
-            if (lane >= 0 && lane <= 2) {
-                if (hatSteps.count(step)) ++hatClashes;
-                hatSteps.insert(step);
+            if ( quarter && !allowed && n.m_velocity > 0.2f ) ++quarterViolations;
+            const int lane = laneOf( n.m_part );
+            if ( lane >= 0 && lane <= 2 )
+            {
+                if ( hatSteps.count( step ) ) ++hatClashes;
+                hatSteps.insert( step );
             }
         }
     }
-    check(quarterViolations == 0, "the quarters belong to the kick (clap, rim, cyclic and pad layers may share them)",
-          fmt("%d violations", quarterViolations));
-    check(hatClashes == 0, "one hat per step", fmt("%d clashes in %d bars", hatClashes, bars));
+    check( quarterViolations == 0, "the quarters belong to the kick (clap, rim, cyclic and pad layers may share them)",
+           fmt( "%d violations", quarterViolations ) );
+    check( hatClashes == 0, "one hat per step", fmt( "%d clashes in %d bars", hatClashes, bars ) );
 
     // Anchors: the same every bar of a block. Motion: rolled anew. Loop: bar 3 of a loop equals bar 1.
     bool on1[Steps], on2[Steps];
-    rollSteps(plan, LayerIdE::CLOSED_HAT, 3, 0, 1.0f, on1);
-    rollSteps(plan, LayerIdE::CLOSED_HAT, 17, 0, 1.0f, on2);
-    check(std::equal(on1, on1 + Steps, on2), "the offbeat hat is the same in every bar");
+    rollSteps( plan, LayerIdE::CLOSED_HAT, 3, 0, 1.0f, on1 );
+    rollSteps( plan, LayerIdE::CLOSED_HAT, 17, 0, 1.0f, on2 );
+    check( std::equal( on1, on1 + Steps, on2 ), "the offbeat hat is the same in every bar" );
     std::set<unsigned> shapes;
-    for (int bar = 0; bar < 64; ++bar) {
-        rollSteps(plan, LayerIdE::ROLLING_HAT, bar, 0, 1.0f, on1);
+    for ( int bar = 0; bar < 64; ++bar )
+    {
+        rollSteps( plan, LayerIdE::ROLLING_HAT, bar, 0, 1.0f, on1 );
         unsigned m = 0;
-        for (int s = 0; s < Steps; ++s) m |= on1[s] ? (1u << s) : 0u;
-        shapes.insert(m);
+        for ( int s = 0; s < Steps; ++s ) m |= on1[s] ? ( 1u << s ) : 0u;
+        shapes.insert( m );
     }
-    check(shapes.size() > 12, "the rolling hat is rolled anew every bar (Hypnotic)", fmt("%zu shapes in 64 bars", shapes.size()));
+    check( shapes.size() > 12, "the rolling hat is rolled anew every bar (Hypnotic)",
+           fmt( "%zu shapes in 64 bars", shapes.size() ) );
     // A reroll share of 0 rolls the motion once per block: the same shape in every bar of the block.
     RackPlan steady = plan;
     steady.m_reroll = 0.0f;
     bool steadySame = true;
-    rollSteps(steady, LayerIdE::ROLLING_HAT, 32, 1, 1.0f, on1);
-    for (int bar = 33; bar < 64; ++bar) {
-        rollSteps(steady, LayerIdE::ROLLING_HAT, bar, 1, 1.0f, on2);
-        steadySame = steadySame && std::equal(on1, on1 + Steps, on2);
+    rollSteps( steady, LayerIdE::ROLLING_HAT, 32, 1, 1.0f, on1 );
+    for ( int bar = 33; bar < 64; ++bar )
+    {
+        rollSteps( steady, LayerIdE::ROLLING_HAT, bar, 1, 1.0f, on2 );
+        steadySame = steadySame && std::equal( on1, on1 + Steps, on2 );
     }
-    check(steadySame, "reroll 0: the rolling hat is the same in every bar of a block");
-    const int loop = plan.m_loopBars[static_cast<int>(LayerIdE::OPEN_HAT)];
-    rollSteps(plan, LayerIdE::OPEN_HAT, 32 + 0, 1, 1.0f, on1);
-    rollSteps(plan, LayerIdE::OPEN_HAT, 32 + 2, 1, 1.0f, on2);
-    check(loop == 1 || std::equal(on1, on1 + Steps, on2), "a loop's third bar repeats its first", fmt("loop of %d", loop));
+    check( steadySame, "reroll 0: the rolling hat is the same in every bar of a block" );
+    const int loop = plan.m_loopBars[static_cast<int>( LayerIdE::OPEN_HAT )];
+    rollSteps( plan, LayerIdE::OPEN_HAT, 32 + 0, 1, 1.0f, on1 );
+    rollSteps( plan, LayerIdE::OPEN_HAT, 32 + 2, 1, 1.0f, on2 );
+    check( loop == 1 || std::equal( on1, on1 + Steps, on2 ), "a loop's third bar repeats its first",
+           fmt( "loop of %d", loop ) );
 
     // Swing: the rolling hat's even sixteenths late by (S - 50) % of an eighth, the odd ones on the grid.
-    BarSpec spec = emptyBar(5, 20.0, 130.0);
-    spec.m_active[static_cast<int>(LayerIdE::ROLLING_HAT)] = true;
+    BarSpec spec = emptyBar( 5, 20.0, 130.0 );
+    spec.m_active[static_cast<int>( LayerIdE::ROLLING_HAT )] = true;
     notes.clear();
-    realizeBar(plan, spec, notes);
+    realizeBar( plan, spec, notes );
     double worst = 0.0;
-    for (const NoteEvent& n : notes) {
-        const double pos = (n.m_beat - 20.0) * 4.0;
-        const int step = static_cast<int>(std::lround(std::floor(pos + 1e-6)));
-        const double expect = step + ((step & 1) ? (plan.m_swing - 50.0) / 100.0 * 2.0 : 0.0);
-        worst = std::max(worst, std::fabs(pos - expect));
+    for ( const NoteEvent &n : notes )
+    {
+        const double pos = ( n.m_beat - 20.0 ) * 4.0;
+        const int    step = static_cast<int>( std::lround( std::floor( pos + 1e-6 ) ) );
+        const double expect = step + ( ( step & 1 ) ? ( plan.m_swing - 50.0 ) / 100.0 * 2.0 : 0.0 );
+        worst = std::max( worst, std::fabs( pos - expect ) );
     }
-    check(worst < 1e-9, "MPC swing on the even sixteenths", fmt("swing %.0f %%, worst %.2e steps", static_cast<double>(plan.m_swing), worst));
+    check( worst < 1e-9, "MPC swing on the even sixteenths",
+           fmt( "swing %.0f %%, worst %.2e steps", static_cast<double>( plan.m_swing ), worst ) );
 
     // Determinism: bar 37 alone equals bar 37 after 36 others.
     std::vector<NoteEvent> a, b;
-    BarSpec s37 = emptyBar(37, 148.0, 130.0);
-    for (bool& x : s37.m_active) x = true;
-    realizeBar(plan, s37, a);
-    for (int bar = 0; bar < 37; ++bar) { BarSpec s = emptyBar(bar, 4.0 * bar, 130.0); for (bool& x : s.m_active) x = true; realizeBar(plan, s, b); }
+    BarSpec                s37 = emptyBar( 37, 148.0, 130.0 );
+    for ( bool &x : s37.m_active ) x = true;
+    realizeBar( plan, s37, a );
+    for ( int bar = 0; bar < 37; ++bar )
+    {
+        BarSpec s = emptyBar( bar, 4.0 * bar, 130.0 );
+        for ( bool &x : s.m_active ) x = true;
+        realizeBar( plan, s, b );
+    }
     b.clear();
-    realizeBar(plan, s37, b);
+    realizeBar( plan, s37, b );
     bool same = a.size() == b.size();
-    for (size_t i = 0; same && i < a.size(); ++i) same = a[i].m_beat == b[i].m_beat && a[i].m_velocity == b[i].m_velocity && a[i].m_part == b[i].m_part;
-    check(same, "a bar realised alone equals the bar in sequence", fmt("%zu notes", a.size()));
+    for ( size_t i = 0; same && i < a.size(); ++i )
+        same = a[i].m_beat == b[i].m_beat && a[i].m_velocity == b[i].m_velocity && a[i].m_part == b[i].m_part;
+    check( same, "a bar realised alone equals the bar in sequence", fmt( "%zu notes", a.size() ) );
 }
 
 /**
@@ -544,149 +607,203 @@ void testRack()
  */
 void testRackPhase2()
 {
-    section("the rack's cycles, chains and conditions");
+    section( "the rack's cycles, chains and conditions" );
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("compose.humanize"), 0.0f);
+    p->set( p->find( "compose.humanize" ), 0.0f );
     // Cycles: a period of p sixteenths is back on the bar's first step after lcm(p, 16) / 16 bars, and not before.
-    bool realign = true;
+    bool        realign = true;
     std::string detail;
-    for (int period : { 3, 5, 6, 7, 12, 15, 17 }) {
-        RackPlan plan = makeRackPlan(*p, 3);
-        const int li = static_cast<int>(LayerIdE::PING);
+    for ( int period : { 3, 5, 6, 7, 12, 15, 17 } )
+    {
+        RackPlan  plan = makeRackPlan( *p, 3 );
+        const int li = static_cast<int>( LayerIdE::PING );
         plan.m_period[li] = period;
         plan.m_resetBars[li] = 64;
         plan.m_cycle[li] = 1;   // one onset, on the period's first position
         int first = -1;
-        for (int bar = 1; bar < 40 && first < 0; ++bar) {
+        for ( int bar = 1; bar < 40 && first < 0; ++bar )
+        {
             bool on[Steps];
-            rollSteps(plan, LayerIdE::PING, bar, 0, 1.0f, on);
-            if (on[0]) first = bar;
+            rollSteps( plan, LayerIdE::PING, bar, 0, 1.0f, on );
+            if ( on[0] ) first = bar;
         }
         int g = period, h = 16;
-        while (h) { const int t = g % h; g = h; h = t; }
+        while ( h )
+        {
+            const int t = g % h;
+            g = h;
+            h = t;
+        }
         const int want = period * 16 / g / 16;
-        if (first != want) { realign = false; detail += fmt("%d: bar %d (want %d) ", period, first, want); }
+        if ( first != want )
+        {
+            realign = false;
+            detail += fmt( "%d: bar %d (want %d) ", period, first, want );
+        }
     }
-    check(realign, "a cycle meets the bar again after lcm(p, 16) / 16 bars (15 and 17: after 15 and 17)", detail);
+    check( realign, "a cycle meets the bar again after lcm(p, 16) / 16 bars (15 and 17: after 15 and 17)", detail );
     // Euclid: the chosen rotations keep the quarters free, the masks are maximally even -- and all three kinds come
     // (six, five and seven onsets; until 01.10.2026 the five and the seven fell back to the matrix unseen).
     int euclidOnQuarter = 0, plans = 0, onsetKinds[17] = {};
-    for (uint64_t seed = 1; seed < 200; ++seed) {
-        const RackPlan plan = makeRackPlan(*p, seed);
-        for (int li = 0; li < NumLayers; ++li) {
-            if (plan.m_euclid[li] == 0) continue;
+    for ( uint64_t seed = 1; seed < 200; ++seed )
+    {
+        const RackPlan plan = makeRackPlan( *p, seed );
+        for ( int li = 0; li < NumLayers; ++li )
+        {
+            if ( plan.m_euclid[li] == 0 ) continue;
             ++plans;
-            if (plan.m_euclid[li] & 0x1111u) ++euclidOnQuarter;
+            if ( plan.m_euclid[li] & 0x1111u ) ++euclidOnQuarter;
             int n = 0;
-            for (int s = 0; s < 16; ++s) n += (plan.m_euclid[li] >> s) & 1;
+            for ( int s = 0; s < 16; ++s ) n += ( plan.m_euclid[li] >> s ) & 1;
             ++onsetKinds[n];
         }
     }
-    const uint64_t e516 = euclidMask(5, 16);
-    int gaps[5], k = 0, last = -1, firstOn = -1;
-    for (int i = 0; i < 16; ++i) if (e516 & (uint64_t(1) << i)) { if (last >= 0) gaps[k++] = i - last; else firstOn = i; last = i; }
+    const uint64_t e516 = euclidMask( 5, 16 );
+    int            gaps[5], k = 0, last = -1, firstOn = -1;
+    for ( int i = 0; i < 16; ++i )
+        if ( e516 & ( uint64_t( 1 ) << i ) )
+        {
+            if ( last >= 0 )
+                gaps[k++] = i - last;
+            else
+                firstOn = i;
+            last = i;
+        }
     gaps[k++] = 16 - last + firstOn;
     bool even = true;
-    for (int i = 0; i < k; ++i) even = even && (gaps[i] == 3 || gaps[i] == 4);
-    check(euclidOnQuarter == 0 && plans > 20 && onsetKinds[5] > 0 && onsetKinds[6] > 0 && onsetKinds[7] > 0,
-          "Euclidean patterns off the quarters, with five, six and seven onsets",
-          fmt("%d of %d on a quarter; %d / %d / %d with five / six / seven", euclidOnQuarter, plans, onsetKinds[5], onsetKinds[6], onsetKinds[7]));
-    check(even && k == 5, "E(5,16) is 3+3+3+3+4 in some rotation");
+    for ( int i = 0; i < k; ++i ) even = even && ( gaps[i] == 3 || gaps[i] == 4 );
+    check( euclidOnQuarter == 0 && plans > 20 && onsetKinds[5] > 0 && onsetKinds[6] > 0 && onsetKinds[7] > 0,
+           "Euclidean patterns off the quarters, with five, six and seven onsets",
+           fmt( "%d of %d on a quarter; %d / %d / %d with five / six / seven", euclidOnQuarter, plans, onsetKinds[5],
+                onsetKinds[6], onsetKinds[7] ) );
+    check( even && k == 5, "E(5,16) is 3+3+3+3+4 in some rotation" );
     // The ghost chain: after a ghost kick, the next sixteenth's chance is halved.
-    const RackPlan plan = makeRackPlan(*p, 21);
-    int pairs = 0, afterOn = 0;
-    for (int bar = 0; bar < 40000; ++bar) {
+    const RackPlan plan = makeRackPlan( *p, 21 );
+    int            pairs = 0, afterOn = 0;
+    for ( int bar = 0; bar < 40000; ++bar )
+    {
         bool on[Steps];
-        rollSteps(plan, LayerIdE::CLAP_GHOST, bar, 0, 1.0f, on);
-        for (int s = 2; s < Steps; ++s) if (layerDef(LayerIdE::CLAP_GHOST).m_p[s] > 0.0f && on[s - 2]) { ++pairs; afterOn += on[s] ? 1 : 0; }
+        rollSteps( plan, LayerIdE::CLAP_GHOST, bar, 0, 1.0f, on );
+        for ( int s = 2; s < Steps; ++s )
+            if ( layerDef( LayerIdE::CLAP_GHOST ).m_p[s] > 0.0f && on[s - 2] )
+            {
+                ++pairs;
+                afterOn += on[s] ? 1 : 0;
+            }
     }
     int base = 0, total = 0;
-    for (int bar = 0; bar < 40000; ++bar) {
+    for ( int bar = 0; bar < 40000; ++bar )
+    {
         bool on[Steps];
-        rollSteps(plan, LayerIdE::CLAP_GHOST, bar, 0, 1.0f, on);
-        for (int s = 0; s < Steps; ++s) if (layerDef(LayerIdE::CLAP_GHOST).m_p[s] > 0.0f) { ++total; base += on[s] ? 1 : 0; }
+        rollSteps( plan, LayerIdE::CLAP_GHOST, bar, 0, 1.0f, on );
+        for ( int s = 0; s < Steps; ++s )
+            if ( layerDef( LayerIdE::CLAP_GHOST ).m_p[s] > 0.0f )
+            {
+                ++total;
+                base += on[s] ? 1 : 0;
+            }
     }
-    const double after = pairs > 0 ? static_cast<double>(afterOn) / pairs : 0.0, overall = static_cast<double>(base) / total;
-    check(after < 0.9 * overall, "a clap ghost two steps after another is rarer than any clap ghost",
-          fmt("%.3f against %.3f", after, overall));
+    const double after = pairs > 0 ? static_cast<double>( afterOn ) / pairs : 0.0,
+                 overall = static_cast<double>( base ) / total;
+    check( after < 0.9 * overall, "a clap ghost two steps after another is rarer than any clap ghost",
+           fmt( "%.3f against %.3f", after, overall ) );
     // Trig conditions: the extra open hat only in the second of four bars.
     bool condOk = true;
-    for (int bar = 0; bar < 32; ++bar) {
-        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
-        spec.m_active[static_cast<int>(LayerIdE::OPEN_HAT)] = true;
+    for ( int bar = 0; bar < 32; ++bar )
+    {
+        BarSpec spec = emptyBar( bar, 4.0 * bar, 130.0 );
+        spec.m_active[static_cast<int>( LayerIdE::OPEN_HAT )] = true;
         std::vector<NoteEvent> notes;
-        realizeBar(plan, spec, notes);
-        const TrigCond& t = plan.m_conds[0];
-        bool has = false;
-        for (const NoteEvent& n : notes) if (std::fabs((n.m_beat - 4.0 * bar) * 4.0 - t.m_step) < 0.2 && n.m_part == percPart(2)) has = true;
-        const bool want = (bar % 4) == 1;
-        if (want && !has) condOk = false;
+        realizeBar( plan, spec, notes );
+        const TrigCond &t = plan.m_conds[0];
+        bool            has = false;
+        for ( const NoteEvent &n : notes )
+            if ( std::fabs( ( n.m_beat - 4.0 * bar ) * 4.0 - t.m_step ) < 0.2 && n.m_part == percPart( 2 ) ) has = true;
+        const bool want = ( bar % 4 ) == 1;
+        if ( want && !has ) condOk = false;
     }
-    check(condOk, "the open hat's trig condition plays in bar 2 of 4");
+    check( condOk, "the open hat's trig condition plays in bar 2 of 4" );
     // Fills: only in the last bar of an eight-bar phrase.
     bool fillOk = true;
-    int fills = 0;
-    for (int bar = 0; bar < 256; ++bar) {
-        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
-        spec.m_active[static_cast<int>(LayerIdE::TOM_CONGA)] = true;
+    int  fills = 0;
+    for ( int bar = 0; bar < 256; ++bar )
+    {
+        BarSpec spec = emptyBar( bar, 4.0 * bar, 130.0 );
+        spec.m_active[static_cast<int>( LayerIdE::TOM_CONGA )] = true;
         std::vector<NoteEvent> notes;
-        realizeBar(plan, spec, notes);
+        realizeBar( plan, spec, notes );
         int last4 = 0;
-        for (const NoteEvent& n : notes) if ((n.m_beat - 4.0 * bar) * 4.0 >= 12.9 && n.m_shift > 0) ++last4;
-        if (last4 > 0) { ++fills; if (bar % 8 != 7) fillOk = false; }
+        for ( const NoteEvent &n : notes )
+            if ( ( n.m_beat - 4.0 * bar ) * 4.0 >= 12.9 && n.m_shift > 0 ) ++last4;
+        if ( last4 > 0 )
+        {
+            ++fills;
+            if ( bar % 8 != 7 ) fillOk = false;
+        }
     }
-    check(fillOk && fills > 0, "fills only in the last bar of an eight-bar phrase", fmt("%d fills in 32 phrases", fills));
+    check( fillOk && fills > 0, "fills only in the last bar of an eight-bar phrase",
+           fmt( "%d fills in 32 phrases", fills ) );
     // Mini-notation.
-    const std::string kick = miniNotation(plan, LayerIdE::KICK, 0, "bd");
-    const std::string ping = miniNotation(plan, LayerIdE::PING, 0, "p");
-    check(kick == "bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~", "the kick in mini-notation", kick);
-    check(ping.front() == '{' && ping.find("}%16") != std::string::npos, "a cyclic layer as a polymetric sequence", ping);
+    const std::string kick = miniNotation( plan, LayerIdE::KICK, 0, "bd" );
+    const std::string ping = miniNotation( plan, LayerIdE::PING, 0, "p" );
+    check( kick == "bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~ bd ~ ~ ~", "the kick in mini-notation", kick );
+    check( ping.front() == '{' && ping.find( "}%16" ) != std::string::npos, "a cyclic layer as a polymetric sequence",
+           ping );
 }
 
 /** The study's form (Study.h, PLAN 7.2). */
 void testStudyForm()
 {
-    section("the study's form");
-    for (int combo = 0; combo < 8; ++combo) {
+    section( "the study's form" );
+    for ( int combo = 0; combo < 8; ++combo )
+    {
         const int owner = combo % 2, style = combo / 2;
-        auto p = std::make_unique<ParamStore>();
-        p->set(p->find("compose.minutes"), 7.0f);
-        p->set(p->find("compose.low_owner"), static_cast<float>(owner));
-        p->set(p->find("compose.style"), static_cast<float>(style));
-        const Score s = composeStudy(*p, 5);
-        const std::string who = fmt("%s, owner %d", StyleNames[style], owner);
-        const int bars = static_cast<int>(s.m_lengthBeats / 4.0);
+        auto      p = std::make_unique<ParamStore>();
+        p->set( p->find( "compose.minutes" ), 7.0f );
+        p->set( p->find( "compose.low_owner" ), static_cast<float>( owner ) );
+        p->set( p->find( "compose.style" ), static_cast<float>( style ) );
+        const Score       s = composeStudy( *p, 5 );
+        const std::string who = fmt( "%s, owner %d", StyleNames[style], owner );
+        const int         bars = static_cast<int>( s.m_lengthBeats / 4.0 );
         // Exactly one operation at every block boundary of the body.
         int blocksWithOne = 0, blocks = 0;
-        for (int b = 32; b < bars - 32; b += 32) {
+        for ( int b = 32; b < bars - 32; b += 32 )
+        {
             ++blocks;
             int ops = 0;
-            for (const BlockOp& o : s.m_ops) if (std::fabs(o.m_beat - 4.0 * b) < 1e-9) ++ops;
+            for ( const BlockOp &o : s.m_ops )
+                if ( std::fabs( o.m_beat - 4.0 * b ) < 1e-9 ) ++ops;
             blocksWithOne += ops == 1 ? 1 : 0;
         }
-        check(blocksWithOne >= blocks - 1, (who + ": one operation per block boundary").c_str(), fmt("%d of %d", blocksWithOne, blocks));
+        check( blocksWithOne >= blocks - 1, ( who + ": one operation per block boundary" ).c_str(),
+               fmt( "%d of %d", blocksWithOne, blocks ) );
         // Every operation on a four-bar line.
         bool onFour = true;
-        for (const BlockOp& o : s.m_ops) onFour = onFour && std::fabs(std::fmod(o.m_beat, 16.0)) < 1e-9;
-        check(onFour, (who + ": every operation on a multiple of four bars").c_str());
+        for ( const BlockOp &o : s.m_ops ) onFour = onFour && std::fabs( std::fmod( o.m_beat, 16.0 ) ) < 1e-9;
+        check( onFour, ( who + ": every operation on a multiple of four bars" ).c_str() );
         // No tonal material in the first and last 32 bars (Dok. 8.5), and a bass only where the sub owns the low end.
         int tonalEdge = 0, bassNotes = 0, tonalNotes = 0;
-        for (const NoteEvent& n : s.m_notes) {
-            const bool isTonal = n.m_part == PartE::BASS || n.m_part == PartE::SUB || n.m_part == PartE::ACID || n.m_part == PartE::CHORD
-                              || n.m_part == PartE::DRONE || n.m_part == PartE::TEXTURE || n.m_part == PartE::PING;
-            if (!isTonal) continue;
+        for ( const NoteEvent &n : s.m_notes )
+        {
+            const bool isTonal = n.m_part == PartE::BASS || n.m_part == PartE::SUB || n.m_part == PartE::ACID ||
+                                 n.m_part == PartE::CHORD || n.m_part == PartE::DRONE || n.m_part == PartE::TEXTURE ||
+                                 n.m_part == PartE::PING;
+            if ( !isTonal ) continue;
             ++tonalNotes;
             bassNotes += n.m_part == PartE::BASS ? 1 : 0;
-            if (n.m_beat < 128.0 || n.m_beat >= s.m_lengthBeats - 128.0) ++tonalEdge;
+            if ( n.m_beat < 128.0 || n.m_beat >= s.m_lengthBeats - 128.0 ) ++tonalEdge;
         }
         // Hypnotic brings the ping early, Dub the chord, a sub owner the bass: tonal material even in seven minutes.
-        const bool wantTonal = owner == 1 || style == static_cast<int>(StyleE::HYPNOTIC) || style == static_cast<int>(StyleE::DUB);
-        check(tonalEdge == 0 && (tonalNotes > 0 || !wantTonal), (who + ": no tonal material in the first and last 32 bars").c_str(),
-              fmt("%d of %d notes at the edges", tonalEdge, tonalNotes));
-        check(owner == 1 ? bassNotes > 0 : bassNotes == 0, (who + ": a bass line exactly where the sub owns the low end").c_str(),
-              fmt("%d notes", bassNotes));
-        check(s.m_levels.size() == 1 && s.m_levels[0].m_targetLufs == styleTargetLufs(style) && s.m_levels[0].m_peakBeat > 128.0,
-              (who + ": a loudness mark in the body").c_str());
+        const bool wantTonal =
+            owner == 1 || style == static_cast<int>( StyleE::HYPNOTIC ) || style == static_cast<int>( StyleE::DUB );
+        check( tonalEdge == 0 && ( tonalNotes > 0 || !wantTonal ),
+               ( who + ": no tonal material in the first and last 32 bars" ).c_str(),
+               fmt( "%d of %d notes at the edges", tonalEdge, tonalNotes ) );
+        check( owner == 1 ? bassNotes > 0 : bassNotes == 0,
+               ( who + ": a bass line exactly where the sub owns the low end" ).c_str(), fmt( "%d notes", bassNotes ) );
+        check( s.m_levels.size() == 1 && s.m_levels[0].m_targetLufs == styleTargetLufs( style ) &&
+                   s.m_levels[0].m_peakBeat > 128.0,
+               ( who + ": a loudness mark in the body" ).c_str() );
     }
 }
 
@@ -696,146 +813,213 @@ void testStudyForm()
  *  two layers entering in the second half, the whole pool entering, the harmony check (Dok. 8.9), a loudness mark. */
 void testComposer()
 {
-    section("the composer's grammar");
+    section( "the composer's grammar" );
     int tracks = 0, badOps = 0, badLines = 0, badReturns = 0, badTonal = 0, badEndless = 0, badBass = 0, badLate = 0,
         badPool = 0, badHarmony = 0, badLevel = 0, badOpening = 0;
     std::set<int> openings;
-    std::string firstOpening;
-    std::string first;
-    const auto fail = [&](int& counter, const std::string& what) { ++counter; if (first.empty()) first = what; };
+    std::string   firstOpening;
+    std::string   first;
+    const auto    fail = [&]( int &counter, const std::string &what )
+    {
+        ++counter;
+        if ( first.empty() ) first = what;
+    };
     int forms[3] = {};
-    for (int style = 0; style < 4; ++style) {
-        for (uint64_t seed = 1; seed <= 8; ++seed) {
+    for ( int style = 0; style < 4; ++style )
+    {
+        for ( uint64_t seed = 1; seed <= 8; ++seed )
+        {
             auto p = std::make_unique<ParamStore>();
-            p->set(p->find("compose.style"), static_cast<float>(style));
-            TrackInfo info;
-            const Score s = composeTrack(*p, seed, TrackRequest{}, nullptr, std::string(), &info);
+            p->set( p->find( "compose.style" ), static_cast<float>( style ) );
+            TrackInfo   info;
+            const Score s = composeTrack( *p, seed, TrackRequest{}, nullptr, std::string(), &info );
             ++tracks;
-            ++forms[static_cast<int>(info.m_form)];
-            const std::string who = fmt("%s seed %d (%s)", StyleNames[style], static_cast<int>(seed), FormNames[static_cast<int>(info.m_form)]);
-            const int blocks = info.m_bars / 32;
-            const bool endless = info.m_form == FormTypeE::ENDLESS;
+            ++forms[static_cast<int>( info.m_form )];
+            const std::string who = fmt( "%s seed %d (%s)", StyleNames[style], static_cast<int>( seed ),
+                                         FormNames[static_cast<int>( info.m_form )] );
+            const int         blocks = info.m_bars / 32;
+            const bool        endless = info.m_form == FormTypeE::ENDLESS;
             // Phase 20: the opening -- in the first four bars two voices beside the kick and the sub at least, and the
             // kick by bar 17 (where the opening holds it back, not in the first four bars).
-            if (!endless) {
-                openings.insert(info.m_opening);
+            if ( !endless )
+            {
+                openings.insert( info.m_opening );
                 std::set<int> voices;
-                double firstKick = 1e30;
-                for (const NoteEvent& n : s.m_notes) {
-                    if (n.m_part == PartE::KICK) firstKick = std::min(firstKick, n.m_beat);
-                    else if (n.m_part != PartE::SUB && n.m_beat < 16.0) voices.insert(static_cast<int>(n.m_part));
+                double        firstKick = 1e30;
+                for ( const NoteEvent &n : s.m_notes )
+                {
+                    if ( n.m_part == PartE::KICK )
+                        firstKick = std::min( firstKick, n.m_beat );
+                    else if ( n.m_part != PartE::SUB && n.m_beat < 16.0 )
+                        voices.insert( static_cast<int>( n.m_part ) );
                 }
                 // (And the end, the opening's mirror: two voices beside the kick in the last four bars.)
                 std::set<int> tail;
-                for (const NoteEvent& n : s.m_notes)
-                    if (n.m_part != PartE::KICK && n.m_part != PartE::SUB && n.m_beat >= s.m_lengthBeats - 16.0) tail.insert(static_cast<int>(n.m_part));
-                if (tail.size() < 2) { ++badOpening; if (firstOpening.empty()) firstOpening = who + fmt(": %zu voices beside the kick in the last four bars", tail.size()); }
-                const bool held = info.m_opening != static_cast<int>(OpeningE::DRUMS);
-                const auto failOpening = [&](const std::string& what) { ++badOpening; if (firstOpening.empty()) firstOpening = what; };
-                if (voices.size() < 2) failOpening(who + fmt(": %zu voices beside the kick in bars 1-4 (%s)", voices.size(), OpeningNames[info.m_opening]));
-                else if (firstKick > 64.0 + 1e-9 || (held && firstKick < 32.0 - 1e-9) || (!held && firstKick > 1e-9 + 1.0))
-                    failOpening(who + fmt(": the kick from beat %.1f (%s)", firstKick, OpeningNames[info.m_opening]));
+                for ( const NoteEvent &n : s.m_notes )
+                    if ( n.m_part != PartE::KICK && n.m_part != PartE::SUB && n.m_beat >= s.m_lengthBeats - 16.0 )
+                        tail.insert( static_cast<int>( n.m_part ) );
+                if ( tail.size() < 2 )
+                {
+                    ++badOpening;
+                    if ( firstOpening.empty() )
+                        firstOpening = who + fmt( ": %zu voices beside the kick in the last four bars", tail.size() );
+                }
+                const bool held = info.m_opening != static_cast<int>( OpeningE::DRUMS );
+                const auto failOpening = [&]( const std::string &what )
+                {
+                    ++badOpening;
+                    if ( firstOpening.empty() ) firstOpening = what;
+                };
+                if ( voices.size() < 2 )
+                    failOpening( who + fmt( ": %zu voices beside the kick in bars 1-4 (%s)", voices.size(),
+                                            OpeningNames[info.m_opening] ) );
+                else if ( firstKick > 64.0 + 1e-9 || ( held && firstKick < 32.0 - 1e-9 ) ||
+                          ( !held && firstKick > 1e-9 + 1.0 ) )
+                    failOpening( who +
+                                 fmt( ": the kick from beat %.1f (%s)", firstKick, OpeningNames[info.m_opening] ) );
                 // Phase 21: a tom or a rim that opens the track carries it -- three hits a bar or more in bars 1-8 (the
                 // matrix left it one or two).
                 int carry[PercLanes] = {};
-                for (const NoteEvent& n : s.m_notes)
-                    if (n.m_beat < 32.0 && n.m_part >= PartE::PERC1 && n.m_part <= PartE::PERC12) ++carry[static_cast<int>(n.m_part) - static_cast<int>(PartE::PERC1)];
-                for (int lane : { 7, 9, 10 })
-                    if (carry[lane] > 0 && carry[lane] < 24) failOpening(who + fmt(": the opening's lane %d with %d hits in bars 1-8", lane + 1, carry[lane]));
+                for ( const NoteEvent &n : s.m_notes )
+                    if ( n.m_beat < 32.0 && n.m_part >= PartE::PERC1 && n.m_part <= PartE::PERC12 )
+                        ++carry[static_cast<int>( n.m_part ) - static_cast<int>( PartE::PERC1 )];
+                for ( int lane : { 7, 9, 10 } )
+                    if ( carry[lane] > 0 && carry[lane] < 24 )
+                        failOpening( who +
+                                     fmt( ": the opening's lane %d with %d hits in bars 1-8", lane + 1, carry[lane] ) );
             }
             // One staircase operation at every block boundary -- or, since Phase 8, a hat's or a perc's entry on the
             // block's 8- or 16-bar line in its place (Dok. "jeder Einsatz sitzt auf Takt 1 einer 8-Takt-Phrase").
-            const auto small = [](int layer) {
-                const LayerIdE id = static_cast<LayerIdE>(layer);
-                return id == LayerIdE::OPEN_HAT || id == LayerIdE::RIDE || id == LayerIdE::ROLLING_HAT || id == LayerIdE::CLAP_A
-                    || id == LayerIdE::SHAKER || id == LayerIdE::TOM_CONGA || id == LayerIdE::RIM || id == LayerIdE::GHOST_KICK;
+            const auto small = []( int layer )
+            {
+                const LayerIdE id = static_cast<LayerIdE>( layer );
+                return id == LayerIdE::OPEN_HAT || id == LayerIdE::RIDE || id == LayerIdE::ROLLING_HAT ||
+                       id == LayerIdE::CLAP_A || id == LayerIdE::SHAKER || id == LayerIdE::TOM_CONGA ||
+                       id == LayerIdE::RIM || id == LayerIdE::GHOST_KICK;
             };
-            for (int b = 0; b < blocks; ++b) {
+            for ( int b = 0; b < blocks; ++b )
+            {
                 int n = 0, inside = 0;
-                for (const BlockOp& o : s.m_ops) {
-                    if (o.m_kind == OpKindE::KICK_OUT || o.m_kind == OpKindE::RETURN) continue;
-                    if (std::fabs(o.m_beat - 128.0 * b) < 1e-9) ++n;
-                    else if ((std::fabs(o.m_beat - 128.0 * b - 32.0) < 1e-9 || std::fabs(o.m_beat - 128.0 * b - 64.0) < 1e-9)
-                             && o.m_kind == OpKindE::ADD && small(o.m_layer)) ++inside;
+                for ( const BlockOp &o : s.m_ops )
+                {
+                    if ( o.m_kind == OpKindE::KICK_OUT || o.m_kind == OpKindE::RETURN ) continue;
+                    if ( std::fabs( o.m_beat - 128.0 * b ) < 1e-9 )
+                        ++n;
+                    else if ( ( std::fabs( o.m_beat - 128.0 * b - 32.0 ) < 1e-9 ||
+                                std::fabs( o.m_beat - 128.0 * b - 64.0 ) < 1e-9 ) &&
+                              o.m_kind == OpKindE::ADD && small( o.m_layer ) )
+                        ++inside;
                 }
                 // (Phase 10: the build may bring further hats and percs on the block's 8-bar lines.)
-                if (!(n == 1 || (n == 0 && inside >= 1))) { fail(badOps, who + fmt(": %d operations at block %d, %d inside it", n, b + 1, inside)); break; }
+                if ( !( n == 1 || ( n == 0 && inside >= 1 ) ) )
+                {
+                    fail( badOps, who + fmt( ": %d operations at block %d, %d inside it", n, b + 1, inside ) );
+                    break;
+                }
             }
-            for (const BlockOp& o : s.m_ops) {
-                if (std::fabs(std::fmod(o.m_beat, 16.0)) > 1e-9) fail(badLines, who + fmt(": an operation at beat %.2f", o.m_beat));
-                if (o.m_kind == OpKindE::RETURN && std::fabs(std::fmod(o.m_beat, 64.0)) > 1e-9) fail(badReturns, who + ": a return off the 16-bar lines");
-                if (endless && o.m_kind == OpKindE::KICK_OUT) fail(badEndless, who + ": a kick-out");
+            for ( const BlockOp &o : s.m_ops )
+            {
+                if ( std::fabs( std::fmod( o.m_beat, 16.0 ) ) > 1e-9 )
+                    fail( badLines, who + fmt( ": an operation at beat %.2f", o.m_beat ) );
+                if ( o.m_kind == OpKindE::RETURN && std::fabs( std::fmod( o.m_beat, 64.0 ) ) > 1e-9 )
+                    fail( badReturns, who + ": a return off the 16-bar lines" );
+                if ( endless && o.m_kind == OpKindE::KICK_OUT ) fail( badEndless, who + ": a kick-out" );
             }
             // Tonal material, the bass, the harmony.
             std::set<int> pcs, bassPcs;
-            int bassNotes = 0, firstBass = 1 << 30;
-            bool offScale = false;
-            for (const NoteEvent& n : s.m_notes) {
-                const bool tonal = n.m_part == PartE::BASS || n.m_part == PartE::ACID || n.m_part == PartE::CHORD || n.m_part == PartE::DRONE
-                                || n.m_part == PartE::PING;
+            int           bassNotes = 0, firstBass = 1 << 30;
+            bool          offScale = false;
+            for ( const NoteEvent &n : s.m_notes )
+            {
+                const bool tonal = n.m_part == PartE::BASS || n.m_part == PartE::ACID || n.m_part == PartE::CHORD ||
+                                   n.m_part == PartE::DRONE || n.m_part == PartE::PING;
                 // (Phase 20: the atmosphere's opening begins with the texture.)
-                const bool atmosphere = info.m_opening == static_cast<int>(OpeningE::ATMOSPHERE);
+                const bool atmosphere = info.m_opening == static_cast<int>( OpeningE::ATMOSPHERE );
                 // (Phase 20: and it may carry the end with the percussion, as the records' atmospheres do: no key to clash.)
-                if (n.m_part == PartE::TEXTURE && !endless && !atmosphere && n.m_beat < 128.0)
-                    fail(badTonal, who + ": texture at the edge");
-                if (!tonal) continue;
-                if (!endless && (n.m_beat < 128.0 || n.m_beat >= s.m_lengthBeats - 128.0)) fail(badTonal, who + fmt(": %s at beat %.1f", PartNames[static_cast<int>(n.m_part)], n.m_beat));
-                const int pc = ((n.m_pitch - info.m_key) % 12 + 12) % 12;
-                pcs.insert(pc);
-                offScale = offScale || !inScale(info.m_scale, pc);
-                if (n.m_part == PartE::BASS) { ++bassNotes; bassPcs.insert(pc); firstBass = std::min(firstBass, static_cast<int>(n.m_beat / 4.0)); }
+                if ( n.m_part == PartE::TEXTURE && !endless && !atmosphere && n.m_beat < 128.0 )
+                    fail( badTonal, who + ": texture at the edge" );
+                if ( !tonal ) continue;
+                if ( !endless && ( n.m_beat < 128.0 || n.m_beat >= s.m_lengthBeats - 128.0 ) )
+                    fail( badTonal,
+                          who + fmt( ": %s at beat %.1f", PartNames[static_cast<int>( n.m_part )], n.m_beat ) );
+                const int pc = ( ( n.m_pitch - info.m_key ) % 12 + 12 ) % 12;
+                pcs.insert( pc );
+                offScale = offScale || !inScale( info.m_scale, pc );
+                if ( n.m_part == PartE::BASS )
+                {
+                    ++bassNotes;
+                    bassPcs.insert( pc );
+                    firstBass = std::min( firstBass, static_cast<int>( n.m_beat / 4.0 ) );
+                }
             }
-            if (info.m_subOwns != (bassNotes > 0)) fail(badBass, who + fmt(": %d bass notes, sub %d", bassNotes, info.m_subOwns ? 1 : 0));
-            if (bassNotes > 0 && !endless && firstBass < info.m_bassBar) fail(badBass, who + fmt(": the bass from bar %d", firstBass + 1));
-            if (pcs.size() > 4 || bassPcs.size() > 2 || offScale)
-                fail(badHarmony, who + fmt(": %zu pitch classes, bass %zu%s", pcs.size(), bassPcs.size(), offScale ? ", off the scale" : ""));
+            if ( info.m_subOwns != ( bassNotes > 0 ) )
+                fail( badBass, who + fmt( ": %d bass notes, sub %d", bassNotes, info.m_subOwns ? 1 : 0 ) );
+            if ( bassNotes > 0 && !endless && firstBass < info.m_bassBar )
+                fail( badBass, who + fmt( ": the bass from bar %d", firstBass + 1 ) );
+            if ( pcs.size() > 4 || bassPcs.size() > 2 || offScale )
+                fail( badHarmony, who + fmt( ": %zu pitch classes, bass %zu%s", pcs.size(), bassPcs.size(),
+                                             offScale ? ", off the scale" : "" ) );
             // Two layers entering in the second half; the whole pool in.
-            if (!endless) {
+            if ( !endless )
+            {
                 int late = 0;
-                for (const BlockOp& o : s.m_ops) if (o.m_kind == OpKindE::ADD && o.m_beat >= s.m_lengthBeats / 2.0) ++late;
-                if (late < 2) fail(badLate, who + fmt(": %d layers enter in the second half", late));
+                for ( const BlockOp &o : s.m_ops )
+                    if ( o.m_kind == OpKindE::ADD && o.m_beat >= s.m_lengthBeats / 2.0 ) ++late;
+                if ( late < 2 ) fail( badLate, who + fmt( ": %d layers enter in the second half", late ) );
             }
-            if (info.m_layers.size() < 5) fail(badPool, who + fmt(": only %zu layers", info.m_layers.size()));
-            if (s.m_levels.size() != 1 || s.m_levels[0].m_peakBeat < info.m_introBars * 4.0 || s.m_levels[0].m_peakBeat >= info.m_outroBar * 4.0 + (endless ? 1.0 : 0.0))
-                fail(badLevel, who + ": the loudness mark");
+            if ( info.m_layers.size() < 5 ) fail( badPool, who + fmt( ": only %zu layers", info.m_layers.size() ) );
+            if ( s.m_levels.size() != 1 || s.m_levels[0].m_peakBeat < info.m_introBars * 4.0 ||
+                 s.m_levels[0].m_peakBeat >= info.m_outroBar * 4.0 + ( endless ? 1.0 : 0.0 ) )
+                fail( badLevel, who + ": the loudness mark" );
         }
     }
-    check(badOps == 0, "one operation on a block's first bar (a hat or a perc may enter on its 8- or 16-bar line instead)",
-          badOps ? first : fmt("%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2]));
+    check( badOps == 0,
+           "one operation on a block's first bar (a hat or a perc may enter on its 8- or 16-bar line instead)",
+           badOps ? first : fmt( "%d tracks: %d Arc, %d Peak, %d Endless", tracks, forms[0], forms[1], forms[2] ) );
     first.clear();
-    check(badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line", first);
-    check(badTonal == 0, "no tonal material in the first and last 32 bars (the Endless excepted; the texture may end a track)", first);
+    check( badLines == 0 && badReturns == 0, "every operation on a four-bar line, every return on a 16-bar line",
+           first );
+    check( badTonal == 0,
+           "no tonal material in the first and last 32 bars (the Endless excepted; the texture may end a track)",
+           first );
     // Phase 21: a set's first track opens the mix: never with the kick -- it comes on bar 5 or 9.
-    for (int style = 0; style < 4; ++style) {
-        for (uint64_t seed = 1; seed <= 6; ++seed) {
+    for ( int style = 0; style < 4; ++style )
+    {
+        for ( uint64_t seed = 1; seed <= 6; ++seed )
+        {
             auto p = std::make_unique<ParamStore>();
-            p->set(p->find("compose.style"), static_cast<float>(style));
+            p->set( p->find( "compose.style" ), static_cast<float>( style ) );
             TrackRequest req;
             req.m_mixable = true;
             req.m_quickStart = true;
             req.m_blocks = 6;
-            TrackInfo info;
-            const Score s = composeTrack(*p, seed, req, nullptr, std::string(), &info);
-            double firstKick = 1e30;
-            for (const NoteEvent& n : s.m_notes) if (n.m_part == PartE::KICK) firstKick = std::min(firstKick, n.m_beat);
-            if (info.m_opening == static_cast<int>(OpeningE::DRUMS) || firstKick < 16.0 - 1e-9 || firstKick > 32.0 + 1e-9) {
+            TrackInfo   info;
+            const Score s = composeTrack( *p, seed, req, nullptr, std::string(), &info );
+            double      firstKick = 1e30;
+            for ( const NoteEvent &n : s.m_notes )
+                if ( n.m_part == PartE::KICK ) firstKick = std::min( firstKick, n.m_beat );
+            if ( info.m_opening == static_cast<int>( OpeningE::DRUMS ) || firstKick < 16.0 - 1e-9 ||
+                 firstKick > 32.0 + 1e-9 )
+            {
                 ++badOpening;
-                if (firstOpening.empty())
-                    firstOpening = fmt("%s seed %d, a set's first track: %s, the kick from beat %.1f", StyleNames[style], static_cast<int>(seed),
-                                       OpeningNames[info.m_opening], firstKick);
+                if ( firstOpening.empty() )
+                    firstOpening =
+                        fmt( "%s seed %d, a set's first track: %s, the kick from beat %.1f", StyleNames[style],
+                             static_cast<int>( seed ), OpeningNames[info.m_opening], firstKick );
             }
         }
     }
-    check(badOpening == 0 && openings.size() == 3,
-          "never the kick alone: two voices beside it in the first and the last four bars, the kick by bar 17, a tom or rim that "
-          "opens with three hits a bar; a set's first track without the kick until bar 5 or 9; all three openings",
-          firstOpening.empty() ? fmt("%zu openings", openings.size()) : firstOpening);
-    check(badEndless == 0, "the Endless without a kick-out", first);
-    check(badBass == 0, "a bass line exactly where the sub owns the low end, from the body on", first);
-    check(badHarmony == 0, "at most four pitch classes, the bass at most two, all in the scale (Dok. 8.9)", first);
-    check(badLate == 0, "at least two layers enter in the second half", first);
-    check(badPool == 0, "at least four layers beside the kick", first);
-    check(badLevel == 0, "a loudness mark in the body", first);
+    check( badOpening == 0 && openings.size() == 3,
+           "never the kick alone: two voices beside it in the first and the last four bars, the kick by bar 17, a tom "
+           "or rim that "
+           "opens with three hits a bar; a set's first track without the kick until bar 5 or 9; all three openings",
+           firstOpening.empty() ? fmt( "%zu openings", openings.size() ) : firstOpening );
+    check( badEndless == 0, "the Endless without a kick-out", first );
+    check( badBass == 0, "a bass line exactly where the sub owns the low end, from the body on", first );
+    check( badHarmony == 0, "at most four pitch classes, the bass at most two, all in the scale (Dok. 8.9)", first );
+    check( badLate == 0, "at least two layers enter in the second half", first );
+    check( badPool == 0, "at least four layers beside the kick", first );
+    check( badLevel == 0, "a loudness mark in the body", first );
 }
 
 /**
@@ -845,50 +1029,67 @@ void testComposer()
  */
 void testGroove()
 {
-    section("the groove (Phase 10)");
-    int tracks = 0, full = 0, percs = 0;
+    section( "the groove (Phase 10)" );
+    int         tracks = 0, full = 0, percs = 0;
     std::string first;
-    for (int style = 0; style < 4; ++style) {
-        for (uint64_t seed = 1; seed <= 6; ++seed) {
-            for (int set = 0; set < 2; ++set) {
+    for ( int style = 0; style < 4; ++style )
+    {
+        for ( uint64_t seed = 1; seed <= 6; ++seed )
+        {
+            for ( int set = 0; set < 2; ++set )
+            {
                 auto p = std::make_unique<ParamStore>();
-                p->set(p->find("compose.style"), static_cast<float>(style));
+                p->set( p->find( "compose.style" ), static_cast<float>( style ) );
                 TrackRequest req;
-                if (set == 1) { req.m_blocks = 5; req.m_mixable = true; }
-                TrackInfo info;
-                const Score s = composeTrack(*p, seed, req, nullptr, std::string(), &info);
-                if (info.m_form == FormTypeE::ENDLESS) continue;
-                ++tracks;
-                const double from = (info.m_bassBar + 32) * 4.0, to = from + 128.0;
-                std::set<int> voices;
-                bool perc = false;
-                for (const NoteEvent& n : s.m_notes) {
-                    if (n.m_beat < from || n.m_beat >= to || n.m_part == PartE::KICK) continue;
-                    voices.insert(static_cast<int>(n.m_part));
-                    const int lane = laneOf(n.m_part);
-                    perc = perc || (lane >= 4 && lane <= 10);
+                if ( set == 1 )
+                {
+                    req.m_blocks = 5;
+                    req.m_mixable = true;
                 }
-                const std::string who = fmt("%s seed %d%s", StyleNames[style], static_cast<int>(seed), set ? " (set)" : "");
-                if (voices.size() >= 5) ++full;
-                else if (first.empty()) first = who + fmt(": %zu voices in the body's second block", voices.size());
-                if (perc) ++percs;
-                else if (first.empty()) first = who + ": no percussion beyond the hats";
+                TrackInfo   info;
+                const Score s = composeTrack( *p, seed, req, nullptr, std::string(), &info );
+                if ( info.m_form == FormTypeE::ENDLESS ) continue;
+                ++tracks;
+                const double  from = ( info.m_bassBar + 32 ) * 4.0, to = from + 128.0;
+                std::set<int> voices;
+                bool          perc = false;
+                for ( const NoteEvent &n : s.m_notes )
+                {
+                    if ( n.m_beat < from || n.m_beat >= to || n.m_part == PartE::KICK ) continue;
+                    voices.insert( static_cast<int>( n.m_part ) );
+                    const int lane = laneOf( n.m_part );
+                    perc = perc || ( lane >= 4 && lane <= 10 );
+                }
+                const std::string who =
+                    fmt( "%s seed %d%s", StyleNames[style], static_cast<int>( seed ), set ? " (set)" : "" );
+                if ( voices.size() >= 5 )
+                    ++full;
+                else if ( first.empty() )
+                    first = who + fmt( ": %zu voices in the body's second block", voices.size() );
+                if ( perc )
+                    ++percs;
+                else if ( first.empty() )
+                    first = who + ": no percussion beyond the hats";
             }
         }
     }
-    check(full == tracks, "five voices or more beside the kick in the body's second block", full == tracks ? fmt("%d tracks", tracks) : first);
-    check(percs * 10 >= tracks * 9, "percussion beyond the hats in nine tracks of ten", fmt("%d of %d", percs, tracks));
+    check( full == tracks, "five voices or more beside the kick in the body's second block",
+           full == tracks ? fmt( "%d tracks", tracks ) : first );
+    check( percs * 10 >= tracks * 9, "percussion beyond the hats in nine tracks of ten",
+           fmt( "%d of %d", percs, tracks ) );
 }
 
 /** Phase 8: a signature voice that plays its motif, waves in the body, a reroll of the figure that keeps the rest. */
 void testFigure()
 {
-    section("the figure and the waves (Phase 8)");
-    int tracks = 0, figures = 0, wanting = 0, steady = 0, motifs = 0, bodies = 0, wavy = 0, moving = 0;
+    section( "the figure and the waves (Phase 8)" );
+    int           tracks = 0, figures = 0, wanting = 0, steady = 0, motifs = 0, bodies = 0, wavy = 0, moving = 0;
     std::set<int> kinds;
-    std::string first;
-    const auto partOf = [](int layer) {
-        switch (static_cast<LayerIdE>(layer)) {
+    std::string   first;
+    const auto    partOf = []( int layer )
+    {
+        switch ( static_cast<LayerIdE>( layer ) )
+        {
         case LayerIdE::CHORD: return PartE::CHORD;
         case LayerIdE::ACID: return PartE::ACID;
         case LayerIdE::BASS: return PartE::BASS;
@@ -896,271 +1097,355 @@ void testFigure()
         }
     };
     // The onsets of a part per bar, as sixteen bits (the feel, swing and jitter are far under half a sixteenth).
-    const auto masks = [](const Score& s, PartE part) {
+    const auto masks = []( const Score &s, PartE part )
+    {
         std::map<int, uint32_t> m;
-        for (const NoteEvent& n : s.m_notes) {
-            if (n.m_part != part) continue;
-            const int step = static_cast<int>(std::floor(n.m_beat * 4.0 + 0.5));
-            m[step / 16] |= 1u << (step % 16);
+        for ( const NoteEvent &n : s.m_notes )
+        {
+            if ( n.m_part != part ) continue;
+            const int step = static_cast<int>( std::floor( n.m_beat * 4.0 + 0.5 ) );
+            m[step / 16] |= 1u << ( step % 16 );
         }
         return m;
     };
-    for (int style = 0; style < 4; ++style) {
-        for (uint64_t seed = 1; seed <= 6; ++seed) {
+    for ( int style = 0; style < 4; ++style )
+    {
+        for ( uint64_t seed = 1; seed <= 6; ++seed )
+        {
             auto p = std::make_unique<ParamStore>();
-            p->set(p->find("compose.style"), static_cast<float>(style));
-            TrackInfo info;
-            const Score s = composeTrack(*p, seed, TrackRequest{}, nullptr, std::string(), &info);
+            p->set( p->find( "compose.style" ), static_cast<float>( style ) );
+            TrackInfo   info;
+            const Score s = composeTrack( *p, seed, TrackRequest{}, nullptr, std::string(), &info );
             ++tracks;
-            const std::string who = fmt("%s seed %d", StyleNames[style], static_cast<int>(seed));
-            if (!info.m_moments.empty()) ++moving;
-            else if (first.empty()) first = who + ": nothing moves between the operations";
-            if (info.m_form != FormTypeE::ENDLESS && info.m_outroBar - info.m_bassBar >= 128) {
+            const std::string who = fmt( "%s seed %d", StyleNames[style], static_cast<int>( seed ) );
+            if ( !info.m_moments.empty() )
+                ++moving;
+            else if ( first.empty() )
+                first = who + ": nothing moves between the operations";
+            if ( info.m_form != FormTypeE::ENDLESS && info.m_outroBar - info.m_bassBar >= 128 )
+            {
                 ++bodies;
-                if (info.m_landings.size() >= 2) ++wavy;
-                else if (first.empty()) first = who + fmt(": %zu landings", info.m_landings.size());
+                if ( info.m_landings.size() >= 2 )
+                    ++wavy;
+                else if ( first.empty() )
+                    first = who + fmt( ": %zu landings", info.m_landings.size() );
             }
             // Phase 18: every track has its figure, a monotonic one too (Phase 13 had left the Roller, the Tribal track and
             // most Tools without); it enters with the body's second block at the latest, the bass's with the body.
-            kinds.insert(info.m_archetype);
+            kinds.insert( info.m_archetype );
             const bool wants = true;
             wanting += wants ? 1 : 0;
-            if (info.m_figure < 0) {
-                if (wants && first.empty()) first = who + fmt(": no figure in a %s track", ArchetypeNames[info.m_archetype]);
+            if ( info.m_figure < 0 )
+            {
+                if ( wants && first.empty() )
+                    first = who + fmt( ": no figure in a %s track", ArchetypeNames[info.m_archetype] );
                 continue;
             }
-            if (info.m_form != FormTypeE::ENDLESS && info.m_figureBar > info.m_bassBar + 32) {
-                if (first.empty()) first = who + fmt(": the figure only from bar %d (the body from %d)", info.m_figureBar + 1, info.m_bassBar + 1);
+            if ( info.m_form != FormTypeE::ENDLESS && info.m_figureBar > info.m_bassBar + 32 )
+            {
+                if ( first.empty() )
+                    first = who + fmt( ": the figure only from bar %d (the body from %d)", info.m_figureBar + 1,
+                                       info.m_bassBar + 1 );
                 continue;
             }
             figures += wants ? 1 : 0;
-            if (static_cast<LayerIdE>(info.m_figure) == LayerIdE::PING) continue;   // a cycle against the bar
+            if ( static_cast<LayerIdE>( info.m_figure ) == LayerIdE::PING ) continue;   // a cycle against the bar
             // The motif: a bar's onsets equal those of the bar a motif before, in most bars where both play.
             ++motifs;
-            const std::map<int, uint32_t> m = masks(s, partOf(info.m_figure));
-            int same = 0, compared = 0;
-            for (const auto& [bar, mask] : m) {
-                const auto before = m.find(bar - info.m_figureBars);
-                if (bar < info.m_figureBar + info.m_figureBars || bar >= info.m_outroBar || before == m.end()) continue;
+            const std::map<int, uint32_t> m = masks( s, partOf( info.m_figure ) );
+            int                           same = 0, compared = 0;
+            for ( const auto &[bar, mask] : m )
+            {
+                const auto before = m.find( bar - info.m_figureBars );
+                if ( bar < info.m_figureBar + info.m_figureBars || bar >= info.m_outroBar || before == m.end() )
+                    continue;
                 ++compared;
                 same += mask == before->second ? 1 : 0;
             }
-            if (compared > 16 && same >= compared * 8 / 10) ++steady;
-            else if (first.empty()) first = who + fmt(": the %s's motif repeats in %d of %d bars", LayerNames[info.m_figure], same, compared);
+            if ( compared > 16 && same >= compared * 8 / 10 )
+                ++steady;
+            else if ( first.empty() )
+                first =
+                    who + fmt( ": the %s's motif repeats in %d of %d bars", LayerNames[info.m_figure], same, compared );
         }
     }
-    check(figures == wanting && kinds.size() >= 5, "a signature voice in every track, by the body's second block; five archetypes or more",
-          fmt("%d of %d, %zu archetypes in %d tracks", figures, wanting, kinds.size(), tracks));
-    check(steady == motifs, "the figure plays its motif, the same in its bars", steady == motifs ? fmt("%d motifs", motifs) : first);
-    check(wavy == bodies && moving == tracks, "the body runs in waves, something moves between the operations",
-          wavy == bodies && moving == tracks ? fmt("%d bodies", bodies) : first);
+    check( figures == wanting && kinds.size() >= 5,
+           "a signature voice in every track, by the body's second block; five archetypes or more",
+           fmt( "%d of %d, %zu archetypes in %d tracks", figures, wanting, kinds.size(), tracks ) );
+    check( steady == motifs, "the figure plays its motif, the same in its bars",
+           steady == motifs ? fmt( "%d motifs", motifs ) : first );
+    check( wavy == bodies && moving == tracks, "the body runs in waves, something moves between the operations",
+           wavy == bodies && moving == tracks ? fmt( "%d bodies", bodies ) : first );
     // The figure drawn again: another motif for the same voice; the kick stays. (A Stab track: it has one.)
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("compose.style"), 1.0f);
-    p->parseText("compose.archetype=Stab");
-    TrackInfo ia, ib;
-    const Score a = composeTrack(*p, 42, TrackRequest{}, nullptr, std::string(), &ia);
-    Curation fig;
-    fig.reroll("figure");
-    const Score b = composeTrack(*p, 42, TrackRequest{}, &fig, std::string(), &ib);
+    p->set( p->find( "compose.style" ), 1.0f );
+    p->parseText( "compose.archetype=Stab" );
+    TrackInfo   ia, ib;
+    const Score a = composeTrack( *p, 42, TrackRequest{}, nullptr, std::string(), &ia );
+    Curation    fig;
+    fig.reroll( "figure" );
+    const Score b = composeTrack( *p, 42, TrackRequest{}, &fig, std::string(), &ib );
     // (The kick's own notes, on the quarters: the ghost kicks move with the candidate each block keeps.)
-    const auto notesOf = [](const Score& s, PartE part) {
+    const auto notesOf = []( const Score &s, PartE part )
+    {
         std::vector<std::pair<double, int>> v;
-        for (const NoteEvent& n : s.m_notes)
-            if (n.m_part == part && (part != PartE::KICK || std::fabs(n.m_beat - std::round(n.m_beat)) < 1e-9)) v.emplace_back(n.m_beat, n.m_pitch);
+        for ( const NoteEvent &n : s.m_notes )
+            if ( n.m_part == part && ( part != PartE::KICK || std::fabs( n.m_beat - std::round( n.m_beat ) ) < 1e-9 ) )
+                v.emplace_back( n.m_beat, n.m_pitch );
         return v;
     };
     const bool sameVoice = ia.m_figure == ib.m_figure && ia.m_figure >= 0;
-    const bool otherMotif = sameVoice && notesOf(a, partOf(ia.m_figure)) != notesOf(b, partOf(ib.m_figure));
-    check(sameVoice && otherMotif && notesOf(a, PartE::KICK) == notesOf(b, PartE::KICK), "rerolling the figure draws another motif and keeps the kick",
-          fmt("the %s", ia.m_figure >= 0 ? LayerNames[ia.m_figure] : "none"));
+    const bool otherMotif = sameVoice && notesOf( a, partOf( ia.m_figure ) ) != notesOf( b, partOf( ib.m_figure ) );
+    check( sameVoice && otherMotif && notesOf( a, PartE::KICK ) == notesOf( b, PartE::KICK ),
+           "rerolling the figure draws another motif and keeps the kick",
+           fmt( "the %s", ia.m_figure >= 0 ? LayerNames[ia.m_figure] : "none" ) );
 }
 
 /** Curation: the same seed gives the same track; rerolling one unit changes it and leaves the others bit for bit. */
 void testCuration()
 {
-    section("curation");
+    section( "curation" );
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("compose.style"), 1.0f);
-    const Score a = composeTrack(*p, 42), b = composeTrack(*p, 42);
-    const auto sameNotes = [](const Score& x, const Score& y) {
-        if (x.m_notes.size() != y.m_notes.size()) return false;
-        for (size_t i = 0; i < x.m_notes.size(); ++i)
-            if (x.m_notes[i].m_beat != y.m_notes[i].m_beat || x.m_notes[i].m_pitch != y.m_notes[i].m_pitch || x.m_notes[i].m_part != y.m_notes[i].m_part
-                || x.m_notes[i].m_velocity != y.m_notes[i].m_velocity) return false;
+    p->set( p->find( "compose.style" ), 1.0f );
+    const Score a = composeTrack( *p, 42 ), b = composeTrack( *p, 42 );
+    const auto  sameNotes = []( const Score &x, const Score &y )
+    {
+        if ( x.m_notes.size() != y.m_notes.size() ) return false;
+        for ( size_t i = 0; i < x.m_notes.size(); ++i )
+            if ( x.m_notes[i].m_beat != y.m_notes[i].m_beat || x.m_notes[i].m_pitch != y.m_notes[i].m_pitch ||
+                 x.m_notes[i].m_part != y.m_notes[i].m_part || x.m_notes[i].m_velocity != y.m_notes[i].m_velocity )
+                return false;
         return true;
     };
-    const auto sameGestures = [](const Score& x, const Score& y) {
-        if (x.m_gestures.size() != y.m_gestures.size()) return false;
-        for (size_t i = 0; i < x.m_gestures.size(); ++i)
-            if (x.m_gestures[i].m_param != y.m_gestures[i].m_param || x.m_gestures[i].m_beat != y.m_gestures[i].m_beat || x.m_gestures[i].m_to != y.m_gestures[i].m_to) return false;
+    const auto sameGestures = []( const Score &x, const Score &y )
+    {
+        if ( x.m_gestures.size() != y.m_gestures.size() ) return false;
+        for ( size_t i = 0; i < x.m_gestures.size(); ++i )
+            if ( x.m_gestures[i].m_param != y.m_gestures[i].m_param ||
+                 x.m_gestures[i].m_beat != y.m_gestures[i].m_beat || x.m_gestures[i].m_to != y.m_gestures[i].m_to )
+                return false;
         return true;
     };
-    check(sameNotes(a, b) && sameGestures(a, b), "the same seed, the same track");
+    check( sameNotes( a, b ) && sameGestures( a, b ), "the same seed, the same track" );
     // The hands drawn again: other gestures, the same notes.
     Curation hands;
-    hands.reroll("hands");
-    const Score h = composeTrack(*p, 42, TrackRequest{}, &hands);
-    check(sameNotes(a, h) && !sameGestures(a, h), "rerolling the hands keeps every note");
+    hands.reroll( "hands" );
+    const Score h = composeTrack( *p, 42, TrackRequest{}, &hands );
+    check( sameNotes( a, h ) && !sameGestures( a, h ), "rerolling the hands keeps every note" );
     // One block drawn again: its bars change at most, every other bar stays.
     Curation blk;
-    blk.reroll("block4");
-    const Score k = composeTrack(*p, 42, TrackRequest{}, &blk);
+    blk.reroll( "block4" );
+    const Score            k = composeTrack( *p, 42, TrackRequest{}, &blk );
     std::vector<NoteEvent> outA, outK;
-    int changedInside = 0;
+    int                    changedInside = 0;
     // A bar's notes may start a few ms before it (the rim, early on a collision): the block is 384 .. 512 less 0.05 beats.
-    const auto inside = [](const NoteEvent& n) { return n.m_beat >= 384.0 - 0.05 && n.m_beat < 512.0 - 0.05; };
-    for (const NoteEvent& n : a.m_notes) if (!inside(n)) outA.push_back(n);
-    for (const NoteEvent& n : k.m_notes) if (!inside(n)) outK.push_back(n);
+    const auto inside = []( const NoteEvent &n ) { return n.m_beat >= 384.0 - 0.05 && n.m_beat < 512.0 - 0.05; };
+    for ( const NoteEvent &n : a.m_notes )
+        if ( !inside( n ) ) outA.push_back( n );
+    for ( const NoteEvent &n : k.m_notes )
+        if ( !inside( n ) ) outK.push_back( n );
     Score sa, sk;
     sa.m_notes = outA;
     sk.m_notes = outK;
-    for (const NoteEvent& n : k.m_notes) if (inside(n)) ++changedInside;
-    std::string where = fmt("%d notes in it", changedInside);
-    for (size_t i = 0; i < std::min(sa.m_notes.size(), sk.m_notes.size()); ++i)
-        if (sa.m_notes[i].m_beat != sk.m_notes[i].m_beat || sa.m_notes[i].m_pitch != sk.m_notes[i].m_pitch || sa.m_notes[i].m_part != sk.m_notes[i].m_part
-            || sa.m_notes[i].m_velocity != sk.m_notes[i].m_velocity) {
-            where = fmt("first difference at beat %.3f (%s) against %.3f (%s); %zu and %zu notes outside", sa.m_notes[i].m_beat,
-                        PartNames[static_cast<int>(sa.m_notes[i].m_part)], sk.m_notes[i].m_beat, PartNames[static_cast<int>(sk.m_notes[i].m_part)],
-                        sa.m_notes.size(), sk.m_notes.size());
+    for ( const NoteEvent &n : k.m_notes )
+        if ( inside( n ) ) ++changedInside;
+    std::string where = fmt( "%d notes in it", changedInside );
+    for ( size_t i = 0; i < std::min( sa.m_notes.size(), sk.m_notes.size() ); ++i )
+        if ( sa.m_notes[i].m_beat != sk.m_notes[i].m_beat || sa.m_notes[i].m_pitch != sk.m_notes[i].m_pitch ||
+             sa.m_notes[i].m_part != sk.m_notes[i].m_part || sa.m_notes[i].m_velocity != sk.m_notes[i].m_velocity )
+        {
+            where =
+                fmt( "first difference at beat %.3f (%s) against %.3f (%s); %zu and %zu notes outside",
+                     sa.m_notes[i].m_beat, PartNames[static_cast<int>( sa.m_notes[i].m_part )], sk.m_notes[i].m_beat,
+                     PartNames[static_cast<int>( sk.m_notes[i].m_part )], sa.m_notes.size(), sk.m_notes.size() );
             break;
         }
-    check(sameNotes(sa, sk) && !sameNotes(a, k), "rerolling block 4 changes its bars only", where);
+    check( sameNotes( sa, sk ) && !sameNotes( a, k ), "rerolling block 4 changes its bars only", where );
     // One layer's patterns drawn again: it changes; the layers no rule ties to it (kick, bass, ping, chord, 303, drone)
     // stay. (The others may move: one hat per step, the ghost chain, the collision dip.) The ping's velocity aside: it
     // dips where a hat meets it (LayerDef::perc), and a hat drawn again meets it elsewhere -- its notes and pitches stay.
     Curation lay;
-    lay.reroll("rack.ch");
-    const Score l = composeTrack(*p, 42, TrackRequest{}, &lay);
-    const int chPart = static_cast<int>(percPart(0));
-    const auto untied = [](PartE part) {
-        return part == PartE::KICK || part == PartE::BASS || part == PartE::PING || part == PartE::CHORD || part == PartE::ACID || part == PartE::DRONE;
+    lay.reroll( "rack.ch" );
+    const Score l = composeTrack( *p, 42, TrackRequest{}, &lay );
+    const int   chPart = static_cast<int>( percPart( 0 ) );
+    const auto  untied = []( PartE part )
+    {
+        return part == PartE::KICK || part == PartE::BASS || part == PartE::PING || part == PartE::CHORD ||
+               part == PartE::ACID || part == PartE::DRONE;
     };
-    const auto kept = [](NoteEvent n) { if (n.m_part == PartE::PING) n.m_velocity = 0.0f; return n; };
+    const auto kept = []( NoteEvent n )
+    {
+        if ( n.m_part == PartE::PING ) n.m_velocity = 0.0f;
+        return n;
+    };
     Score ua, ul, ca, cl;
-    for (const NoteEvent& n : a.m_notes) { if (untied(n.m_part)) ua.m_notes.push_back(kept(n)); if (static_cast<int>(n.m_part) == chPart) ca.m_notes.push_back(n); }
-    for (const NoteEvent& n : l.m_notes) { if (untied(n.m_part)) ul.m_notes.push_back(kept(n)); if (static_cast<int>(n.m_part) == chPart) cl.m_notes.push_back(n); }
-    check(sameNotes(ua, ul) && !sameNotes(ca, cl), "rerolling the offbeat hat changes it and keeps the untied layers",
-          fmt("%zu and %zu hat notes", ca.m_notes.size(), cl.m_notes.size()));
+    for ( const NoteEvent &n : a.m_notes )
+    {
+        if ( untied( n.m_part ) ) ua.m_notes.push_back( kept( n ) );
+        if ( static_cast<int>( n.m_part ) == chPart ) ca.m_notes.push_back( n );
+    }
+    for ( const NoteEvent &n : l.m_notes )
+    {
+        if ( untied( n.m_part ) ) ul.m_notes.push_back( kept( n ) );
+        if ( static_cast<int>( n.m_part ) == chPart ) cl.m_notes.push_back( n );
+    }
+    check( sameNotes( ua, ul ) && !sameNotes( ca, cl ),
+           "rerolling the offbeat hat changes it and keeps the untied layers",
+           fmt( "%zu and %zu hat notes", ca.m_notes.size(), cl.m_notes.size() ) );
     // The .totset round trip.
     const std::string path = "tot_selftest.totset";
-    SetFile sf;
+    SetFile           sf;
     sf.m_seed = 42;
     sf.m_minutes = 7.0;
     sf.m_curation = blk;
-    p->set(p->find("chord.level"), -7.5f);
-    const bool saved = saveSet(path.c_str(), sf, *p);
-    auto q = std::make_unique<ParamStore>();
-    SetFile back;
+    p->set( p->find( "chord.level" ), -7.5f );
+    const bool  saved = saveSet( path.c_str(), sf, *p );
+    auto        q = std::make_unique<ParamStore>();
+    SetFile     back;
     std::string error;
-    const bool loaded = loadSet(path.c_str(), back, *q, &error);
-    std::remove(path.c_str());
-    check(saved && loaded && back.m_seed == 42 && back.m_curation.count("block4") == 1 && q->get(q->find("chord.level")) == -7.5f
-              && q->getInt(q->find("compose.style")) == 1,
-          "a .totset keeps seed, rerolls and changed knobs", error);
+    const bool  loaded = loadSet( path.c_str(), back, *q, &error );
+    std::remove( path.c_str() );
+    check( saved && loaded && back.m_seed == 42 && back.m_curation.count( "block4" ) == 1 &&
+               q->get( q->find( "chord.level" ) ) == -7.5f && q->getInt( q->find( "compose.style" ) ) == 1,
+           "a .totset keeps seed, rerolls and changed knobs", error );
 }
 
 /** The set (PLAN 7.7): deterministic; tracks alternating on two decks without overlapping on one; every swap on a 32-bar
  *  line of both tracks; the tempo monotonic within 1 BPM a track; only one deck ever owns the low band. */
 void testSet()
 {
-    section("the set");
+    section( "the set" );
     auto p = std::make_unique<ParamStore>();
-    p->parseText("set.loops=1; set.fx_breaks=1");
-    SetInfo a, b;
-    const SetScore s = composeSet(*p, 5, 40.0, nullptr, &a);
-    const SetScore t = composeSet(*p, 5, 40.0, nullptr, &b);
-    bool same = a.m_tracks.size() == b.m_tracks.size();
-    for (int d = 0; d < Decks && same; ++d) {
-        same = s.m_decks[d].m_notes.size() == t.m_decks[d].m_notes.size() && s.m_decks[d].m_gestures.size() == t.m_decks[d].m_gestures.size();
-        for (size_t i = 0; same && i < s.m_decks[d].m_notes.size(); ++i)
-            same = s.m_decks[d].m_notes[i].m_beat == t.m_decks[d].m_notes[i].m_beat && s.m_decks[d].m_notes[i].m_pitch == t.m_decks[d].m_notes[i].m_pitch;
+    p->parseText( "set.loops=1; set.fx_breaks=1" );
+    SetInfo        a, b;
+    const SetScore s = composeSet( *p, 5, 40.0, nullptr, &a );
+    const SetScore t = composeSet( *p, 5, 40.0, nullptr, &b );
+    bool           same = a.m_tracks.size() == b.m_tracks.size();
+    for ( int d = 0; d < Decks && same; ++d )
+    {
+        same = s.m_decks[d].m_notes.size() == t.m_decks[d].m_notes.size() &&
+               s.m_decks[d].m_gestures.size() == t.m_decks[d].m_gestures.size();
+        for ( size_t i = 0; same && i < s.m_decks[d].m_notes.size(); ++i )
+            same = s.m_decks[d].m_notes[i].m_beat == t.m_decks[d].m_notes[i].m_beat &&
+                   s.m_decks[d].m_notes[i].m_pitch == t.m_decks[d].m_notes[i].m_pitch;
     }
-    check(same && a.m_tracks.size() >= 5, "the same seed, the same set", fmt("%zu tracks, %zu loops, %zu breaks", a.m_tracks.size(), a.m_loops.size(), a.m_breaks.size()));
+    check( same && a.m_tracks.size() >= 5, "the same seed, the same set",
+           fmt( "%zu tracks, %zu loops, %zu breaks", a.m_tracks.size(), a.m_loops.size(), a.m_breaks.size() ) );
     int badDeck = 0, badLine = 0, badTempo = 0, badDrop = 0;
-    for (size_t i = 0; i < a.m_tracks.size(); ++i) {
-        const SetTrack& k = a.m_tracks[i];
-        if (i >= 1 && a.m_tracks[i - 1].m_deck == k.m_deck) ++badDeck;
-        if (i >= 2 && a.m_tracks[i - 2].m_end > k.m_start) ++badDeck;
-        if (i >= 1) {
-            const SetTrack& o = a.m_tracks[i - 1];
-            if (std::fabs(std::fmod(k.m_swapIn - k.m_start, 128.0)) > 1e-9 || std::fabs(std::fmod(k.m_swapIn - o.m_start, 128.0)) > 1e-9) ++badLine;
+    for ( size_t i = 0; i < a.m_tracks.size(); ++i )
+    {
+        const SetTrack &k = a.m_tracks[i];
+        if ( i >= 1 && a.m_tracks[i - 1].m_deck == k.m_deck ) ++badDeck;
+        if ( i >= 2 && a.m_tracks[i - 2].m_end > k.m_start ) ++badDeck;
+        if ( i >= 1 )
+        {
+            const SetTrack &o = a.m_tracks[i - 1];
+            if ( std::fabs( std::fmod( k.m_swapIn - k.m_start, 128.0 ) ) > 1e-9 ||
+                 std::fabs( std::fmod( k.m_swapIn - o.m_start, 128.0 ) ) > 1e-9 )
+                ++badLine;
             // Phase 19: the swap on the incoming track's figure, a body block after its bass; the outgoing track's
             // outro begins there.
-            if (k.m_info.m_figure < 0 || k.m_start + k.m_info.m_figureBar * 4.0 > k.m_swapIn + 1e-9 || std::fabs(k.m_swapIn - k.m_start - (k.m_info.m_bassBar + 32) * 4.0) > 1e-9
-                || std::fabs(o.m_start + o.m_info.m_outroBar * 4.0 - k.m_swapIn) > 1e-9) ++badDrop;
-            if (k.m_info.m_bpm < o.m_info.m_bpm - 1e-6 || k.m_info.m_bpm > o.m_info.m_bpm + 1.0f + 1e-6) ++badTempo;   // Peak: rising, at most 1 BPM
+            if ( k.m_info.m_figure < 0 || k.m_start + k.m_info.m_figureBar * 4.0 > k.m_swapIn + 1e-9 ||
+                 std::fabs( k.m_swapIn - k.m_start - ( k.m_info.m_bassBar + 32 ) * 4.0 ) > 1e-9 ||
+                 std::fabs( o.m_start + o.m_info.m_outroBar * 4.0 - k.m_swapIn ) > 1e-9 )
+                ++badDrop;
+            if ( k.m_info.m_bpm < o.m_info.m_bpm - 1e-6 || k.m_info.m_bpm > o.m_info.m_bpm + 1.0f + 1e-6 )
+                ++badTempo;   // Peak: rising, at most 1 BPM
         }
     }
-    check(badDeck == 0, "the tracks alternate between the decks and never overlap on one", fmt("%d", badDeck));
-    check(badLine == 0, "every bass swap on a 32-bar line of both tracks", fmt("%d", badLine));
-    check(badDrop == 0, "every swap where the incoming track's figure lands, a block after its bass, on the outgoing track's outro", fmt("%d", badDrop));
-    check(badTempo == 0, "the tempo rises by at most 1 BPM a track (Peak)", fmt("%d", badTempo));
+    check( badDeck == 0, "the tracks alternate between the decks and never overlap on one", fmt( "%d", badDeck ) );
+    check( badLine == 0, "every bass swap on a 32-bar line of both tracks", fmt( "%d", badLine ) );
+    check( badDrop == 0,
+           "every swap where the incoming track's figure lands, a block after its bass, on the outgoing track's outro",
+           fmt( "%d", badDrop ) );
+    check( badTempo == 0, "the tempo rises by at most 1 BPM a track (Peak)", fmt( "%d", badTempo ) );
     // The low band: at the middle of every bar, at most one deck with a track sounding has it open.
     int owners = 0, bars = 0, worst = 0;
-    for (double beat = 2.0; beat < s.m_lengthBeats; beat += 4.0) {
+    for ( double beat = 2.0; beat < s.m_lengthBeats; beat += 4.0 )
+    {
         int open = 0;
-        for (int d = 0; d < Decks; ++d) {
+        for ( int d = 0; d < Decks; ++d )
+        {
             bool sounding = false;
-            for (const SetTrack& k : a.m_tracks) if (k.m_deck == d && beat >= k.m_start && beat < k.m_end) sounding = true;
-            for (const SetLoop& l : a.m_loops) if (d == 2 && beat >= l.m_start && beat < l.m_end) sounding = true;
-            if (!sounding) continue;
-            const int id = p->id(ModuleE::DECK, d, deck::LOW);
-            const float v = p->fromNormalised(id, p->toNormalised(id, p->get(id)) + s.m_decks[d].gestureOffset(id, beat));
-            if (v > -59.9f) ++open;
+            for ( const SetTrack &k : a.m_tracks )
+                if ( k.m_deck == d && beat >= k.m_start && beat < k.m_end ) sounding = true;
+            for ( const SetLoop &l : a.m_loops )
+                if ( d == 2 && beat >= l.m_start && beat < l.m_end ) sounding = true;
+            if ( !sounding ) continue;
+            const int   id = p->id( ModuleE::DECK, d, deck::LOW );
+            const float v =
+                p->fromNormalised( id, p->toNormalised( id, p->get( id ) ) + s.m_decks[d].gestureOffset( id, beat ) );
+            if ( v > -59.9f ) ++open;
         }
         ++bars;
-        worst = std::max(worst, open);
-        if (open > 1) ++owners;
+        worst = std::max( worst, open );
+        if ( open > 1 ) ++owners;
     }
-    check(owners == 0 && worst == 1, "only one deck ever owns the low band", fmt("%d of %d bars with two", owners, bars));
+    check( owners == 0 && worst == 1, "only one deck ever owns the low band",
+           fmt( "%d of %d bars with two", owners, bars ) );
     // The swap in samples: the outgoing deck's low band starts to close and the incoming one's to open in the same sample.
     {
         auto e = std::make_unique<Engine>();
-        e->params().parseText("set.loops=1; set.fx_breaks=1");
-        e->prepare(48000.0, 512);
-        e->loadSet(s);
-        const SetTrack& in = a.m_tracks[1];
-        const SetTrack& out = a.m_tracks[0];
-        const int64_t swap = static_cast<int64_t>(std::ceil(s.m_decks[0].m_tempo.secondsAt(in.m_swapIn) * 48000.0));
-        e->seek(in.m_swapIn - 8.0);
-        const int64_t from = static_cast<int64_t>(std::llround(s.m_decks[0].m_tempo.secondsAt(in.m_swapIn - 8.0) * 48000.0));
-        std::vector<float> L(512), R(512);
-        int64_t at = from;
-        while (at < swap) { const int m = static_cast<int>(std::min<int64_t>(512, swap - at)); e->process(L.data(), R.data(), m); at += m; }
-        const float outBefore = e->lowGain(out.m_deck), inBefore = e->lowGain(in.m_deck);
-        e->process(L.data(), R.data(), 1);
-        const float outAfter = e->lowGain(out.m_deck), inAfter = e->lowGain(in.m_deck);
+        e->params().parseText( "set.loops=1; set.fx_breaks=1" );
+        e->prepare( 48000.0, 512 );
+        e->loadSet( s );
+        const SetTrack &in = a.m_tracks[1];
+        const SetTrack &out = a.m_tracks[0];
+        const int64_t   swap =
+            static_cast<int64_t>( std::ceil( s.m_decks[0].m_tempo.secondsAt( in.m_swapIn ) * 48000.0 ) );
+        e->seek( in.m_swapIn - 8.0 );
+        const int64_t from =
+            static_cast<int64_t>( std::llround( s.m_decks[0].m_tempo.secondsAt( in.m_swapIn - 8.0 ) * 48000.0 ) );
+        std::vector<float> L( 512 ), R( 512 );
+        int64_t            at = from;
+        while ( at < swap )
+        {
+            const int m = static_cast<int>( std::min<int64_t>( 512, swap - at ) );
+            e->process( L.data(), R.data(), m );
+            at += m;
+        }
+        const float outBefore = e->lowGain( out.m_deck ), inBefore = e->lowGain( in.m_deck );
+        e->process( L.data(), R.data(), 1 );
+        const float outAfter = e->lowGain( out.m_deck ), inAfter = e->lowGain( in.m_deck );
         // (Phase 9: the outgoing low band is 6 dB down by then, "A Low auf ~11 Uhr".)
-        check(outBefore > 0.45f && outBefore < 0.55f && inBefore < 1e-6f && outAfter < outBefore && inAfter > 0.0f, "the bass swap in one sample",
-              fmt("out %.4f -> %.4f, in %.2e -> %.4f", outBefore, outAfter, inBefore, inAfter));
+        check( outBefore > 0.45f && outBefore < 0.55f && inBefore < 1e-6f && outAfter < outBefore && inAfter > 0.0f,
+               "the bass swap in one sample",
+               fmt( "out %.4f -> %.4f, in %.2e -> %.4f", outBefore, outAfter, inBefore, inAfter ) );
     }
     // Two decks at once: blocks of 1, 37 and 512 give the same bits over the first swap.
     {
-        const SetTrack& in = a.m_tracks[1];
-        const auto render = [&](int block) {
+        const SetTrack &in = a.m_tracks[1];
+        const auto      render = [&]( int block )
+        {
             auto e = std::make_unique<Engine>();
-            e->params().parseText("set.loops=1; set.fx_breaks=1");
-            e->prepare(48000.0, block);
-            e->loadSet(s);
-            e->seek(in.m_swapIn - 8.0);
-            std::vector<float> out(2 * 288000), L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
-            for (int done = 0; done < 288000;) {
-                const int m = std::min(block, 288000 - done);
-                e->process(L.data(), R.data(), m);
-                for (int i = 0; i < m; ++i) { out[static_cast<size_t>(2 * (done + i))] = L[static_cast<size_t>(i)]; out[static_cast<size_t>(2 * (done + i) + 1)] = R[static_cast<size_t>(i)]; }
+            e->params().parseText( "set.loops=1; set.fx_breaks=1" );
+            e->prepare( 48000.0, block );
+            e->loadSet( s );
+            e->seek( in.m_swapIn - 8.0 );
+            std::vector<float> out( 2 * 288000 ), L( static_cast<size_t>( block ) ), R( static_cast<size_t>( block ) );
+            for ( int done = 0; done < 288000; )
+            {
+                const int m = std::min( block, 288000 - done );
+                e->process( L.data(), R.data(), m );
+                for ( int i = 0; i < m; ++i )
+                {
+                    out[static_cast<size_t>( 2 * ( done + i ) )] = L[static_cast<size_t>( i )];
+                    out[static_cast<size_t>( 2 * ( done + i ) + 1 )] = R[static_cast<size_t>( i )];
+                }
                 done += m;
             }
             return out;
         };
-        const std::vector<float> x = render(512), y = render(37), z = render(1);
-        size_t first = x.size();
-        for (size_t i = 0; i < x.size() && first == x.size(); ++i)
-            if (std::memcmp(&x[i], &y[i], sizeof(float)) != 0 || std::memcmp(&x[i], &z[i], sizeof(float)) != 0) first = i;
+        const std::vector<float> x = render( 512 ), y = render( 37 ), z = render( 1 );
+        size_t                   first = x.size();
+        for ( size_t i = 0; i < x.size() && first == x.size(); ++i )
+            if ( std::memcmp( &x[i], &y[i], sizeof( float ) ) != 0 ||
+                 std::memcmp( &x[i], &z[i], sizeof( float ) ) != 0 )
+                first = i;
         double peak = 0.0;
-        for (float v : x) peak = std::max(peak, static_cast<double>(std::fabs(v)));
-        check(first == x.size() && peak > 0.1, "two decks over a swap: 1 and 37 equal 512, bit for bit",
-              first == x.size() ? fmt("peak %.2f", peak) : fmt("first difference at %.4f s", first / 96000.0));
+        for ( float v : x ) peak = std::max( peak, static_cast<double>( std::fabs( v ) ) );
+        check( first == x.size() && peak > 0.1, "two decks over a swap: 1 and 37 equal 512, bit for bit",
+               first == x.size() ? fmt( "peak %.2f", peak ) : fmt( "first difference at %.4f s", first / 96000.0 ) );
     }
 }
 
@@ -1171,11 +1456,11 @@ void testSet()
  * @param[in] instance  its instance
  * @return the instance's values
  */
-std::vector<float> moduleValues(const ParamStore& p, ModuleE m, int instance = 0)
+std::vector<float> moduleValues( const ParamStore &p, ModuleE m, int instance = 0 )
 {
-    std::vector<float> v(static_cast<size_t>(ParamStore::moduleCount(m)));
-    const int b = p.base(m, instance);
-    for (size_t i = 0; i < v.size(); ++i) v[i] = p.get(b + static_cast<int>(i));
+    std::vector<float> v( static_cast<size_t>( ParamStore::moduleCount( m ) ) );
+    const int          b = p.base( m, instance );
+    for ( size_t i = 0; i < v.size(); ++i ) v[i] = p.get( b + static_cast<int>( i ) );
     return v;
 }
 
@@ -1186,27 +1471,31 @@ std::vector<float> moduleValues(const ParamStore& p, ModuleE m, int instance = 0
  * @param[in] hi  the highest, Hz
  * @return the pitch in Hz
  */
-double pitchHz(const std::vector<float>& x, double lo, double hi)
+double pitchHz( const std::vector<float> &x, double lo, double hi )
 {
-    const int minLag = static_cast<int>(48000.0 / hi), maxLag = static_cast<int>(48000.0 / lo) + 1;
-    const size_t n = x.size() - static_cast<size_t>(maxLag) - 2;
-    std::vector<double> r(static_cast<size_t>(maxLag + 2), 0.0);
-    for (int lag = minLag - 1; lag <= maxLag + 1; ++lag) {
+    const int           minLag = static_cast<int>( 48000.0 / hi ), maxLag = static_cast<int>( 48000.0 / lo ) + 1;
+    const size_t        n = x.size() - static_cast<size_t>( maxLag ) - 2;
+    std::vector<double> r( static_cast<size_t>( maxLag + 2 ), 0.0 );
+    for ( int lag = minLag - 1; lag <= maxLag + 1; ++lag )
+    {
         double s = 0.0, e0 = 0.0, e1 = 0.0;
-        for (size_t i = 0; i < n; ++i) {
-            const double a = x[i], b = x[i + static_cast<size_t>(lag)];
+        for ( size_t i = 0; i < n; ++i )
+        {
+            const double a = x[i], b = x[i + static_cast<size_t>( lag )];
             s += a * b;
             e0 += a * a;
             e1 += b * b;
         }
-        r[static_cast<size_t>(lag)] = s / std::sqrt(e0 * e1 + 1e-30);
+        r[static_cast<size_t>( lag )] = s / std::sqrt( e0 * e1 + 1e-30 );
     }
     int best = minLag;
-    for (int lag = minLag; lag <= maxLag; ++lag) if (r[static_cast<size_t>(lag)] > r[static_cast<size_t>(best)]) best = lag;
-    const double a = r[static_cast<size_t>(best - 1)], b = r[static_cast<size_t>(best)], c = r[static_cast<size_t>(best + 1)];
+    for ( int lag = minLag; lag <= maxLag; ++lag )
+        if ( r[static_cast<size_t>( lag )] > r[static_cast<size_t>( best )] ) best = lag;
+    const double a = r[static_cast<size_t>( best - 1 )], b = r[static_cast<size_t>( best )],
+                 c = r[static_cast<size_t>( best + 1 )];
     const double d = a - 2.0 * b + c;
-    const double off = std::fabs(d) > 1e-12 ? 0.5 * (a - c) / d : 0.0;
-    return 48000.0 / (best + off);
+    const double off = std::fabs( d ) > 1e-12 ? 0.5 * ( a - c ) / d : 0.0;
+    return 48000.0 / ( best + off );
 }
 
 /**
@@ -1217,14 +1506,15 @@ double pitchHz(const std::vector<float>& x, double lo, double hi)
  * @param[out]    out     receives the left channel
  * @param[in]     n       how many samples
  */
-void runSynth(MonoSynth& s, const std::vector<float>& v, float minCut, std::vector<float>& out, int n)
+void runSynth( MonoSynth &s, const std::vector<float> &v, float minCut, std::vector<float> &out, int n )
 {
-    std::vector<float> L(32), R(32);
-    for (int done = 0; done < n; done += 32) {
-        s.update(v.data(), minCut);
-        const int m = std::min(32, n - done);
-        s.process(L.data(), R.data(), m);
-        for (int i = 0; i < m; ++i) out.push_back(L[static_cast<size_t>(i)]);
+    std::vector<float> L( 32 ), R( 32 );
+    for ( int done = 0; done < n; done += 32 )
+    {
+        s.update( v.data(), minCut );
+        const int m = std::min( 32, n - done );
+        s.process( L.data(), R.data(), m );
+        for ( int i = 0; i < m; ++i ) out.push_back( L[static_cast<size_t>( i )] );
     }
 }
 
@@ -1232,159 +1522,218 @@ void runSynth(MonoSynth& s, const std::vector<float>& v, float minCut, std::vect
 /** The score cues (Cue.h, PLAN 10.3): the OSC bytes, the marks of a track, the tap, a datagram through the loopback. */
 void testCues()
 {
-    section("score cues (OSC)");
-    const char* d = "8A";
-    const std::vector<uint8_t> key = oscMessage("/tot/key", "s", nullptr, nullptr, &d);
+    section( "score cues (OSC)" );
+    const char                *d = "8A";
+    const std::vector<uint8_t> key = oscMessage( "/tot/key", "s", nullptr, nullptr, &d );
     const uint8_t keyWant[20] = { '/', 't', 'o', 't', '/', 'k', 'e', 'y', 0, 0, 0, 0, ',', 's', 0, 0, '8', 'A', 0, 0 };
     const int32_t five = 5;
-    const float bpm = 132.0f;
-    const std::vector<uint8_t> beat = oscMessage("/tot/beat", "if", &five, &bpm, nullptr);
-    const uint8_t beatWant[24] = { '/', 't', 'o', 't', '/', 'b', 'e', 'a', 't', 0, 0, 0, ',', 'i', 'f', 0, 0, 0, 0, 5, 0x43, 0x04, 0, 0 };
-    check(key.size() == 20 && std::memcmp(key.data(), keyWant, 20) == 0 && beat.size() == 24 && std::memcmp(beat.data(), beatWant, 24) == 0,
-          "OSC 1.0 byte layout (padding to four bytes, big-endian numbers)", fmt("%zu and %zu bytes", key.size(), beat.size()));
+    const float   bpm = 132.0f;
+    const std::vector<uint8_t> beat = oscMessage( "/tot/beat", "if", &five, &bpm, nullptr );
+    const uint8_t              beatWant[24] = { '/', 't', 'o', 't', '/', 'b', 'e', 'a', 't',  0,    0, 0,
+                                                ',', 'i', 'f', 0,   0,   0,   0,   5,   0x43, 0x04, 0, 0 };
+    check( key.size() == 20 && std::memcmp( key.data(), keyWant, 20 ) == 0 && beat.size() == 24 &&
+               std::memcmp( beat.data(), beatWant, 24 ) == 0,
+           "OSC 1.0 byte layout (padding to four bytes, big-endian numbers)",
+           fmt( "%zu and %zu bytes", key.size(), beat.size() ) );
 
-    auto p = std::make_unique<ParamStore>();
-    TrackInfo info;
-    const Score score = composeTrack(*p, 5, TrackRequest{}, nullptr, std::string(), &info);
-    const std::vector<CueMark> marks = cueMarksOf(score, *p);
-    int blocks = 0, ops = 0, keys = 0, named = 0;
-    bool ordered = true, camelot = true;
-    for (size_t i = 0; i < marks.size(); ++i) {
-        if (i > 0 && marks[i].m_beat < marks[i - 1].m_beat) ordered = false;
-        if (marks[i].m_kind == CueKindE::BLOCK) { ++blocks; named += marks[i].m_text[0] != 0; }
-        if (marks[i].m_kind == CueKindE::OP) { ++ops; named += marks[i].m_text[0] != 0; }
-        if (marks[i].m_kind == CueKindE::KEY) { ++keys; camelot = camelot && std::string(marks[i].m_text) == camelotOf(info.m_key); }
-    }
-    int wantOps = 0;
-    for (const BlockOp& o : score.m_ops) wantOps += o.m_kind != OpKindE::END && o.m_kind != OpKindE::HOLD;
-    check(ordered && blocks == static_cast<int>(score.m_markers.size()) && ops == wantOps && named == blocks + ops && keys == 1 && camelot,
-          "the marks of a track: every block and operation named, its key as a Camelot label",
-          fmt("%d blocks, %d operations, %d key (%s)", blocks, ops, keys, camelotOf(info.m_key).c_str()));
-
-    // The tap over the whole track in blocks: every mark once, a cue per beat and per bar.
-    CueTap tap;
-    CueRing ring;
-    int got = 0, beats = 0, bars = 0, lost = 0;
-    const double step = 0.37;
-    for (double b = 0.0; b < score.m_lengthBeats; b += step) {
-        lost += tap.scan(marks, b, b + step, 130.0f, 0, 0, 1000000, ring);
-        Cue c;
-        while (ring.pop(c)) {
-            if (c.m_kind == CueKindE::BEAT) ++beats;
-            else if (c.m_kind == CueKindE::BAR) ++bars;
-            else ++got;
+    auto                       p = std::make_unique<ParamStore>();
+    TrackInfo                  info;
+    const Score                score = composeTrack( *p, 5, TrackRequest{}, nullptr, std::string(), &info );
+    const std::vector<CueMark> marks = cueMarksOf( score, *p );
+    int                        blocks = 0, ops = 0, keys = 0, named = 0;
+    bool                       ordered = true, camelot = true;
+    for ( size_t i = 0; i < marks.size(); ++i )
+    {
+        if ( i > 0 && marks[i].m_beat < marks[i - 1].m_beat ) ordered = false;
+        if ( marks[i].m_kind == CueKindE::BLOCK )
+        {
+            ++blocks;
+            named += marks[i].m_text[0] != 0;
+        }
+        if ( marks[i].m_kind == CueKindE::OP )
+        {
+            ++ops;
+            named += marks[i].m_text[0] != 0;
+        }
+        if ( marks[i].m_kind == CueKindE::KEY )
+        {
+            ++keys;
+            camelot = camelot && std::string( marks[i].m_text ) == camelotOf( info.m_key );
         }
     }
-    const int wantBeats = static_cast<int>(std::ceil(score.m_lengthBeats));
-    check(lost == 0 && got == static_cast<int>(marks.size()) && std::abs(beats - wantBeats) <= 1 && std::abs(bars - (wantBeats + 3) / 4) <= 1,
-          "the tap sends every mark once, a cue per beat and per bar", fmt("%d of %zu marks, %d beats, %d bars, %d lost", got, marks.size(), beats, bars, lost));
+    int wantOps = 0;
+    for ( const BlockOp &o : score.m_ops ) wantOps += o.m_kind != OpKindE::END && o.m_kind != OpKindE::HOLD;
+    check( ordered && blocks == static_cast<int>( score.m_markers.size() ) && ops == wantOps && named == blocks + ops &&
+               keys == 1 && camelot,
+           "the marks of a track: every block and operation named, its key as a Camelot label",
+           fmt( "%d blocks, %d operations, %d key (%s)", blocks, ops, keys, camelotOf( info.m_key ).c_str() ) );
+
+    // The tap over the whole track in blocks: every mark once, a cue per beat and per bar.
+    CueTap       tap;
+    CueRing      ring;
+    int          got = 0, beats = 0, bars = 0, lost = 0;
+    const double step = 0.37;
+    for ( double b = 0.0; b < score.m_lengthBeats; b += step )
+    {
+        lost += tap.scan( marks, b, b + step, 130.0f, 0, 0, 1000000, ring );
+        Cue c;
+        while ( ring.pop( c ) )
+        {
+            if ( c.m_kind == CueKindE::BEAT )
+                ++beats;
+            else if ( c.m_kind == CueKindE::BAR )
+                ++bars;
+            else
+                ++got;
+        }
+    }
+    const int wantBeats = static_cast<int>( std::ceil( score.m_lengthBeats ) );
+    check( lost == 0 && got == static_cast<int>( marks.size() ) && std::abs( beats - wantBeats ) <= 1 &&
+               std::abs( bars - ( wantBeats + 3 ) / 4 ) <= 1,
+           "the tap sends every mark once, a cue per beat and per bar",
+           fmt( "%d of %zu marks, %d beats, %d bars, %d lost", got, marks.size(), beats, bars, lost ) );
 
     // The sender, for real: a datagram through the loopback to a socket of the test's own.
-    const std::vector<uint8_t> want = oscOf([] { Cue c; c.m_kind = CueKindE::OP; std::strcpy(c.m_text, "add ride"); return c; }());
+    const std::vector<uint8_t> want = oscOf(
+        []
+        {
+            Cue c;
+            c.m_kind = CueKindE::OP;
+            std::strcpy( c.m_text, "add ride" );
+            return c;
+        }() );
     std::vector<uint8_t> heard;
-#if defined(_WIN32)
+#if defined( _WIN32 )
     WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
-    const SOCKET rx = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    DWORD timeout = 2000;
-    setsockopt(rx, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout));
+    WSAStartup( MAKEWORD( 2, 2 ), &wsa );
+    const SOCKET rx = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+    DWORD        timeout = 2000;
+    setsockopt( rx, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>( &timeout ), sizeof( timeout ) );
 #else
-    const int rx = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    timeval timeout{ 2, 0 };
-    setsockopt(rx, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    const int rx = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+    timeval   timeout{ 2, 0 };
+    setsockopt( rx, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof( timeout ) );
 #endif
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_addr.s_addr = htonl( INADDR_LOOPBACK );
     addr.sin_port = 0;
-    bind(rx, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-    socklen_t len = sizeof(addr);
-    getsockname(rx, reinterpret_cast<sockaddr*>(&addr), &len);
+    bind( rx, reinterpret_cast<sockaddr *>( &addr ), sizeof( addr ) );
+    socklen_t len = sizeof( addr );
+    getsockname( rx, reinterpret_cast<sockaddr *>( &addr ), &len );
     CueSender sender;
-    if (sender.start("127.0.0.1", ntohs(addr.sin_port))) {
+    if ( sender.start( "127.0.0.1", ntohs( addr.sin_port ) ) )
+    {
         Cue c;
         c.m_kind = CueKindE::OP;
-        std::strcpy(c.m_text, "add ride");
+        std::strcpy( c.m_text, "add ride" );
         c.m_dueNanos = CueSender::nowNanos();
-        sender.ring().push(c);
-        char buf[256];
-        const auto n = recv(rx, buf, sizeof(buf), 0);
-        if (n > 0) heard.assign(buf, buf + n);
+        sender.ring().push( c );
+        char       buf[256];
+        const auto n = recv( rx, buf, sizeof( buf ), 0 );
+        if ( n > 0 ) heard.assign( buf, buf + n );
         sender.stop();
     }
-#if defined(_WIN32)
-    closesocket(rx);
+#if defined( _WIN32 )
+    closesocket( rx );
     WSACleanup();
 #else
-    close(rx);
+    close( rx );
 #endif
-    check(heard == want, "the sender's datagram arrives through the loopback, byte for byte", fmt("%zu bytes", heard.size()));
+    check( heard == want, "the sender's datagram arrives through the loopback, byte for byte",
+           fmt( "%zu bytes", heard.size() ) );
 }
 
 /** @brief The bass synth and the 303: pitch, glide, slides and the accent. */
 void testSynth()
 {
-    section("the bass synth and the 303");
+    section( "the bass synth and the 303" );
     auto p = std::make_unique<ParamStore>();
     {
-        std::vector<float> v = moduleValues(*p, ModuleE::BASS);
-        v[synth::CUTOFF] = 8000.0f; v[synth::ENV_AMOUNT] = 0.0f; v[synth::SUB_OSC] = 0.0f; v[synth::KEY_TRACK] = 0.0f;
-        v[synth::AMP_SUSTAIN] = 1.0f; v[synth::DUCK] = 0.0f; v[synth::LOW_CUT] = 20.0f;
+        std::vector<float> v = moduleValues( *p, ModuleE::BASS );
+        v[synth::CUTOFF] = 8000.0f;
+        v[synth::ENV_AMOUNT] = 0.0f;
+        v[synth::SUB_OSC] = 0.0f;
+        v[synth::KEY_TRACK] = 0.0f;
+        v[synth::AMP_SUSTAIN] = 1.0f;
+        v[synth::DUCK] = 0.0f;
+        v[synth::LOW_CUT] = 20.0f;
         MonoSynth s;
-        s.prepare(48000.0);
-        s.update(v.data(), 20.0f);
-        s.noteOn(45, 1.0f, 0.0, false, false);
+        s.prepare( 48000.0 );
+        s.update( v.data(), 20.0f );
+        s.noteOn( 45, 1.0f, 0.0, false, false );
         std::vector<float> y;
-        runSynth(s, v, 20.0f, y, 48000);
-        const std::vector<float> tail(y.begin() + 9600, y.end());
-        const double hz = pitchHz(tail, 60.0, 400.0);
-        check(std::fabs(hz / 110.0 - 1.0) < 0.003, "A2 plays at 110 Hz", fmt("%.2f Hz", hz));
+        runSynth( s, v, 20.0f, y, 48000 );
+        const std::vector<float> tail( y.begin() + 9600, y.end() );
+        const double             hz = pitchHz( tail, 60.0, 400.0 );
+        check( std::fabs( hz / 110.0 - 1.0 ) < 0.003, "A2 plays at 110 Hz", fmt( "%.2f Hz", hz ) );
     }
     {
-        std::vector<float> v = moduleValues(*p, ModuleE::ACID);
-        v[synth::CUTOFF] = 8000.0f; v[synth::ENV_AMOUNT] = 0.0f; v[synth::KEY_TRACK] = 0.0f; v[synth::DUCK] = 0.0f;
-        v[synth::LOW_CUT] = 20.0f; v[synth::AMP_SUSTAIN] = 1.0f;
+        std::vector<float> v = moduleValues( *p, ModuleE::ACID );
+        v[synth::CUTOFF] = 8000.0f;
+        v[synth::ENV_AMOUNT] = 0.0f;
+        v[synth::KEY_TRACK] = 0.0f;
+        v[synth::DUCK] = 0.0f;
+        v[synth::LOW_CUT] = 20.0f;
+        v[synth::AMP_SUSTAIN] = 1.0f;
         MonoSynth s;
-        s.prepare(48000.0);
-        s.update(v.data(), 20.0f);
-        s.noteOn(45, 1.0f, 0.0, false, true);   // slides into the next
+        s.prepare( 48000.0 );
+        s.update( v.data(), 20.0f );
+        s.noteOn( 45, 1.0f, 0.0, false, true );   // slides into the next
         std::vector<float> y;
-        runSynth(s, v, 20.0f, y, 14400);
-        s.noteOn(57, 1.0f, 0.0, false, false);
-        runSynth(s, v, 20.0f, y, 28800);
-        const std::vector<float> tail(y.begin() + 14400 + 9600, y.end());
-        const double hz = pitchHz(tail, 120.0, 500.0);
-        check(std::fabs(hz / 220.0 - 1.0) < 0.004, "the 303 slides to A3", fmt("%.2f Hz", hz));
+        runSynth( s, v, 20.0f, y, 14400 );
+        s.noteOn( 57, 1.0f, 0.0, false, false );
+        runSynth( s, v, 20.0f, y, 28800 );
+        const std::vector<float> tail( y.begin() + 14400 + 9600, y.end() );
+        const double             hz = pitchHz( tail, 120.0, 500.0 );
+        check( std::fabs( hz / 220.0 - 1.0 ) < 0.004, "the 303 slides to A3", fmt( "%.2f Hz", hz ) );
         // No new attack at the slide: the level just after it within 3 dB of the level just before.
         double before = 0.0, after = 0.0;
-        for (size_t i = 14400 - 480; i < 14400 - 240; ++i) before += static_cast<double>(y[i]) * y[i];
-        for (size_t i = 14400 + 240; i < 14400 + 480; ++i) after += static_cast<double>(y[i]) * y[i];
-        check(std::fabs(powDb(after / before)) < 3.0, "the slide keeps the gate open", fmt("%+.1f dB", powDb(after / before)));
+        for ( size_t i = 14400 - 480; i < 14400 - 240; ++i ) before += static_cast<double>( y[i] ) * y[i];
+        for ( size_t i = 14400 + 240; i < 14400 + 480; ++i ) after += static_cast<double>( y[i] ) * y[i];
+        check( std::fabs( powDb( after / before ) ) < 3.0, "the slide keeps the gate open",
+               fmt( "%+.1f dB", powDb( after / before ) ) );
     }
     // Every model at full resonance and drive, the cutoff swept over its range, accented notes: bounded and finite.
-    double worst = 0.0;
-    int worstModel = 0;
-    bool finite = true;
+    double      worst = 0.0;
+    int         worstModel = 0;
+    bool        finite = true;
     std::string peaks;
-    for (int m = 0; m < 9; ++m) {
-        std::vector<float> v = moduleValues(*p, ModuleE::ACID);
-        v[synth::FILTER] = static_cast<float>(m); v[synth::RESONANCE] = 1.0f; v[synth::DRIVE] = 1.0f; v[synth::ACCENT] = 1.0f;
-        v[synth::ENV_AMOUNT] = 6.0f; v[synth::LEVEL] = 0.0f; v[synth::DUCK] = 0.0f;
+    for ( int m = 0; m < 9; ++m )
+    {
+        std::vector<float> v = moduleValues( *p, ModuleE::ACID );
+        v[synth::FILTER] = static_cast<float>( m );
+        v[synth::RESONANCE] = 1.0f;
+        v[synth::DRIVE] = 1.0f;
+        v[synth::ACCENT] = 1.0f;
+        v[synth::ENV_AMOUNT] = 6.0f;
+        v[synth::LEVEL] = 0.0f;
+        v[synth::DUCK] = 0.0f;
         MonoSynth s;
-        s.prepare(48000.0);
-        std::vector<float> L(32), R(32);
-        double peak = 0.0;
-        for (int done = 0; done < 96000; done += 32) {
-            v[synth::CUTOFF] = 40.0f * std::pow(300.0f, static_cast<float>(done % 24000) / 24000.0f);
-            s.update(v.data(), 20.0f);
-            if (done % 6016 == 0) s.noteOn(33 + (done / 6016) % 24, 1.0f, 0.0, true, (done / 6016) % 3 == 0);
-            s.process(L.data(), R.data(), 32);
-            for (float x : L) { finite = finite && std::isfinite(x); peak = std::max(peak, static_cast<double>(std::fabs(x))); }
+        s.prepare( 48000.0 );
+        std::vector<float> L( 32 ), R( 32 );
+        double             peak = 0.0;
+        for ( int done = 0; done < 96000; done += 32 )
+        {
+            v[synth::CUTOFF] = 40.0f * std::pow( 300.0f, static_cast<float>( done % 24000 ) / 24000.0f );
+            s.update( v.data(), 20.0f );
+            if ( done % 6016 == 0 ) s.noteOn( 33 + ( done / 6016 ) % 24, 1.0f, 0.0, true, ( done / 6016 ) % 3 == 0 );
+            s.process( L.data(), R.data(), 32 );
+            for ( float x : L )
+            {
+                finite = finite && std::isfinite( x );
+                peak = std::max( peak, static_cast<double>( std::fabs( x ) ) );
+            }
         }
-        if (peak > worst) { worst = peak; worstModel = m; }
-        peaks += fmt(m == 0 ? "%.2f" : " %.2f", peak);
+        if ( peak > worst )
+        {
+            worst = peak;
+            worstModel = m;
+        }
+        peaks += fmt( m == 0 ? "%.2f" : " %.2f", peak );
     }
-    check(finite && worst < 4.0, "every filter model bounded at full resonance and drive", fmt("peaks %s (worst: model %d)", peaks.c_str(), worstModel));
+    check( finite && worst < 4.0, "every filter model bounded at full resonance and drive",
+           fmt( "peaks %s (worst: model %d)", peaks.c_str(), worstModel ) );
 }
 
 /** The harmony rules of Dok. 8.6 and 8.9 on the plans of 600 seeds: every chord in the key, no major seventh over its
@@ -1392,188 +1741,249 @@ void testSynth()
  *  130 Hz, under 150 Hz only fifths and octaves; no V; the drone and the 303 in the key. */
 void testHarmony()
 {
-    section("the harmony rules");
-    int bad = 0, chords = 0, shuttles = 0;
+    section( "the harmony rules" );
+    int         bad = 0, chords = 0, shuttles = 0;
     std::string first;
-    for (int k = 0; k < 600; ++k) {
+    for ( int k = 0; k < 600; ++k )
+    {
         auto p = std::make_unique<ParamStore>();
-        p->set(p->find("compose.key"), static_cast<float>(k % 12));
-        p->set(p->find("compose.scale"), static_cast<float>((k / 12) % 5));
-        const RackPlan plan = makeRackPlan(*p, static_cast<uint64_t>(k) * 7919u + 1u);
-        auto inKey = [&](int pitch) { return inScale(plan.m_scale, ((pitch - plan.m_keyRoot) % 12 + 12) % 12); };
-        auto fail = [&](const std::string& what) { ++bad; if (first.empty()) first = what; };
-        auto judge = [&](const std::vector<int>& tones, int root, const char* what) {
+        p->set( p->find( "compose.key" ), static_cast<float>( k % 12 ) );
+        p->set( p->find( "compose.scale" ), static_cast<float>( ( k / 12 ) % 5 ) );
+        const RackPlan plan = makeRackPlan( *p, static_cast<uint64_t>( k ) * 7919u + 1u );
+        auto           inKey = [&]( int pitch )
+        { return inScale( plan.m_scale, ( ( pitch - plan.m_keyRoot ) % 12 + 12 ) % 12 ); };
+        auto fail = [&]( const std::string &what )
+        {
+            ++bad;
+            if ( first.empty() ) first = what;
+        };
+        auto judge = [&]( const std::vector<int> &tones, int root, const char *what )
+        {
             ++chords;
             std::set<int> pcs;
-            bool ok = true;
-            for (size_t i = 0; i < tones.size(); ++i) {
-                ok = ok && inKey(tones[i]) && ((tones[i] - root) % 12 + 12) % 12 != 11;
-                pcs.insert(((tones[i] % 12) + 12) % 12);
-                for (size_t j = 0; j < tones.size(); ++j) {
-                    if (tones[j] <= tones[i]) continue;
+            bool          ok = true;
+            for ( size_t i = 0; i < tones.size(); ++i )
+            {
+                ok = ok && inKey( tones[i] ) && ( ( tones[i] - root ) % 12 + 12 ) % 12 != 11;
+                pcs.insert( ( ( tones[i] % 12 ) + 12 ) % 12 );
+                for ( size_t j = 0; j < tones.size(); ++j )
+                {
+                    if ( tones[j] <= tones[i] ) continue;
                     const int iv = tones[j] - tones[i];
-                    if (iv == 3 || iv == 4) ok = ok && midiToHz(tones[i]) >= 130.0;
-                    if (midiToHz(tones[j]) < 150.0) ok = ok && (iv == 7 || iv == 12);
+                    if ( iv == 3 || iv == 4 ) ok = ok && midiToHz( tones[i] ) >= 130.0;
+                    if ( midiToHz( tones[j] ) < 150.0 ) ok = ok && ( iv == 7 || iv == 12 );
                 }
             }
             ok = ok && pcs.size() <= 4;
-            if (!ok) fail(fmt("%s of seed %d", what, k));
+            if ( !ok ) fail( fmt( "%s of seed %d", what, k ) );
         };
         std::vector<int> c;
-        for (int t = 0; t < plan.m_nChordTones; ++t) c.push_back(plan.m_chordRoot + plan.m_chordTones[t]);
-        judge(c, plan.m_chordRoot, "chord");
-        if (plan.m_shuttleBars > 0) {
+        for ( int t = 0; t < plan.m_nChordTones; ++t ) c.push_back( plan.m_chordRoot + plan.m_chordTones[t] );
+        judge( c, plan.m_chordRoot, "chord" );
+        if ( plan.m_shuttleBars > 0 )
+        {
             ++shuttles;
             c.clear();
-            for (int t = 0; t < 3; ++t) c.push_back(plan.m_chordRoot + plan.m_shuttleTones[t]);
-            judge(c, plan.m_chordRoot + plan.m_shuttle, "shuttle");
-            if (((plan.m_shuttle % 12) + 12) % 12 == 7) fail(fmt("a V at seed %d", k));
+            for ( int t = 0; t < 3; ++t ) c.push_back( plan.m_chordRoot + plan.m_shuttleTones[t] );
+            judge( c, plan.m_chordRoot + plan.m_shuttle, "shuttle" );
+            if ( ( ( plan.m_shuttle % 12 ) + 12 ) % 12 == 7 ) fail( fmt( "a V at seed %d", k ) );
         }
-        if (!inKey(plan.m_droneNote) || midiToHz(plan.m_droneNote) < 150.0) fail(fmt("drone of seed %d", k));
-        if (k % 20 == 0) {
+        if ( !inKey( plan.m_droneNote ) || midiToHz( plan.m_droneNote ) < 150.0 ) fail( fmt( "drone of seed %d", k ) );
+        if ( k % 20 == 0 )
+        {
             std::vector<NoteEvent> notes;
-            for (int bar = 0; bar < 16; ++bar) {
-                BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
-                spec.m_active[static_cast<int>(LayerIdE::ACID)] = true;
-                realizeBar(plan, spec, notes);
+            for ( int bar = 0; bar < 16; ++bar )
+            {
+                BarSpec spec = emptyBar( bar, 4.0 * bar, 130.0 );
+                spec.m_active[static_cast<int>( LayerIdE::ACID )] = true;
+                realizeBar( plan, spec, notes );
             }
-            for (const NoteEvent& n : notes)
-                if (n.m_part == PartE::ACID && !inKey(n.m_pitch)) { fail(fmt("303 of seed %d", k)); break; }
+            for ( const NoteEvent &n : notes )
+                if ( n.m_part == PartE::ACID && !inKey( n.m_pitch ) )
+                {
+                    fail( fmt( "303 of seed %d", k ) );
+                    break;
+                }
         }
     }
-    check(bad == 0, "every chord, shuttle, drone and 303 line by the rules", bad == 0 ? fmt("%d chords, %d shuttles", chords, shuttles) : first);
+    check( bad == 0, "every chord, shuttle, drone and 303 line by the rules",
+           bad == 0 ? fmt( "%d chords, %d shuttles", chords, shuttles ) : first );
 }
 
 /** The dub chain: the echo dies away at its default feedback and stays bounded beyond one; the multiband duck takes its
  *  depths band by band and, untriggered, passes every band at unity (an allpass). */
 void testDub()
 {
-    section("the dub chain and the multiband duck");
-    auto p = std::make_unique<ParamStore>();
-    std::vector<float> v = moduleValues(*p, ModuleE::DUB);
-    auto run = [](DubChain& d, int seconds, int burst) {
-        std::vector<float> in(512), zero(512, 0.0f), L(512), R(512), out;
-        Rng rng;
-        rng.seed(5);
-        for (int done = 0; done < seconds * 48000; done += 512) {
-            for (int i = 0; i < 512; ++i) in[static_cast<size_t>(i)] = done + i < burst ? rng.uniform() - 0.5f : 0.0f;
-            d.process(in.data(), in.data(), zero.data(), zero.data(), L.data(), R.data(), 512);
-            out.insert(out.end(), L.begin(), L.end());
+    section( "the dub chain and the multiband duck" );
+    auto               p = std::make_unique<ParamStore>();
+    std::vector<float> v = moduleValues( *p, ModuleE::DUB );
+    auto               run = []( DubChain &d, int seconds, int burst )
+    {
+        std::vector<float> in( 512 ), zero( 512, 0.0f ), L( 512 ), R( 512 ), out;
+        Rng                rng;
+        rng.seed( 5 );
+        for ( int done = 0; done < seconds * 48000; done += 512 )
+        {
+            for ( int i = 0; i < 512; ++i )
+                in[static_cast<size_t>( i )] = done + i < burst ? rng.uniform() - 0.5f : 0.0f;
+            d.process( in.data(), in.data(), zero.data(), zero.data(), L.data(), R.data(), 512 );
+            out.insert( out.end(), L.begin(), L.end() );
         }
         return out;
     };
-    auto energy = [](const std::vector<float>& y, double a, double b) {
+    auto energy = []( const std::vector<float> &y, double a, double b )
+    {
         double e = 0.0;
-        for (size_t i = static_cast<size_t>(a * 48000.0); i < static_cast<size_t>(b * 48000.0) && i < y.size(); ++i) e += static_cast<double>(y[i]) * y[i];
+        for ( size_t i = static_cast<size_t>( a * 48000.0 ); i < static_cast<size_t>( b * 48000.0 ) && i < y.size();
+              ++i )
+            e += static_cast<double>( y[i] ) * y[i];
         return e;
     };
     {
         DubChain d;
-        d.prepare(48000.0, 512);
-        d.update(v.data(), 130.0);
-        const std::vector<float> y = run(d, 6, 480);
-        const double drop = powDb(energy(y, 5.0, 6.0) / energy(y, 0.0, 1.0));
-        check(drop < -40.0, "at the default feedback the echo dies away", fmt("%.1f dB after five seconds", drop));
+        d.prepare( 48000.0, 512 );
+        d.update( v.data(), 130.0 );
+        const std::vector<float> y = run( d, 6, 480 );
+        const double             drop = powDb( energy( y, 5.0, 6.0 ) / energy( y, 0.0, 1.0 ) );
+        check( drop < -40.0, "at the default feedback the echo dies away", fmt( "%.1f dB after five seconds", drop ) );
     }
     {
         DubChain d;
-        d.prepare(48000.0, 512);
+        d.prepare( 48000.0, 512 );
         v[dub::FEEDBACK] = 1.2f;
-        d.update(v.data(), 130.0);
-        const std::vector<float> y = run(d, 20, 4800);
-        double peak = 0.0;
-        bool finite = true;
-        for (float x : y) { finite = finite && std::isfinite(x); peak = std::max(peak, static_cast<double>(std::fabs(x))); }
-        check(finite && peak < 4.0, "beyond the edge (feedback 1.2) it stays bounded", fmt("peak %.2f", peak));
+        d.update( v.data(), 130.0 );
+        const std::vector<float> y = run( d, 20, 4800 );
+        double                   peak = 0.0;
+        bool                     finite = true;
+        for ( float x : y )
+        {
+            finite = finite && std::isfinite( x );
+            peak = std::max( peak, static_cast<double>( std::fabs( x ) ) );
+        }
+        check( finite && peak < 4.0, "beyond the edge (feedback 1.2) it stays bounded", fmt( "peak %.2f", peak ) );
     }
     // The duck: a tone per band, the ducker triggered at 0.5 s, its gain 20 .. 50 ms later against an untriggered twin.
     const double freqs[3] = { 60.0, 800.0, 8000.0 }, want[3] = { -10.0, -3.0, 0.0 }, tol[3] = { 1.5, 1.0, 0.5 };
-    double worstFlat = 0.0;
-    for (int b = 0; b < 3; ++b) {
+    double       worstFlat = 0.0;
+    for ( int b = 0; b < 3; ++b )
+    {
         MultibandDucker a, c;
-        a.prepare(48000.0);
-        c.prepare(48000.0);
-        a.set(10.0f, 3.0f, 60.0f, 250.0f);
-        c.set(10.0f, 3.0f, 60.0f, 250.0f);
-        std::vector<float> x(512), al(512), ar(512), cl(512), cr(512), ya, yc;
-        for (int done = 0; done < 28672; done += 512) {
-            if (done == 24064) a.trigger(0.0);
-            for (int i = 0; i < 512; ++i) x[static_cast<size_t>(i)] = 0.3f * static_cast<float>(std::sin(2.0 * PiD * freqs[b] * (done + i) / 48000.0));
-            al = x; ar = x; cl = x; cr = x;
-            a.process(al.data(), ar.data(), 512);
-            c.process(cl.data(), cr.data(), 512);
-            ya.insert(ya.end(), al.begin(), al.end());
-            yc.insert(yc.end(), cl.begin(), cl.end());
+        a.prepare( 48000.0 );
+        c.prepare( 48000.0 );
+        a.set( 10.0f, 3.0f, 60.0f, 250.0f );
+        c.set( 10.0f, 3.0f, 60.0f, 250.0f );
+        std::vector<float> x( 512 ), al( 512 ), ar( 512 ), cl( 512 ), cr( 512 ), ya, yc;
+        for ( int done = 0; done < 28672; done += 512 )
+        {
+            if ( done == 24064 ) a.trigger( 0.0 );
+            for ( int i = 0; i < 512; ++i )
+                x[static_cast<size_t>( i )] =
+                    0.3f * static_cast<float>( std::sin( 2.0 * PiD * freqs[b] * ( done + i ) / 48000.0 ) );
+            al = x;
+            ar = x;
+            cl = x;
+            cr = x;
+            a.process( al.data(), ar.data(), 512 );
+            c.process( cl.data(), cr.data(), 512 );
+            ya.insert( ya.end(), al.begin(), al.end() );
+            yc.insert( yc.end(), cl.begin(), cl.end() );
         }
         double ea = 0.0, ec = 0.0;
-        for (size_t i = 24064 + 960; i < 24064 + 2400; ++i) { ea += static_cast<double>(ya[i]) * ya[i]; ec += static_cast<double>(yc[i]) * yc[i]; }
-        const double g = powDb(ea / ec);
+        for ( size_t i = 24064 + 960; i < 24064 + 2400; ++i )
+        {
+            ea += static_cast<double>( ya[i] ) * ya[i];
+            ec += static_cast<double>( yc[i] ) * yc[i];
+        }
+        const double g = powDb( ea / ec );
         // Flatness over whole periods before the trigger (12 of 60 Hz): the allpass turns the phase, not the level.
         double ef = 0.0, ex = 0.0;
-        for (size_t i = 14400; i < 24000; ++i) {
-            const double s = 0.3 * std::sin(2.0 * PiD * freqs[b] * static_cast<double>(i) / 48000.0);
+        for ( size_t i = 14400; i < 24000; ++i )
+        {
+            const double s = 0.3 * std::sin( 2.0 * PiD * freqs[b] * static_cast<double>( i ) / 48000.0 );
             ex += s * s;
-            ef += static_cast<double>(yc[i]) * yc[i];
+            ef += static_cast<double>( yc[i] ) * yc[i];
         }
-        worstFlat = std::max(worstFlat, std::fabs(powDb(ef / ex)));
-        check(std::fabs(g - want[b]) <= tol[b], fmt("the duck at %.0f Hz takes %.0f dB", freqs[b], -want[b]).c_str(), fmt("%+.2f dB", g));
+        worstFlat = std::max( worstFlat, std::fabs( powDb( ef / ex ) ) );
+        check( std::fabs( g - want[b] ) <= tol[b],
+               fmt( "the duck at %.0f Hz takes %.0f dB", freqs[b], -want[b] ).c_str(), fmt( "%+.2f dB", g ) );
     }
-    check(worstFlat < 0.05, "untriggered, every band passes at unity", fmt("%.3f dB off at worst", worstFlat));
+    check( worstFlat < 0.05, "untriggered, every band passes at unity", fmt( "%.3f dB off at worst", worstFlat ) );
     // The cloud: silent at its knob; raised, grains of what it heard, bounded against its input (0.3: a few grains
     // overlapping, panned); never ahead of its history.
     {
-        std::vector<float> c = moduleValues(*p, ModuleE::CLOUD);
-        GrainCloud cl;
-        cl.prepare(48000.0, 3);
-        std::vector<float> in(512), zero(512, 0.0f), L(512), R(512);
-        double quiet = 0.0, loud = 0.0, early = 0.0;
-        for (int pass = 0; pass < 2; ++pass) {
+        std::vector<float> c = moduleValues( *p, ModuleE::CLOUD );
+        GrainCloud         cl;
+        cl.prepare( 48000.0, 3 );
+        std::vector<float> in( 512 ), zero( 512, 0.0f ), L( 512 ), R( 512 );
+        double             quiet = 0.0, loud = 0.0, early = 0.0;
+        for ( int pass = 0; pass < 2; ++pass )
+        {
             cl.reset();
             c[cloud::LEVEL] = pass == 0 ? -60.0f : -12.0f;   // -12 dB: unity through the cloud's makeup
-            cl.update(c.data());
-            for (int done = 0; done < 4 * 48000; done += 512) {
-                for (int i = 0; i < 512; ++i) in[static_cast<size_t>(i)] = done + i >= 48000 ? 0.3f * static_cast<float>(std::sin(2.0 * PiD * 440.0 * (done + i) / 48000.0)) : 0.0f;
-                cl.process(in.data(), in.data(), L.data(), R.data(), 512);
-                for (int i = 0; i < 512; ++i) {
-                    const double e = static_cast<double>(L[static_cast<size_t>(i)]) * L[static_cast<size_t>(i)];
-                    if (pass == 0) quiet += e;
-                    else if (done + i < 48000) early += e;
-                    else loud = std::max(loud, static_cast<double>(std::fabs(L[static_cast<size_t>(i)])));
+            cl.update( c.data() );
+            for ( int done = 0; done < 4 * 48000; done += 512 )
+            {
+                for ( int i = 0; i < 512; ++i )
+                    in[static_cast<size_t>( i )] =
+                        done + i >= 48000
+                            ? 0.3f * static_cast<float>( std::sin( 2.0 * PiD * 440.0 * ( done + i ) / 48000.0 ) )
+                            : 0.0f;
+                cl.process( in.data(), in.data(), L.data(), R.data(), 512 );
+                for ( int i = 0; i < 512; ++i )
+                {
+                    const double e = static_cast<double>( L[static_cast<size_t>( i )] ) * L[static_cast<size_t>( i )];
+                    if ( pass == 0 )
+                        quiet += e;
+                    else if ( done + i < 48000 )
+                        early += e;
+                    else
+                        loud = std::max( loud, static_cast<double>( std::fabs( L[static_cast<size_t>( i )] ) ) );
                 }
             }
         }
-        check(quiet == 0.0 && early == 0.0 && loud > 0.05 && loud < 3.0, "the cloud: silent at -60 dB and before its input, grains after",
-              fmt("peak %.2f", loud));
+        check( quiet == 0.0 && early == 0.0 && loud > 0.05 && loud < 3.0,
+               "the cloud: silent at -60 dB and before its input, grains after", fmt( "peak %.2f", loud ) );
     }
 }
 
 /** The Leveler brings the loudest part of a study to its style's target (or as near as 4 dB allow). */
 void testLeveler()
 {
-    section("the leveler");
-    for (int style = 0; style < 4; style += 3) {
+    section( "the leveler" );
+    for ( int style = 0; style < 4; style += 3 )
+    {
         auto p = std::make_unique<ParamStore>();
-        p->set(p->find("compose.minutes"), 5.0f);
-        p->set(p->find("compose.style"), static_cast<float>(style));
-        Score s = composeStudy(*p, 21);
-        const std::vector<LevelReading> r = levelScore(s, *p);
-        if (r.size() != 1) { check(false, "one reading per track", fmt("%zu", r.size())); continue; }
+        p->set( p->find( "compose.minutes" ), 5.0f );
+        p->set( p->find( "compose.style" ), static_cast<float>( style ) );
+        Score                           s = composeStudy( *p, 21 );
+        const std::vector<LevelReading> r = levelScore( s, *p );
+        if ( r.size() != 1 )
+        {
+            check( false, "one reading per track", fmt( "%zu", r.size() ) );
+            continue;
+        }
         // Independently: the part again with the correction, warmed up as the Leveler warms up.
         auto e = std::make_unique<Engine>();
-        e->params().copyValuesFrom(*p);
-        e->prepare(48000.0, 512);
-        e->load(s);
-        const double at = s.m_tempo.secondsAt(s.m_levels[0].m_peakBeat);
-        e->seek(s.m_tempo.beatAt(at - 4.0));
-        std::vector<float> L(512), R(512);
-        for (int done = 0; done < 4 * 48000; done += 512) e->process(L.data(), R.data(), 512);
+        e->params().copyValuesFrom( *p );
+        e->prepare( 48000.0, 512 );
+        e->load( s );
+        const double at = s.m_tempo.secondsAt( s.m_levels[0].m_peakBeat );
+        e->seek( s.m_tempo.beatAt( at - 4.0 ) );
+        std::vector<float> L( 512 ), R( 512 );
+        for ( int done = 0; done < 4 * 48000; done += 512 ) e->process( L.data(), R.data(), 512 );
         LoudnessMeter m;
-        m.prepare(48000.0);
-        for (int done = 0; done < 20 * 48000; done += 512) { e->process(L.data(), R.data(), 512); m.process(L.data(), R.data(), 512); }
+        m.prepare( 48000.0 );
+        for ( int done = 0; done < 20 * 48000; done += 512 )
+        {
+            e->process( L.data(), R.data(), 512 );
+            m.process( L.data(), R.data(), 512 );
+        }
         const double got = m.report().m_integrated;
-        const bool clamped = std::fabs(r[0].m_trim) >= 3.99f;
-        check(clamped || std::fabs(got - r[0].m_target) <= 0.5, fmt("%s: the loudest part at its target", StyleNames[style]).c_str(),
-              fmt("measured %.1f, trim %+.1f dB, then %.1f LUFS against %.1f", r[0].m_measured, r[0].m_trim, got, r[0].m_target));
+        const bool   clamped = std::fabs( r[0].m_trim ) >= 3.99f;
+        check( clamped || std::fabs( got - r[0].m_target ) <= 0.5,
+               fmt( "%s: the loudest part at its target", StyleNames[style] ).c_str(),
+               fmt( "measured %.1f, trim %+.1f dB, then %.1f LUFS against %.1f", r[0].m_measured, r[0].m_trim, got,
+                    r[0].m_target ) );
     }
 }
 
@@ -1581,66 +1991,84 @@ void testLeveler()
  *  played again with the corrections measures what the Leveler meant, and every track has a lead voice to be heard. */
 void testBalance()
 {
-    section("the balance");
+    section( "the balance" );
     std::string first;
-    int tracks = 0, withLead = 0, parts = 0, placed = 0, again = 0, agreed = 0;
-    for (int style = 0; style < 4; ++style) {
-        for (const uint64_t seed : { 3ull, 8ull }) {
+    int         tracks = 0, withLead = 0, parts = 0, placed = 0, again = 0, agreed = 0;
+    for ( int style = 0; style < 4; ++style )
+    {
+        for ( const uint64_t seed : { 3ull, 8ull } )
+        {
             auto p = std::make_unique<ParamStore>();
-            p->set(p->find("compose.style"), static_cast<float>(style));
-            p->set(p->find("compose.minutes"), 5.0f);
-            Score s = composeTrack(*p, seed);
-            const std::vector<LevelReading> r = levelScore(s, *p);
-            if (r.size() != 1) { check(false, "one reading per track", fmt("%zu", r.size())); continue; }
+            p->set( p->find( "compose.style" ), static_cast<float>( style ) );
+            p->set( p->find( "compose.minutes" ), 5.0f );
+            Score                           s = composeTrack( *p, seed );
+            const std::vector<LevelReading> r = levelScore( s, *p );
+            if ( r.size() != 1 )
+            {
+                check( false, "one reading per track", fmt( "%zu", r.size() ) );
+                continue;
+            }
             ++tracks;
-            const std::string who = fmt("%s seed %d", StyleNames[style], static_cast<int>(seed));
+            const std::string who = fmt( "%s seed %d", StyleNames[style], static_cast<int>( seed ) );
             // Played again with the corrections: the loudest samples in the Leveler's three places.
             auto e = std::make_unique<Engine>();
-            e->params().copyValuesFrom(*p);
-            e->prepare(48000.0, 512);
-            e->load(s);
-            const LevelMark& m = s.m_levels[0];
-            std::vector<float> L(512), R(512);
-            BalanceDbT heard;
-            heard.fill(-200.0f);
-            for (const double back : { 0.0, 64.0, 160.0 }) {
+            e->params().copyValuesFrom( *p );
+            e->prepare( 48000.0, 512 );
+            e->load( s );
+            const LevelMark   &m = s.m_levels[0];
+            std::vector<float> L( 512 ), R( 512 );
+            BalanceDbT         heard;
+            heard.fill( -200.0f );
+            for ( const double back : { 0.0, 64.0, 160.0 } )
+            {
                 const double at = m.m_peakBeat - back;
-                if (back > 0.0 && at < m.m_beat + 128.0) continue;
-                e->seek(s.m_tempo.beatAt(s.m_tempo.secondsAt(at) - 2.0));
-                for (int done = 0; done < 2 * 48000; done += 512) e->process(L.data(), R.data(), 512);
-                e->watchPeaks(true);
-                for (int done = 0; done < 12 * 48000; done += 512) e->process(L.data(), R.data(), 512);
-                e->watchPeaks(false);
-                const Deck& d = e->deck(0);
-                for (int q = 0; q < BalParts; ++q)
-                    if (d.kickPeak() > 1e-4f && d.partPeak(q) > 0.0f)
-                        heard[static_cast<size_t>(q)] = std::max(heard[static_cast<size_t>(q)], 20.0f * std::log10(d.partPeak(q) / d.kickPeak()));
+                if ( back > 0.0 && at < m.m_beat + 128.0 ) continue;
+                e->seek( s.m_tempo.beatAt( s.m_tempo.secondsAt( at ) - 2.0 ) );
+                for ( int done = 0; done < 2 * 48000; done += 512 ) e->process( L.data(), R.data(), 512 );
+                e->watchPeaks( true );
+                for ( int done = 0; done < 12 * 48000; done += 512 ) e->process( L.data(), R.data(), 512 );
+                e->watchPeaks( false );
+                const Deck &d = e->deck( 0 );
+                for ( int q = 0; q < BalParts; ++q )
+                    if ( d.kickPeak() > 1e-4f && d.partPeak( q ) > 0.0f )
+                        heard[static_cast<size_t>( q )] = std::max(
+                            heard[static_cast<size_t>( q )], 20.0f * std::log10( d.partPeak( q ) / d.kickPeak() ) );
             }
             bool lead = false;
-            for (int q = 0; q < BalParts; ++q) {
-                const float f = r[0].m_found[static_cast<size_t>(q)], b = r[0].m_bal[static_cast<size_t>(q)];
-                if (std::isnan(f)) continue;
-                if (q == static_cast<int>(BalPartE::PING) || q == static_cast<int>(BalPartE::BASS) || q == static_cast<int>(BalPartE::ACID)
-                    || q == static_cast<int>(BalPartE::CHORD)) lead = true;
+            for ( int q = 0; q < BalParts; ++q )
+            {
+                const float f = r[0].m_found[static_cast<size_t>( q )], b = r[0].m_bal[static_cast<size_t>( q )];
+                if ( std::isnan( f ) ) continue;
+                if ( q == static_cast<int>( BalPartE::PING ) || q == static_cast<int>( BalPartE::BASS ) ||
+                     q == static_cast<int>( BalPartE::ACID ) || q == static_cast<int>( BalPartE::CHORD ) )
+                    lead = true;
                 // In its window (ranked), or at the largest correction; where the guard took boosts back, not over it.
-                const float lo = r[0].m_lo[static_cast<size_t>(q)], hi = r[0].m_hi[static_cast<size_t>(q)];
+                const float lo = r[0].m_lo[static_cast<size_t>( q )], hi = r[0].m_hi[static_cast<size_t>( q )];
                 ++parts;
                 const bool atMost = b >= 14.99f || b <= -7.99f;
-                if (atMost || (f + b <= hi + 0.05f && (r[0].m_guarded || f + b >= lo - 0.05f))) ++placed;
-                else if (first.empty()) first = who + fmt(": %s at %.1f + %.1f outside %.0f .. %.0f", BalPartNames[q], f, b, lo, hi);
+                if ( atMost || ( f + b <= hi + 0.05f && ( r[0].m_guarded || f + b >= lo - 0.05f ) ) )
+                    ++placed;
+                else if ( first.empty() )
+                    first = who + fmt( ": %s at %.1f + %.1f outside %.0f .. %.0f", BalPartNames[q], f, b, lo, hi );
                 ++again;
-                if (std::fabs(heard[static_cast<size_t>(q)] - (f + b)) <= 1.5f) ++agreed;
-                else if (first.empty()) first = who + fmt(": %s meant %.1f, heard %.1f", BalPartNames[q], f + b, heard[static_cast<size_t>(q)]);
+                if ( std::fabs( heard[static_cast<size_t>( q )] - ( f + b ) ) <= 1.5f )
+                    ++agreed;
+                else if ( first.empty() )
+                    first = who + fmt( ": %s meant %.1f, heard %.1f", BalPartNames[q], f + b,
+                                       heard[static_cast<size_t>( q )] );
             }
             withLead += lead ? 1 : 0;
-            if (!lead && first.empty()) first = who + ": no lead voice heard (ping, bass, 303 or chord)";
+            if ( !lead && first.empty() ) first = who + ": no lead voice heard (ping, bass, 303 or chord)";
         }
     }
-    check(tracks == 8 && withLead == tracks, "a lead voice heard in every track", first.empty() ? fmt("%d of %d", withLead, tracks) : first);
-    check(parts > 30 && placed == parts, "every part heard in its ranked window against the kick (or at its largest correction; not over it where the guard acted)",
-          first.empty() ? fmt("%d of %d parts", placed, parts) : first);
-    check(again == parts && agreed == again, "played again, every part as loud as the Leveler meant (1.5 dB)",
-          first.empty() ? fmt("%d of %d", agreed, again) : first);
+    check( tracks == 8 && withLead == tracks, "a lead voice heard in every track",
+           first.empty() ? fmt( "%d of %d", withLead, tracks ) : first );
+    check( parts > 30 && placed == parts,
+           "every part heard in its ranked window against the kick (or at its largest correction; not over it where "
+           "the guard acted)",
+           first.empty() ? fmt( "%d of %d parts", placed, parts ) : first );
+    check( again == parts && agreed == again, "played again, every part as loud as the Leveler meant (1.5 dB)",
+           first.empty() ? fmt( "%d of %d", agreed, again ) : first );
 }
 
 /**
@@ -1649,67 +2077,79 @@ void testBalance()
  * @param[out] stems  receives the stems, or null
  * @return the mix
  */
-std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems = nullptr)
+std::vector<float> renderFull( int block, std::vector<std::vector<float>> *stems = nullptr )
 {
-    auto e = std::make_unique<Engine>();
-    ParamStore& p = e->params();
-    p.parseText("compose.low_owner=Sub");
-    const RackPlan plan = makeRackPlan(p, 17);
-    Score sc;
-    sc.clear(130.0f);
+    auto        e = std::make_unique<Engine>();
+    ParamStore &p = e->params();
+    p.parseText( "compose.low_owner=Sub" );
+    const RackPlan plan = makeRackPlan( p, 17 );
+    Score          sc;
+    sc.clear( 130.0f );
     sc.m_seed = 17;
-    for (int bar = 0; bar < 8; ++bar) {
-        BarSpec spec = emptyBar(bar, 4.0 * bar, 130.0);
-        for (bool& a : spec.m_active) a = true;
-        realizeBar(plan, spec, sc.m_notes);
+    for ( int bar = 0; bar < 8; ++bar )
+    {
+        BarSpec spec = emptyBar( bar, 4.0 * bar, 130.0 );
+        for ( bool &a : spec.m_active ) a = true;
+        realizeBar( plan, spec, sc.m_notes );
     }
     Gesture g;
-    g.m_param = p.find("dub.feedback");
+    g.m_param = p.find( "dub.feedback" );
     g.m_beat = 14.0;
     g.m_length = 4.0;
     g.m_from = 0.0f;
     g.m_to = 0.45f;
     g.m_shape = GestureShapeE::MINIMUM_JERK;
-    sc.m_gestures.push_back(g);
+    sc.m_gestures.push_back( g );
     Gesture c;
-    c.m_param = p.find("cloud.level");
+    c.m_param = p.find( "cloud.level" );
     c.m_beat = 4.0;
     c.m_length = 0.0;
     c.m_to = 0.9f;
     c.m_shape = GestureShapeE::STEP;
-    sc.m_gestures.push_back(c);
-    g.m_param = p.find("dub.ping_send");
+    sc.m_gestures.push_back( c );
+    g.m_param = p.find( "dub.ping_send" );
     g.m_beat = 15.0;
     g.m_length = 0.0;
     g.m_to = 0.6f;
     g.m_shape = GestureShapeE::STEP;
-    sc.m_gestures.push_back(g);
+    sc.m_gestures.push_back( g );
     sc.m_lengthBeats = 32.0;
     sc.sort();
-    e->prepare(48000.0, block);
-    e->load(sc);
-    const int n = static_cast<int>(sc.m_tempo.secondsAt(32.0) * 48000.0);
-    std::vector<float> out(static_cast<size_t>(2 * n));
-    std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
-    std::vector<std::vector<float>> sl(Engine::STEMS, std::vector<float>(static_cast<size_t>(block))), sr = sl;
-    std::vector<float*> pl, pr;
-    for (int k = 0; k < Engine::STEMS; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
-    if (stems != nullptr) { stems->assign(Engine::STEMS, {}); e->setStems(pl.data(), pr.data()); }
-    for (int done = 0; done < n;) {
-        const int m = std::min(block, n - done);
-        e->process(L.data(), R.data(), m);
-        for (int i = 0; i < m; ++i) {
-            out[static_cast<size_t>(2 * (done + i))] = L[static_cast<size_t>(i)];
-            out[static_cast<size_t>(2 * (done + i) + 1)] = R[static_cast<size_t>(i)];
+    e->prepare( 48000.0, block );
+    e->load( sc );
+    const int                       n = static_cast<int>( sc.m_tempo.secondsAt( 32.0 ) * 48000.0 );
+    std::vector<float>              out( static_cast<size_t>( 2 * n ) );
+    std::vector<float>              L( static_cast<size_t>( block ) ), R( static_cast<size_t>( block ) );
+    std::vector<std::vector<float>> sl( Engine::STEMS, std::vector<float>( static_cast<size_t>( block ) ) ), sr = sl;
+    std::vector<float *>            pl, pr;
+    for ( int k = 0; k < Engine::STEMS; ++k )
+    {
+        pl.push_back( sl[static_cast<size_t>( k )].data() );
+        pr.push_back( sr[static_cast<size_t>( k )].data() );
+    }
+    if ( stems != nullptr )
+    {
+        stems->assign( Engine::STEMS, {} );
+        e->setStems( pl.data(), pr.data() );
+    }
+    for ( int done = 0; done < n; )
+    {
+        const int m = std::min( block, n - done );
+        e->process( L.data(), R.data(), m );
+        for ( int i = 0; i < m; ++i )
+        {
+            out[static_cast<size_t>( 2 * ( done + i ) )] = L[static_cast<size_t>( i )];
+            out[static_cast<size_t>( 2 * ( done + i ) + 1 )] = R[static_cast<size_t>( i )];
         }
-        if (stems != nullptr)
-            for (int k = 0; k < Engine::STEMS; ++k)
-                (*stems)[static_cast<size_t>(k)].insert((*stems)[static_cast<size_t>(k)].end(), sl[static_cast<size_t>(k)].begin(), sl[static_cast<size_t>(k)].begin() + m);
+        if ( stems != nullptr )
+            for ( int k = 0; k < Engine::STEMS; ++k )
+                ( *stems )[static_cast<size_t>( k )].insert( ( *stems )[static_cast<size_t>( k )].end(),
+                                                             sl[static_cast<size_t>( k )].begin(),
+                                                             sl[static_cast<size_t>( k )].begin() + m );
         done += m;
     }
     return out;
 }
-
 
 /**
  * Renders @p seconds of the study with block size @p block.
@@ -1719,21 +2159,26 @@ std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems 
  * @param[in] settings  knob settings as key=value text
  * @return the rendered audio
  */
-std::vector<float> renderStudy(int block, double seconds, uint64_t seed, const char* settings = "")
+std::vector<float> renderStudy( int block, double seconds, uint64_t seed, const char *settings = "" )
 {
     auto e = std::make_unique<Engine>();
-    e->params().parseText(settings);
-    e->params().set(e->params().find("compose.minutes"), 4.0f);
-    const Score s = composeStudy(e->params(), seed);
-    e->prepare(48000.0, block);
-    e->load(s);
-    const int n = static_cast<int>(seconds * 48000.0);
-    std::vector<float> out(static_cast<size_t>(2 * n));
-    std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block));
-    for (int done = 0; done < n;) {
-        const int m = std::min(block, n - done);
-        e->process(L.data(), R.data(), m);
-        for (int i = 0; i < m; ++i) { out[static_cast<size_t>(2 * (done + i))] = L[static_cast<size_t>(i)]; out[static_cast<size_t>(2 * (done + i) + 1)] = R[static_cast<size_t>(i)]; }
+    e->params().parseText( settings );
+    e->params().set( e->params().find( "compose.minutes" ), 4.0f );
+    const Score s = composeStudy( e->params(), seed );
+    e->prepare( 48000.0, block );
+    e->load( s );
+    const int          n = static_cast<int>( seconds * 48000.0 );
+    std::vector<float> out( static_cast<size_t>( 2 * n ) );
+    std::vector<float> L( static_cast<size_t>( block ) ), R( static_cast<size_t>( block ) );
+    for ( int done = 0; done < n; )
+    {
+        const int m = std::min( block, n - done );
+        e->process( L.data(), R.data(), m );
+        for ( int i = 0; i < m; ++i )
+        {
+            out[static_cast<size_t>( 2 * ( done + i ) )] = L[static_cast<size_t>( i )];
+            out[static_cast<size_t>( 2 * ( done + i ) + 1 )] = R[static_cast<size_t>( i )];
+        }
         done += m;
     }
     return out;
@@ -1742,205 +2187,272 @@ std::vector<float> renderStudy(int block, double seconds, uint64_t seed, const c
 /** Phase 9: the mix -- tracks of about three minutes, layered sources, what the third deck borrows, the DJ's hand. */
 void testMix()
 {
-    section("the mix (Phase 9)");
+    section( "the mix (Phase 9)" );
     auto p = std::make_unique<ParamStore>();
-    p->parseText("set.loops=1; set.dj_hand=1");
-    SetInfo a;
-    const SetScore s = composeSet(*p, 11, 40.0, nullptr, &a);
-    const TempoMap& tm = s.m_decks[0].m_tempo;
-    const double minutes = tm.secondsAt(s.m_lengthBeats) / 60.0;
-    const double perHour = a.m_tracks.size() * 60.0 / minutes;
-    check(perHour > 15.0 && perHour < 25.0, "about twenty tracks an hour at three minutes a track (Fabric 66, Berghain 04)",
-          fmt("%.1f an hour, %zu in %.1f min", perHour, a.m_tracks.size(), minutes));
+    p->parseText( "set.loops=1; set.dj_hand=1" );
+    SetInfo         a;
+    const SetScore  s = composeSet( *p, 11, 40.0, nullptr, &a );
+    const TempoMap &tm = s.m_decks[0].m_tempo;
+    const double    minutes = tm.secondsAt( s.m_lengthBeats ) / 60.0;
+    const double    perHour = a.m_tracks.size() * 60.0 / minutes;
+    check( perHour > 15.0 && perHour < 25.0,
+           "about twenty tracks an hour at three minutes a track (Fabric 66, Berghain 04)",
+           fmt( "%.1f an hour, %zu in %.1f min", perHour, a.m_tracks.size(), minutes ) );
     // Sources per bar: the tracks from their blend to their fade, and the third deck.
     int two = 0, bars = 0;
-    for (double beat = 2.0; beat < s.m_lengthBeats; beat += 4.0, ++bars) {
+    for ( double beat = 2.0; beat < s.m_lengthBeats; beat += 4.0, ++bars )
+    {
         int heard = 0;
-        for (size_t i = 0; i < a.m_tracks.size(); ++i) {
-            const SetTrack& t = a.m_tracks[i];
-            const double from = i == 0 ? t.m_start : t.m_swapIn - 128.0, to = i + 1 < a.m_tracks.size() ? t.m_swapOut + 96.0 : t.m_end;
+        for ( size_t i = 0; i < a.m_tracks.size(); ++i )
+        {
+            const SetTrack &t = a.m_tracks[i];
+            const double    from = i == 0 ? t.m_start : t.m_swapIn - 128.0,
+                            to = i + 1 < a.m_tracks.size() ? t.m_swapOut + 96.0 : t.m_end;
             heard += beat >= from && beat < to ? 1 : 0;
         }
-        for (const SetLoop& l : a.m_loops) heard += beat >= l.m_start && beat < l.m_end ? 1 : 0;
+        for ( const SetLoop &l : a.m_loops ) heard += beat >= l.m_start && beat < l.m_end ? 1 : 0;
         two += heard >= 2 ? 1 : 0;
     }
-    check(two * 2 >= bars, "two sources or more in half the set at least (Mix-Dok. 6)", fmt("%d of %d bars", two, bars));
+    check( two * 2 >= bars, "two sources or more in half the set at least (Mix-Dok. 6)",
+           fmt( "%d of %d bars", two, bars ) );
     // The third deck: one thing at a time, of more than one kind; a tease only where the keys agree.
-    bool apart = true, keys = true;
+    bool          apart = true, keys = true;
     std::set<int> kinds;
-    for (size_t i = 0; i < a.m_loops.size(); ++i) {
-        const SetLoop& l = a.m_loops[i];
-        kinds.insert(static_cast<int>(l.m_kind));
-        if (i > 0 && l.m_start < a.m_loops[i - 1].m_end) apart = false;
-        if (l.m_kind == LoopKindE::TEASE && l.m_from >= 1) {
-            const int dk = ((a.m_tracks[static_cast<size_t>(l.m_from)].m_info.m_key - a.m_tracks[static_cast<size_t>(l.m_from - 1)].m_info.m_key) % 12 + 12) % 12;
-            keys = keys && (dk == 0 || dk == 5 || dk == 7);
+    for ( size_t i = 0; i < a.m_loops.size(); ++i )
+    {
+        const SetLoop &l = a.m_loops[i];
+        kinds.insert( static_cast<int>( l.m_kind ) );
+        if ( i > 0 && l.m_start < a.m_loops[i - 1].m_end ) apart = false;
+        if ( l.m_kind == LoopKindE::TEASE && l.m_from >= 1 )
+        {
+            const int dk = ( ( a.m_tracks[static_cast<size_t>( l.m_from )].m_info.m_key -
+                               a.m_tracks[static_cast<size_t>( l.m_from - 1 )].m_info.m_key ) %
+                                 12 +
+                             12 ) %
+                           12;
+            keys = keys && ( dk == 0 || dk == 5 || dk == 7 );
         }
     }
-    check(apart && keys && kinds.size() >= 2, "the third deck borrows one thing at a time, of several kinds, a tease in agreeing keys",
-          fmt("%zu loops of %zu kinds", a.m_loops.size(), kinds.size()));
+    check( apart && keys && kinds.size() >= 2,
+           "the third deck borrows one thing at a time, of several kinds, a tease in agreeing keys",
+           fmt( "%zu loops of %zu kinds", a.m_loops.size(), kinds.size() ) );
     // The DJ's hand: moves between the blends, never near a track's own moments; none with the knob at zero.
     bool clear = true;
-    for (const SetMove& m : a.m_moves)
-        for (const SetTrack& t : a.m_tracks)
-            for (const auto& mo : t.m_info.m_moments) clear = clear && std::fabs(t.m_start + mo.first * 4.0 - m.m_beat) >= 16.0;
-    p->parseText("set.dj_hand=0");
+    for ( const SetMove &m : a.m_moves )
+        for ( const SetTrack &t : a.m_tracks )
+            for ( const auto &mo : t.m_info.m_moments )
+                clear = clear && std::fabs( t.m_start + mo.first * 4.0 - m.m_beat ) >= 16.0;
+    p->parseText( "set.dj_hand=0" );
     SetInfo b;
-    composeSet(*p, 11, 40.0, nullptr, &b);
-    check(!a.m_moves.empty() && clear && b.m_moves.empty(), "the DJ's hand moves between the blends, clear of the tracks' own moments",
-          fmt("%zu moves", a.m_moves.size()));
+    composeSet( *p, 11, 40.0, nullptr, &b );
+    check( !a.m_moves.empty() && clear && b.m_moves.empty(),
+           "the DJ's hand moves between the blends, clear of the tracks' own moments",
+           fmt( "%zu moves", a.m_moves.size() ) );
     // Phase 11: Klock's cruise starts hard and eases, and builds at its end; a marathon rises, peaks and closes; neither
     // goes over 136 BPM; the first track of a set is under way in 16 bars.
-    const auto arc = [&](const char* dram, double minutes, std::vector<float>& energy, float& topBpm) {
+    const auto arc = [&]( const char *dram, double minutes, std::vector<float> &energy, float &topBpm )
+    {
         auto q = std::make_unique<ParamStore>();
-        q->parseText(std::string("set.dramaturgy=") + dram);
+        q->parseText( std::string( "set.dramaturgy=" ) + dram );
         SetInfo c;
-        composeSet(*q, 3, minutes, nullptr, &c);
+        composeSet( *q, 3, minutes, nullptr, &c );
         topBpm = 0.0f;
-        for (const SetTrack& t : c.m_tracks) { energy.push_back(t.m_energy); topBpm = std::max(topBpm, t.m_info.m_bpm); }
+        for ( const SetTrack &t : c.m_tracks )
+        {
+            energy.push_back( t.m_energy );
+            topBpm = std::max( topBpm, t.m_info.m_bpm );
+        }
         return c;
     };
     std::vector<float> cruise, marathon;
-    float cruiseTop = 0.0f, marathonTop = 0.0f;
-    const SetInfo c = arc("Cruise", 90.0, cruise, cruiseTop);
-    arc("Marathon", 180.0, marathon, marathonTop);
-    const float cruiseMid = cruise[cruise.size() / 2], marathonTop3 = *std::max_element(marathon.begin(), marathon.end());
-    const bool cruiseOk = cruise.front() > cruiseMid && cruise.back() > cruiseMid && cruiseTop <= 136.0f;
-    const bool marathonOk = marathon.front() < marathonTop3 && marathon.back() < marathonTop3 && marathonTop <= 136.0f;
+    float              cruiseTop = 0.0f, marathonTop = 0.0f;
+    const SetInfo      c = arc( "Cruise", 90.0, cruise, cruiseTop );
+    arc( "Marathon", 180.0, marathon, marathonTop );
+    const float cruiseMid = cruise[cruise.size() / 2],
+                marathonTop3 = *std::max_element( marathon.begin(), marathon.end() );
+    const bool  cruiseOk = cruise.front() > cruiseMid && cruise.back() > cruiseMid && cruiseTop <= 136.0f;
+    const bool  marathonOk = marathon.front() < marathonTop3 && marathon.back() < marathonTop3 && marathonTop <= 136.0f;
     // Phase 13: no track of a set follows its own kind.
     bool alternate = true;
-    for (size_t i = 1; i < a.m_tracks.size(); ++i) alternate = alternate && a.m_tracks[i].m_info.m_archetype != a.m_tracks[i - 1].m_info.m_archetype;
-    check(alternate, "no track of a set follows its own archetype", fmt("%zu tracks", a.m_tracks.size()));
+    for ( size_t i = 1; i < a.m_tracks.size(); ++i )
+        alternate = alternate && a.m_tracks[i].m_info.m_archetype != a.m_tracks[i - 1].m_info.m_archetype;
+    check( alternate, "no track of a set follows its own archetype", fmt( "%zu tracks", a.m_tracks.size() ) );
     // (Phase 20: two voices beside the kick in its first four bars, the kick by bar 9.)
     std::set<int> quickVoices;
-    double quickKick = 1e30;
-    for (const NoteEvent& n : s.m_decks[0].m_notes) {
-        if (n.m_part == PartE::KICK) quickKick = std::min(quickKick, n.m_beat);
-        else if (n.m_part != PartE::SUB && n.m_beat < 16.0) quickVoices.insert(static_cast<int>(n.m_part));
+    double        quickKick = 1e30;
+    for ( const NoteEvent &n : s.m_decks[0].m_notes )
+    {
+        if ( n.m_part == PartE::KICK )
+            quickKick = std::min( quickKick, n.m_beat );
+        else if ( n.m_part != PartE::SUB && n.m_beat < 16.0 )
+            quickVoices.insert( static_cast<int>( n.m_part ) );
     }
     const bool quick = quickVoices.size() >= 2 && quickKick <= 32.0 + 1e-9;
-    check(cruiseOk && marathonOk && quick, "Cruise and Marathon keep their arcs under 136 BPM; the first track under way in 16 bars",
-          fmt("cruise %.2f / %.2f / %.2f, marathon %.2f .. %.2f .. %.2f, %zu tracks", cruise.front(), cruiseMid, cruise.back(),
-              marathon.front(), marathonTop3, marathon.back(), c.m_tracks.size()));
+    check( cruiseOk && marathonOk && quick,
+           "Cruise and Marathon keep their arcs under 136 BPM; the first track under way in 16 bars",
+           fmt( "cruise %.2f / %.2f / %.2f, marathon %.2f .. %.2f .. %.2f, %zu tracks", cruise.front(), cruiseMid,
+                cruise.back(), marathon.front(), marathonTop3, marathon.back(), c.m_tracks.size() ) );
 }
 
 /** Phase 17: ratings make the liked kinds and sounds come more often, the disliked seldom, never all or nothing. */
 void testRatings()
 {
-    section("ratings (Phase 17)");
+    section( "ratings (Phase 17)" );
     std::vector<Rating> ratings;
-    for (int i = 0; i < 8; ++i) { Rating r; r.m_value = 1; r.m_archetype = static_cast<int>(ArchetypeE::TRIBAL); r.m_groups = { "Berlin 909" }; ratings.push_back(r); }
-    for (int i = 0; i < 2; ++i) { Rating r; r.m_value = -1; r.m_archetype = static_cast<int>(ArchetypeE::ACID); ratings.push_back(r); }
-    const Preferences prefs = preferencesFrom(ratings);
-    const bool factors = std::fabs(prefs.m_archetype[static_cast<int>(ArchetypeE::TRIBAL)] - 3.0f) < 1e-6f
-                      && std::fabs(prefs.m_archetype[static_cast<int>(ArchetypeE::ACID)] - 0.5f) < 1e-6f
-                      && std::fabs(prefs.group("Berlin 909") - 3.0f) < 1e-6f && prefs.group("Dub Sine") == 1.0f;
+    for ( int i = 0; i < 8; ++i )
+    {
+        Rating r;
+        r.m_value = 1;
+        r.m_archetype = static_cast<int>( ArchetypeE::TRIBAL );
+        r.m_groups = { "Berlin 909" };
+        ratings.push_back( r );
+    }
+    for ( int i = 0; i < 2; ++i )
+    {
+        Rating r;
+        r.m_value = -1;
+        r.m_archetype = static_cast<int>( ArchetypeE::ACID );
+        ratings.push_back( r );
+    }
+    const Preferences prefs = preferencesFrom( ratings );
+    const bool factors = std::fabs( prefs.m_archetype[static_cast<int>( ArchetypeE::TRIBAL )] - 3.0f ) < 1e-6f &&
+                         std::fabs( prefs.m_archetype[static_cast<int>( ArchetypeE::ACID )] - 0.5f ) < 1e-6f &&
+                         std::fabs( prefs.group( "Berlin 909" ) - 3.0f ) < 1e-6f && prefs.group( "Dub Sine" ) == 1.0f;
     // The Raw profile's archetypes drawn over the unit interval, with and without the ratings.
-    const StyleProfile& raw = styleProfile(StyleE::RAW_PEAK);
-    int tribal = 0, tribalRated = 0, acid = 0, acidRated = 0;
-    for (int i = 0; i < 1000; ++i) {
-        const float u = (static_cast<float>(i) + 0.5f) / 1000.0f;
-        tribal += pickArchetype(raw, u) == ArchetypeE::TRIBAL ? 1 : 0;
-        tribalRated += pickArchetype(raw, u, -1, &prefs) == ArchetypeE::TRIBAL ? 1 : 0;
-        acid += pickArchetype(raw, u) == ArchetypeE::ACID ? 1 : 0;
-        acidRated += pickArchetype(raw, u, -1, &prefs) == ArchetypeE::ACID ? 1 : 0;
+    const StyleProfile &raw = styleProfile( StyleE::RAW_PEAK );
+    int                 tribal = 0, tribalRated = 0, acid = 0, acidRated = 0;
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const float u = ( static_cast<float>( i ) + 0.5f ) / 1000.0f;
+        tribal += pickArchetype( raw, u ) == ArchetypeE::TRIBAL ? 1 : 0;
+        tribalRated += pickArchetype( raw, u, -1, &prefs ) == ArchetypeE::TRIBAL ? 1 : 0;
+        acid += pickArchetype( raw, u ) == ArchetypeE::ACID ? 1 : 0;
+        acidRated += pickArchetype( raw, u, -1, &prefs ) == ArchetypeE::ACID ? 1 : 0;
     }
     // The kick's presets: the liked group comes more often.
     Rng a, b;
-    a.seed(5);
-    b.seed(5);
-    int group = 0, groupRated = 0;
-    const std::vector<SoundPreset>& kicks = factoryPresets(ModuleE::KICK);
-    for (int i = 0; i < 400; ++i) {
-        group += std::string(kicks[static_cast<size_t>(pickPreset(ModuleE::KICK, raw.m_styleMix, -1, a))].m_group) == "Berlin 909" ? 1 : 0;
-        groupRated += std::string(kicks[static_cast<size_t>(pickPreset(ModuleE::KICK, raw.m_styleMix, -1, b, &prefs))].m_group) == "Berlin 909" ? 1 : 0;
+    a.seed( 5 );
+    b.seed( 5 );
+    int                             group = 0, groupRated = 0;
+    const std::vector<SoundPreset> &kicks = factoryPresets( ModuleE::KICK );
+    for ( int i = 0; i < 400; ++i )
+    {
+        group +=
+            std::string( kicks[static_cast<size_t>( pickPreset( ModuleE::KICK, raw.m_styleMix, -1, a ) )].m_group ) ==
+                    "Berlin 909"
+                ? 1
+                : 0;
+        groupRated +=
+            std::string(
+                kicks[static_cast<size_t>( pickPreset( ModuleE::KICK, raw.m_styleMix, -1, b, &prefs ) )].m_group ) ==
+                    "Berlin 909"
+                ? 1
+                : 0;
     }
     // The file: appended and read back.
     const std::string path = "tot_selftest_ratings.tsv";
-    std::remove(path.c_str());
-    for (const Rating& r : ratings) appendRating(path, r);
-    const std::vector<Rating> back = loadRatings(path);
-    std::remove(path.c_str());
-    const bool file = back.size() == ratings.size() && back[0].m_groups.size() == 1 && back[0].m_groups[0] == "Berlin 909" && back.back().m_value == -1;
-    check(factors && tribalRated > tribal && acidRated < acid && acidRated > 0 && groupRated > group && file,
-          "the ratings weigh the archetypes and preset groups, none ruled out; they are kept in a file",
-          fmt("Tribal %d -> %d, Acid %d -> %d of 1000; group %d -> %d of 400", tribal, tribalRated, acid, acidRated, group, groupRated));
+    std::remove( path.c_str() );
+    for ( const Rating &r : ratings ) appendRating( path, r );
+    const std::vector<Rating> back = loadRatings( path );
+    std::remove( path.c_str() );
+    const bool file = back.size() == ratings.size() && back[0].m_groups.size() == 1 &&
+                      back[0].m_groups[0] == "Berlin 909" && back.back().m_value == -1;
+    check( factors && tribalRated > tribal && acidRated < acid && acidRated > 0 && groupRated > group && file,
+           "the ratings weigh the archetypes and preset groups, none ruled out; they are kept in a file",
+           fmt( "Tribal %d -> %d, Acid %d -> %d of 1000; group %d -> %d of 400", tribal, tribalRated, acid, acidRated,
+                group, groupRated ) );
 }
 
 /** Phase 16: a set as a rekordbox collection -- its grid following the ramps, every cue a memory cue, eight hot cues. */
 void testRekordbox()
 {
-    section("rekordbox xml (Phase 16)");
-    auto p = std::make_unique<ParamStore>();
-    SetInfo si;
-    const SetScore s = composeSet(*p, 7, 12.0, nullptr, &si);
-    const TempoMap& tm = s.m_decks[0].m_tempo;
-    const std::vector<CueAt> cues = setCues(si, tm);
-    const std::string path = "tot_selftest.rekordbox.xml";
-    const bool written = writeRekordboxXml(path, "C:/Music/Totality set & more.wav", "Totality \"set\"", "Am", cues, tm, s.m_lengthBeats, 48000.0);
+    section( "rekordbox xml (Phase 16)" );
+    auto                     p = std::make_unique<ParamStore>();
+    SetInfo                  si;
+    const SetScore           s = composeSet( *p, 7, 12.0, nullptr, &si );
+    const TempoMap          &tm = s.m_decks[0].m_tempo;
+    const std::vector<CueAt> cues = setCues( si, tm );
+    const std::string        path = "tot_selftest.rekordbox.xml";
+    const bool  written = writeRekordboxXml( path, "C:/Music/Totality set & more.wav", "Totality \"set\"", "Am", cues,
+                                             tm, s.m_lengthBeats, 48000.0 );
     std::string xml;
-    if (FILE* f = std::fopen(path.c_str(), "rb")) {
+    if ( FILE *f = std::fopen( path.c_str(), "rb" ) )
+    {
         char buf[4096];
-        for (size_t n; (n = std::fread(buf, 1, sizeof(buf), f)) > 0;) xml.append(buf, n);
-        std::fclose(f);
+        for ( size_t n; ( n = std::fread( buf, 1, sizeof( buf ), f ) ) > 0; ) xml.append( buf, n );
+        std::fclose( f );
     }
-    std::remove(path.c_str());
-    const auto count = [&](const char* what) {
+    std::remove( path.c_str() );
+    const auto count = [&]( const char *what )
+    {
         size_t n = 0;
-        for (size_t at = xml.find(what); at != std::string::npos; at = xml.find(what, at + 1)) ++n;
+        for ( size_t at = xml.find( what ); at != std::string::npos; at = xml.find( what, at + 1 ) ) ++n;
         return n;
     };
-    const size_t marks = count("<POSITION_MARK"), tempos = count("<TEMPO ");
-    const bool escaped = xml.find("Totality &quot;set&quot;") != std::string::npos && xml.find("set%20%26%20more.wav") != std::string::npos;
-    check(written && marks == cues.size() + std::min<size_t>(8, cues.size()) && tempos > 2 && escaped
-              && xml.find("</DJ_PLAYLISTS>") != std::string::npos,
-          "a set as a rekordbox collection: its ramps bar by bar, every cue a memory cue, eight hot cues, names escaped",
-          fmt("%zu cues, %zu marks, %zu tempos", cues.size(), marks, tempos));
+    const size_t marks = count( "<POSITION_MARK" ), tempos = count( "<TEMPO " );
+    const bool   escaped = xml.find( "Totality &quot;set&quot;" ) != std::string::npos &&
+                           xml.find( "set%20%26%20more.wav" ) != std::string::npos;
+    check(
+        written && marks == cues.size() + std::min<size_t>( 8, cues.size() ) && tempos > 2 && escaped &&
+            xml.find( "</DJ_PLAYLISTS>" ) != std::string::npos,
+        "a set as a rekordbox collection: its ramps bar by bar, every cue a memory cue, eight hot cues, names escaped",
+        fmt( "%zu cues, %zu marks, %zu tempos", cues.size(), marks, tempos ) );
 }
 
 /** Blocks of 1, 37 and 512 samples give the same bits (the raster and the event splits, Engine.h). */
 void testBlockSizes()
 {
-    section("block sizes");
-    const std::vector<float> a = renderStudy(512, 20.0, 3), b = renderStudy(37, 20.0, 3), c = renderStudy(1, 20.0, 3);
-    size_t firstB = a.size(), firstC = a.size();
-    for (size_t i = 0; i < a.size(); ++i) {
-        if (firstB == a.size() && std::memcmp(&a[i], &b[i], sizeof(float)) != 0) firstB = i;
-        if (firstC == a.size() && std::memcmp(&a[i], &c[i], sizeof(float)) != 0) firstC = i;
+    section( "block sizes" );
+    const std::vector<float> a = renderStudy( 512, 20.0, 3 ), b = renderStudy( 37, 20.0, 3 ),
+                             c = renderStudy( 1, 20.0, 3 );
+    size_t                   firstB = a.size(), firstC = a.size();
+    for ( size_t i = 0; i < a.size(); ++i )
+    {
+        if ( firstB == a.size() && std::memcmp( &a[i], &b[i], sizeof( float ) ) != 0 ) firstB = i;
+        if ( firstC == a.size() && std::memcmp( &a[i], &c[i], sizeof( float ) ) != 0 ) firstC = i;
     }
-    check(firstB == a.size(), "37 equals 512, bit for bit", firstB == a.size() ? std::string() : fmt("first difference at %.4f s", firstB / 96000.0));
-    check(firstC == a.size(), "1 equals 512, bit for bit", firstC == a.size() ? std::string() : fmt("first difference at %.4f s", firstC / 96000.0));
+    check( firstB == a.size(), "37 equals 512, bit for bit",
+           firstB == a.size() ? std::string() : fmt( "first difference at %.4f s", firstB / 96000.0 ) );
+    check( firstC == a.size(), "1 equals 512, bit for bit",
+           firstC == a.size() ? std::string() : fmt( "first difference at %.4f s", firstC / 96000.0 ) );
     double peak = 0.0;
-    for (float x : a) peak = std::max(peak, static_cast<double>(std::fabs(x)));
-    check(peak > 0.1 && std::isfinite(peak), "it sounds", fmt("peak %.3f", peak));
+    for ( float x : a ) peak = std::max( peak, static_cast<double>( std::fabs( x ) ) );
+    check( peak > 0.1 && std::isfinite( peak ), "it sounds", fmt( "peak %.3f", peak ) );
     // Every voice of Phase 3 at once, with automation on the echo.
-    const std::vector<float> d = renderFull(512), e = renderFull(37), f = renderFull(1);
-    size_t firstE = d.size(), firstF = d.size();
-    for (size_t i = 0; i < d.size(); ++i) {
-        if (firstE == d.size() && std::memcmp(&d[i], &e[i], sizeof(float)) != 0) firstE = i;
-        if (firstF == d.size() && std::memcmp(&d[i], &f[i], sizeof(float)) != 0) firstF = i;
+    const std::vector<float> d = renderFull( 512 ), e = renderFull( 37 ), f = renderFull( 1 );
+    size_t                   firstE = d.size(), firstF = d.size();
+    for ( size_t i = 0; i < d.size(); ++i )
+    {
+        if ( firstE == d.size() && std::memcmp( &d[i], &e[i], sizeof( float ) ) != 0 ) firstE = i;
+        if ( firstF == d.size() && std::memcmp( &d[i], &f[i], sizeof( float ) ) != 0 ) firstF = i;
     }
     std::string where;
-    if (firstE != d.size() || firstF != d.size()) {
+    if ( firstE != d.size() || firstF != d.size() )
+    {
         // Which stem parts first.
         std::vector<std::vector<float>> s512, s37;
-        renderFull(512, &s512);
-        renderFull(37, &s37);
+        renderFull( 512, &s512 );
+        renderFull( 37, &s37 );
         size_t best = s512[0].size();
-        for (int k = 0; k < Engine::STEMS; ++k)
-            for (size_t i = 0; i < s512[static_cast<size_t>(k)].size() && i < best; ++i)
-                if (std::memcmp(&s512[static_cast<size_t>(k)][i], &s37[static_cast<size_t>(k)][i], sizeof(float)) != 0) {
+        for ( int k = 0; k < Engine::STEMS; ++k )
+            for ( size_t i = 0; i < s512[static_cast<size_t>( k )].size() && i < best; ++i )
+                if ( std::memcmp( &s512[static_cast<size_t>( k )][i], &s37[static_cast<size_t>( k )][i],
+                                  sizeof( float ) ) != 0 )
+                {
                     best = i;
-                    where = fmt("first difference at %.4f s, first in the %s stem", i / 48000.0, Engine::stemName(k));
+                    where =
+                        fmt( "first difference at %.4f s, first in the %s stem", i / 48000.0, Engine::stemName( k ) );
                     break;
                 }
-        if (where.empty()) where = fmt("first difference at %.4f s (after the stems)", std::min(firstE, firstF) / 96000.0);
+        if ( where.empty() )
+            where = fmt( "first difference at %.4f s (after the stems)", std::min( firstE, firstF ) / 96000.0 );
     }
-    check(firstE == d.size() && firstF == d.size(), "every voice at once: 1 and 37 equal 512, bit for bit", where);
+    check( firstE == d.size() && firstF == d.size(), "every voice at once: 1 and 37 equal 512, bit for bit", where );
 }
 
 /** @brief What renderStems() gives. */
-struct StemRun {
+struct StemRun
+{
     std::vector<float> m_out;   ///< the output, interleaved
     std::vector<float> m_sum;   ///< the stems' sum
     std::vector<float> m_pre;   ///< the mix as it enters the master
@@ -1956,35 +2468,50 @@ struct StemRun {
  * @param[in] stems  true to render the stems too
  * @return the run
  */
-StemRun renderStems(const SetScore& set, const ParamStore& knobs, double from, double beats, int block, bool stems)
+StemRun renderStems( const SetScore &set, const ParamStore &knobs, double from, double beats, int block, bool stems )
 {
     auto e = std::make_unique<Engine>();
-    for (int id = 0; id < e->params().count(); ++id) e->params().set(id, knobs.get(id));
-    e->prepare(48000.0, block);
-    e->loadSet(set);
-    e->seek(from);
-    const TempoMap& tm = set.m_decks[0].m_tempo;
-    const int n = static_cast<int>((tm.secondsAt(from + beats) - tm.secondsAt(from)) * 48000.0);
-    std::vector<std::vector<float>> sl(Engine::STEMS, std::vector<float>(static_cast<size_t>(block))), sr = sl;
-    std::vector<float*> pl, pr;
-    for (int k = 0; k < Engine::STEMS; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
-    std::vector<float> L(static_cast<size_t>(block)), R(static_cast<size_t>(block)), preL(static_cast<size_t>(block)), preR = preL;
-    if (stems) { e->setStems(pl.data(), pr.data()); e->setPremasterTap(preL.data(), preR.data()); }
+    for ( int id = 0; id < e->params().count(); ++id ) e->params().set( id, knobs.get( id ) );
+    e->prepare( 48000.0, block );
+    e->loadSet( set );
+    e->seek( from );
+    const TempoMap &tm = set.m_decks[0].m_tempo;
+    const int       n = static_cast<int>( ( tm.secondsAt( from + beats ) - tm.secondsAt( from ) ) * 48000.0 );
+    std::vector<std::vector<float>> sl( Engine::STEMS, std::vector<float>( static_cast<size_t>( block ) ) ), sr = sl;
+    std::vector<float *>            pl, pr;
+    for ( int k = 0; k < Engine::STEMS; ++k )
+    {
+        pl.push_back( sl[static_cast<size_t>( k )].data() );
+        pr.push_back( sr[static_cast<size_t>( k )].data() );
+    }
+    std::vector<float> L( static_cast<size_t>( block ) ), R( static_cast<size_t>( block ) ),
+        preL( static_cast<size_t>( block ) ), preR = preL;
+    if ( stems )
+    {
+        e->setStems( pl.data(), pr.data() );
+        e->setPremasterTap( preL.data(), preR.data() );
+    }
     StemRun run;
-    for (int done = 0; done < n;) {
-        const int m = std::min(block, n - done);
-        e->process(L.data(), R.data(), m);
-        for (int i = 0; i < m; ++i) {
-            const size_t k = static_cast<size_t>(i);
-            run.m_out.push_back(L[k]);
-            run.m_out.push_back(R[k]);
-            if (!stems) continue;
+    for ( int done = 0; done < n; )
+    {
+        const int m = std::min( block, n - done );
+        e->process( L.data(), R.data(), m );
+        for ( int i = 0; i < m; ++i )
+        {
+            const size_t k = static_cast<size_t>( i );
+            run.m_out.push_back( L[k] );
+            run.m_out.push_back( R[k] );
+            if ( !stems ) continue;
             float sumL = 0.0f, sumR = 0.0f;
-            for (int s = 0; s < Engine::STEMS; ++s) { sumL += sl[static_cast<size_t>(s)][k]; sumR += sr[static_cast<size_t>(s)][k]; }
-            run.m_sum.push_back(sumL);
-            run.m_sum.push_back(sumR);
-            run.m_pre.push_back(preL[k]);
-            run.m_pre.push_back(preR[k]);
+            for ( int s = 0; s < Engine::STEMS; ++s )
+            {
+                sumL += sl[static_cast<size_t>( s )][k];
+                sumR += sr[static_cast<size_t>( s )][k];
+            }
+            run.m_sum.push_back( sumL );
+            run.m_sum.push_back( sumR );
+            run.m_pre.push_back( preL[k] );
+            run.m_pre.push_back( preR[k] );
         }
         done += m;
     }
@@ -1995,35 +2522,47 @@ StemRun renderStems(const SetScore& set, const ParamStore& knobs, double from, d
  *  filters and the bass swap, a break through the mixer's effects -- and switching them on leaves the mix as it was. */
 void testStems()
 {
-    section("stems");
+    section( "stems" );
     auto p = std::make_unique<ParamStore>();
-    p->parseText("set.loops=1; set.fx_breaks=1");
-    SetInfo info;
-    const SetScore set = composeSet(*p, 5, 16.0, nullptr, &info);
-    auto residual = [](const StemRun& r) {
+    p->parseText( "set.loops=1; set.fx_breaks=1" );
+    SetInfo        info;
+    const SetScore set = composeSet( *p, 5, 16.0, nullptr, &info );
+    auto           residual = []( const StemRun &r )
+    {
         double peak = 0.0, err = 0.0;
-        for (size_t i = 0; i < r.m_pre.size(); ++i) {
-            peak = std::max(peak, std::fabs(static_cast<double>(r.m_pre[i])));
-            err = std::max(err, std::fabs(static_cast<double>(r.m_sum[i]) - r.m_pre[i]));
+        for ( size_t i = 0; i < r.m_pre.size(); ++i )
+        {
+            peak = std::max( peak, std::fabs( static_cast<double>( r.m_pre[i] ) ) );
+            err = std::max( err, std::fabs( static_cast<double>( r.m_sum[i] ) - r.m_pre[i] ) );
         }
         return std::pair<double, double>{ peak, err };
     };
-    struct Window { const char* m_what; double m_from, m_beats; };
+    struct Window
+    {
+        const char *m_what;
+        double      m_from, m_beats;
+    };
     std::vector<Window> windows = { { "a track's body", 64.0, 64.0 } };
-    if (info.m_tracks.size() >= 2) windows.push_back({ "a blend and its bass swap", std::max(0.0, info.m_tracks[1].m_swapIn - 64.0), 96.0 });
-    if (!info.m_breaks.empty()) windows.push_back({ "a break through the mixer's effects", std::max(0.0, info.m_breaks[0] - 16.0), 64.0 });
-    for (const Window& w : windows) {
-        const StemRun r = renderStems(set, *p, w.m_from, w.m_beats, 37, true);
-        const auto [peak, err] = residual(r);
-        const double db = 20.0 * std::log10(std::max(err, 1e-12) / std::max(peak, 1e-12));
-        check(peak > 0.01 && db < -100.0, fmt("%s: the stems sum to the mix before the master", w.m_what).c_str(),
-              fmt("peak %.3f, largest difference %.1f dB under it", peak, db));
+    if ( info.m_tracks.size() >= 2 )
+        windows.push_back( { "a blend and its bass swap", std::max( 0.0, info.m_tracks[1].m_swapIn - 64.0 ), 96.0 } );
+    if ( !info.m_breaks.empty() )
+        windows.push_back( { "a break through the mixer's effects", std::max( 0.0, info.m_breaks[0] - 16.0 ), 64.0 } );
+    for ( const Window &w : windows )
+    {
+        const StemRun r = renderStems( set, *p, w.m_from, w.m_beats, 37, true );
+        const auto [peak, err] = residual( r );
+        const double db = 20.0 * std::log10( std::max( err, 1e-12 ) / std::max( peak, 1e-12 ) );
+        check( peak > 0.01 && db < -100.0, fmt( "%s: the stems sum to the mix before the master", w.m_what ).c_str(),
+               fmt( "peak %.3f, largest difference %.1f dB under it", peak, db ) );
     }
-    check(windows.size() == 3, "the set has a blend and a break to test", fmt("%zu tracks, %zu breaks", info.m_tracks.size(), info.m_breaks.size()));
-    const Window& w = windows.back();
-    const StemRun with = renderStems(set, *p, w.m_from, w.m_beats, 512, true), without = renderStems(set, *p, w.m_from, w.m_beats, 512, false);
-    check(with.m_out.size() == without.m_out.size() && std::memcmp(with.m_out.data(), without.m_out.data(), with.m_out.size() * sizeof(float)) == 0,
-          "the mix with stems is the mix without, bit for bit", fmt("%zu samples", with.m_out.size() / 2));
+    check( windows.size() == 3, "the set has a blend and a break to test",
+           fmt( "%zu tracks, %zu breaks", info.m_tracks.size(), info.m_breaks.size() ) );
+    const Window &w = windows.back();
+    const StemRun with = renderStems( set, *p, w.m_from, w.m_beats, 512, true ),
+                  without = renderStems( set, *p, w.m_from, w.m_beats, 512, false );
+    check( with.m_out.size() == without.m_out.size() &&
+               std::memcmp( with.m_out.data(), without.m_out.data(), with.m_out.size() * sizeof( float ) ) == 0,
+           "the mix with stems is the mix without, bit for bit", fmt( "%zu samples", with.m_out.size() / 2 ) );
 }
 
 /**
@@ -2036,23 +2575,34 @@ void testStems()
  * @param[in] seconds  how long
  * @return the left and right channels
  */
-std::pair<std::vector<float>, std::vector<float>> renderLive(const Score& score, bool live, const char* knobs, double from, double seconds)
+std::pair<std::vector<float>, std::vector<float>> renderLive( const Score &score, bool live, const char *knobs,
+                                                              double from, double seconds )
 {
     auto e = std::make_unique<Engine>();
-    e->params().parseText(knobs);
-    e->setLive(live);
-    e->prepare(48000.0, 256);
-    e->load(score);
-    e->seek(from);
-    std::vector<std::vector<float>> sl(Engine::STEMS, std::vector<float>(256)), sr = sl;
-    std::vector<float*> pl, pr;
-    for (int k = 0; k < Engine::STEMS; ++k) { pl.push_back(sl[static_cast<size_t>(k)].data()); pr.push_back(sr[static_cast<size_t>(k)].data()); }
-    e->setStems(pl.data(), pr.data());
-    std::vector<float> out, kick, L(256), R(256);
-    const int n = static_cast<int>(seconds * 48000.0);
-    for (int done = 0; done < n; done += 256) {
-        e->process(L.data(), R.data(), 256);
-        for (int i = 0; i < 256; ++i) { out.push_back(L[static_cast<size_t>(i)]); out.push_back(R[static_cast<size_t>(i)]); kick.push_back(sl[Engine::STEM_KICK][static_cast<size_t>(i)]); }
+    e->params().parseText( knobs );
+    e->setLive( live );
+    e->prepare( 48000.0, 256 );
+    e->load( score );
+    e->seek( from );
+    std::vector<std::vector<float>> sl( Engine::STEMS, std::vector<float>( 256 ) ), sr = sl;
+    std::vector<float *>            pl, pr;
+    for ( int k = 0; k < Engine::STEMS; ++k )
+    {
+        pl.push_back( sl[static_cast<size_t>( k )].data() );
+        pr.push_back( sr[static_cast<size_t>( k )].data() );
+    }
+    e->setStems( pl.data(), pr.data() );
+    std::vector<float> out, kick, L( 256 ), R( 256 );
+    const int          n = static_cast<int>( seconds * 48000.0 );
+    for ( int done = 0; done < n; done += 256 )
+    {
+        e->process( L.data(), R.data(), 256 );
+        for ( int i = 0; i < 256; ++i )
+        {
+            out.push_back( L[static_cast<size_t>( i )] );
+            out.push_back( R[static_cast<size_t>( i )] );
+            kick.push_back( sl[Engine::STEM_KICK][static_cast<size_t>( i )] );
+        }
     }
     return { out, kick };
 }
@@ -2061,246 +2611,317 @@ std::pair<std::vector<float>, std::vector<float>> renderLive(const Score& score,
  *  master filter takes the highs, the throw feeds the echo; the cue marks are there. */
 void testPerform()
 {
-    section("perform (live)");
-    auto p = std::make_unique<ParamStore>();
-    const Score score = composeTrack(*p, 9);
+    section( "perform (live)" );
+    auto         p = std::make_unique<ParamStore>();
+    const Score  score = composeTrack( *p, 9 );
     const double from = 128.0;
-    const auto energy = [](const std::vector<float>& x) { double s = 0.0; for (float v : x) s += static_cast<double>(v) * v; return s; };
-    // High-band energy: the third difference per channel (+18 dB an octave; the first, +6, counted the mids, which a
-    // track with its tonal voice -- Phase 18 -- has more of, and the filter at 312 Hz takes only in part).
-    const auto highs = [](const std::vector<float>& x) {
+    const auto   energy = []( const std::vector<float> &x )
+    {
         double s = 0.0;
-        for (size_t i = 6; i < x.size(); ++i) { const double d = x[i] - 3.0 * x[i - 2] + 3.0 * x[i - 4] - x[i - 6]; s += d * d; }
+        for ( float v : x ) s += static_cast<double>( v ) * v;
         return s;
     };
-    const auto plain = renderLive(score, false, "", from, 6.0);
-    const auto ignored = renderLive(score, false, "perform.mute_kick=1; perform.filter=-0.6; perform.throw=1", from, 6.0);
-    check(plain.first == ignored.first, "without live play the perform module does nothing (renders and exports)");
-    const auto live = renderLive(score, true, "", from, 6.0);
-    const auto noKick = renderLive(score, true, "perform.mute_kick=1", from, 6.0);
-    const double kickLive = energy(live.second), kickMuted = energy(std::vector<float>(noKick.second.begin() + 48000, noKick.second.end()));
-    check(kickLive > 1.0 && kickMuted < 1e-6 * kickLive, "a muted kick falls silent (after the last one rings out)",
-          fmt("kick stem energy %.1f live, %.2g muted", kickLive, kickMuted));
-    const auto dark = renderLive(score, true, "perform.filter=-0.6", from, 6.0);
-    const double drop = 10.0 * std::log10(highs(live.first) / std::max(1e-12, highs(dark.first)));
-    check(drop > 15.0, "the master filter takes the highs", fmt("%.1f dB less above the cutoff", drop));
-    const auto thrown = renderLive(score, true, "perform.throw=1; djfx.echo_return=0", from, 6.0);
-    check(energy(thrown.first) > 1.05 * energy(live.first), "the throw feeds the mixer's echo",
-          fmt("%+.1f dB", 10.0 * std::log10(energy(thrown.first) / energy(live.first))));
+    // High-band energy: the third difference per channel (+18 dB an octave; the first, +6, counted the mids, which a
+    // track with its tonal voice -- Phase 18 -- has more of, and the filter at 312 Hz takes only in part).
+    const auto highs = []( const std::vector<float> &x )
+    {
+        double s = 0.0;
+        for ( size_t i = 6; i < x.size(); ++i )
+        {
+            const double d = x[i] - 3.0 * x[i - 2] + 3.0 * x[i - 4] - x[i - 6];
+            s += d * d;
+        }
+        return s;
+    };
+    const auto plain = renderLive( score, false, "", from, 6.0 );
+    const auto ignored =
+        renderLive( score, false, "perform.mute_kick=1; perform.filter=-0.6; perform.throw=1", from, 6.0 );
+    check( plain.first == ignored.first, "without live play the perform module does nothing (renders and exports)" );
+    const auto   live = renderLive( score, true, "", from, 6.0 );
+    const auto   noKick = renderLive( score, true, "perform.mute_kick=1", from, 6.0 );
+    const double kickLive = energy( live.second ),
+                 kickMuted = energy( std::vector<float>( noKick.second.begin() + 48000, noKick.second.end() ) );
+    check( kickLive > 1.0 && kickMuted < 1e-6 * kickLive, "a muted kick falls silent (after the last one rings out)",
+           fmt( "kick stem energy %.1f live, %.2g muted", kickLive, kickMuted ) );
+    const auto   dark = renderLive( score, true, "perform.filter=-0.6", from, 6.0 );
+    const double drop = 10.0 * std::log10( highs( live.first ) / std::max( 1e-12, highs( dark.first ) ) );
+    check( drop > 15.0, "the master filter takes the highs", fmt( "%.1f dB less above the cutoff", drop ) );
+    const auto thrown = renderLive( score, true, "perform.throw=1; djfx.echo_return=0", from, 6.0 );
+    check( energy( thrown.first ) > 1.05 * energy( live.first ), "the throw feeds the mixer's echo",
+           fmt( "%+.1f dB", 10.0 * std::log10( energy( thrown.first ) / energy( live.first ) ) ) );
     auto e = std::make_unique<Engine>();
-    e->prepare(48000.0, 256);
-    e->load(score);
-    check(e->cueMarks().size() == cueMarksOf(score, e->params()).size() && !e->cueMarks().empty(), "the engine has the score's cue marks",
-          fmt("%zu marks", e->cueMarks().size()));
+    e->prepare( 48000.0, 256 );
+    e->load( score );
+    check( e->cueMarks().size() == cueMarksOf( score, e->params() ).size() && !e->cueMarks().empty(),
+           "the engine has the score's cue marks", fmt( "%zu marks", e->cueMarks().size() ) );
 }
 
 /** The keyboard (01.10.2026, Engine::queueLive): with the composer off nothing generated sounds; a played key sounds on
  *  the voice the keyboard plays, from its sample; without live play the keys do nothing. */
 void testKeyboard()
 {
-    section("keyboard (live)");
-    auto p = std::make_unique<ParamStore>();
-    const Score score = composeTrack(*p, 9);
-    auto run = [&](bool live, const char* knobs, bool key) {
+    section( "keyboard (live)" );
+    auto        p = std::make_unique<ParamStore>();
+    const Score score = composeTrack( *p, 9 );
+    auto        run = [&]( bool live, const char *knobs, bool key )
+    {
         auto e = std::make_unique<Engine>();
-        e->params().parseText(knobs);
-        e->setLive(live);
-        e->prepare(48000.0, 256);
-        e->load(score);
-        e->seek(128.0);
-        std::vector<float> L(256), R(256);
-        double sum = 0.0;
-        for (int b = 0; b < 48000 * 4 / 256; ++b) {
-            if (key && b == 100) e->queueLive(17, 48, 110, 0, true);   // C3 on the bass, 17 samples into the block
-            if (key && b == 300) e->queueLive(3, 48, 0, 0, false);
-            e->process(L.data(), R.data(), 256);
-            if (b >= 100)
-                for (int i = 0; i < 256; ++i) sum += static_cast<double>(L[static_cast<size_t>(i)]) * L[static_cast<size_t>(i)]
-                                                   + static_cast<double>(R[static_cast<size_t>(i)]) * R[static_cast<size_t>(i)];
+        e->params().parseText( knobs );
+        e->setLive( live );
+        e->prepare( 48000.0, 256 );
+        e->load( score );
+        e->seek( 128.0 );
+        std::vector<float> L( 256 ), R( 256 );
+        double             sum = 0.0;
+        for ( int b = 0; b < 48000 * 4 / 256; ++b )
+        {
+            if ( key && b == 100 ) e->queueLive( 17, 48, 110, 0, true );   // C3 on the bass, 17 samples into the block
+            if ( key && b == 300 ) e->queueLive( 3, 48, 0, 0, false );
+            e->process( L.data(), R.data(), 256 );
+            if ( b >= 100 )
+                for ( int i = 0; i < 256; ++i )
+                    sum += static_cast<double>( L[static_cast<size_t>( i )] ) * L[static_cast<size_t>( i )] +
+                           static_cast<double>( R[static_cast<size_t>( i )] ) * R[static_cast<size_t>( i )];
         }
         return sum;
     };
-    const double composed = run(true, "", false);
-    const double silent = run(true, "perform.composer=0", false);
-    const double played = run(true, "perform.composer=0; perform.keyboard_part=2", true);
-    const double offline = run(false, "perform.composer=0; perform.keyboard_part=2", true);
-    const double plainOffline = run(false, "", false);
-    check(silent < 1e-4 * composed, "the composer off: nothing generated sounds", fmt("%.3g of %.3g", silent, composed));
-    check(played > 1e3 * std::max(silent, 1e-9), "a played key sounds on the bass", fmt("energy %.3g, silence %.3g", played, silent));
-    check(offline == plainOffline, "without live play the keyboard and the composer switch do nothing (renders, exports)",
-          fmt("%.6g against %.6g", offline, plainOffline));
+    const double composed = run( true, "", false );
+    const double silent = run( true, "perform.composer=0", false );
+    const double played = run( true, "perform.composer=0; perform.keyboard_part=2", true );
+    const double offline = run( false, "perform.composer=0; perform.keyboard_part=2", true );
+    const double plainOffline = run( false, "", false );
+    check( silent < 1e-4 * composed, "the composer off: nothing generated sounds",
+           fmt( "%.3g of %.3g", silent, composed ) );
+    check( played > 1e3 * std::max( silent, 1e-9 ), "a played key sounds on the bass",
+           fmt( "energy %.3g, silence %.3g", played, silent ) );
+    check( offline == plainOffline,
+           "without live play the keyboard and the composer switch do nothing (renders, exports)",
+           fmt( "%.6g against %.6g", offline, plainOffline ) );
 }
 
 /** MIDI out (02.10.2026, NoteTap.h): in live play every deck writes the composer notes it plays into the tap, each on its
  *  sample inside the block; a muted group's notes are not written, and with the composer off nothing is. */
 void testNoteTap()
 {
-    section("MIDI out (note tap)");
-    auto p = std::make_unique<ParamStore>();
-    const Score score = composeTrack(*p, 9);
-    struct Count { int m_ons = 0, m_kicks = 0, m_offs = 0; bool m_inBlock = true; };
-    auto run = [&](const char* knobs) {
+    section( "MIDI out (note tap)" );
+    auto        p = std::make_unique<ParamStore>();
+    const Score score = composeTrack( *p, 9 );
+    struct Count
+    {
+        int  m_ons = 0, m_kicks = 0, m_offs = 0;
+        bool m_inBlock = true;
+    };
+    auto run = [&]( const char *knobs )
+    {
         auto e = std::make_unique<Engine>();
-        e->params().parseText(knobs);
-        e->setLive(true);
-        e->prepare(48000.0, 256);
-        e->load(score);
-        e->seek(128.0);
+        e->params().parseText( knobs );
+        e->setLive( true );
+        e->prepare( 48000.0, 256 );
+        e->load( score );
+        e->seek( 128.0 );
         auto tap = std::make_unique<NoteTap>();
-        e->setNoteTap(tap.get());
-        std::vector<float> L(256), R(256);
-        Count c;
-        for (int b = 0; b < 48000 * 8 / 256; ++b) {
+        e->setNoteTap( tap.get() );
+        std::vector<float> L( 256 ), R( 256 );
+        Count              c;
+        for ( int b = 0; b < 48000 * 8 / 256; ++b )
+        {
             tap->clear();
             const int64_t s0 = e->samplePosition();
-            e->process(L.data(), R.data(), 256);
-            for (int i = 0; i < tap->m_count; ++i) {
-                const NoteTap::Note& nt = tap->m_notes[i];
-                if (nt.m_sample < s0 || nt.m_sample >= s0 + 256) c.m_inBlock = false;
-                if (nt.m_velocity == 0) { ++c.m_offs; continue; }
+            e->process( L.data(), R.data(), 256 );
+            for ( int i = 0; i < tap->m_count; ++i )
+            {
+                const NoteTap::Note &nt = tap->m_notes[i];
+                if ( nt.m_sample < s0 || nt.m_sample >= s0 + 256 ) c.m_inBlock = false;
+                if ( nt.m_velocity == 0 )
+                {
+                    ++c.m_offs;
+                    continue;
+                }
                 ++c.m_ons;
-                if (nt.m_part == static_cast<uint8_t>(PartE::KICK)) ++c.m_kicks;
+                if ( nt.m_part == static_cast<uint8_t>( PartE::KICK ) ) ++c.m_kicks;
             }
         }
         return c;
     };
-    const Count all = run("");
-    const Count noKick = run("perform.mute_kick=1");
-    const Count off = run("perform.composer=0");
-    check(all.m_kicks >= 8 && all.m_ons > all.m_kicks, "the composer's notes are tapped, the kick among them",
-          fmt("%d notes, %d kicks, %d offs", all.m_ons, all.m_kicks, all.m_offs));
-    check(all.m_inBlock && noKick.m_inBlock, "every tapped note lies in the block it was played in");
-    check(noKick.m_kicks == 0 && noKick.m_ons > 0, "a muted group's notes are not tapped", fmt("%d kicks of %d", noKick.m_kicks, noKick.m_ons));
-    check(off.m_ons == 0, "the composer off: nothing tapped", fmt("%d notes", off.m_ons));
+    const Count all = run( "" );
+    const Count noKick = run( "perform.mute_kick=1" );
+    const Count off = run( "perform.composer=0" );
+    check( all.m_kicks >= 8 && all.m_ons > all.m_kicks, "the composer's notes are tapped, the kick among them",
+           fmt( "%d notes, %d kicks, %d offs", all.m_ons, all.m_kicks, all.m_offs ) );
+    check( all.m_inBlock && noKick.m_inBlock, "every tapped note lies in the block it was played in" );
+    check( noKick.m_kicks == 0 && noKick.m_ons > 0, "a muted group's notes are not tapped",
+           fmt( "%d kicks of %d", noKick.m_kicks, noKick.m_ons ) );
+    check( off.m_ons == 0, "the composer off: nothing tapped", fmt( "%d notes", off.m_ons ) );
 }
 
 /** The family jam (02.10.2026, the plugin's Jam.h): a follower's engine plays its pitched parts the jam's transposition
  *  away, note for note, and the kit as written; in the leader's break the rhythm's foundation is out. */
 void testJam()
 {
-    section("family jam (a follower's engine)");
-    auto p = std::make_unique<ParamStore>();
-    const Score score = composeTrack(*p, 9);
-    struct Got {
+    section( "family jam (a follower's engine)" );
+    auto        p = std::make_unique<ParamStore>();
+    const Score score = composeTrack( *p, 9 );
+    struct Got
+    {
         std::vector<std::pair<int, int>> m_pitched;   ///< (part, pitch) of every pitched note-on, in order
-        std::vector<int> m_kit;                       ///< the kit's note-on pitches, in order
-        int m_out = 0;                                ///< note-ons of the parts a break takes out
+        std::vector<int>                 m_kit;       ///< the kit's note-on pitches, in order
+        int                              m_out = 0;   ///< note-ons of the parts a break takes out
     };
-    auto isPitched = [](PartE part) { return part == PartE::SUB || part == PartE::PING || part == PartE::BASS || part == PartE::ACID || part == PartE::CHORD || part == PartE::DRONE || part == PartE::TEXTURE; };
-    auto isOut = [](PartE part) { return part == PartE::KICK || part == PartE::SUB || part == PartE::BASS || part == PartE::ACID; };
-    auto run = [&](int transpose, bool rhythmOut) {
+    auto isPitched = []( PartE part )
+    {
+        return part == PartE::SUB || part == PartE::PING || part == PartE::BASS || part == PartE::ACID ||
+               part == PartE::CHORD || part == PartE::DRONE || part == PartE::TEXTURE;
+    };
+    auto isOut = []( PartE part )
+    { return part == PartE::KICK || part == PartE::SUB || part == PartE::BASS || part == PartE::ACID; };
+    auto run = [&]( int transpose, bool rhythmOut )
+    {
         auto e = std::make_unique<Engine>();
-        e->setLive(true);
-        e->prepare(48000.0, 256);
-        e->load(score);
-        e->seek(128.0);
-        e->setJam(transpose, 1.0f, rhythmOut);
+        e->setLive( true );
+        e->prepare( 48000.0, 256 );
+        e->load( score );
+        e->seek( 128.0 );
+        e->setJam( transpose, 1.0f, rhythmOut );
         auto tap = std::make_unique<NoteTap>();
-        e->setNoteTap(tap.get());
-        std::vector<float> L(256), R(256);
-        Got g;
-        for (int b = 0; b < 48000 * 8 / 256; ++b) {
+        e->setNoteTap( tap.get() );
+        std::vector<float> L( 256 ), R( 256 );
+        Got                g;
+        for ( int b = 0; b < 48000 * 8 / 256; ++b )
+        {
             tap->clear();
-            e->process(L.data(), R.data(), 256);
-            for (int i = 0; i < tap->m_count; ++i) {
-                const NoteTap::Note& nt = tap->m_notes[i];
-                if (nt.m_velocity == 0) continue;
-                const PartE part = static_cast<PartE>(nt.m_part);
-                if (isOut(part)) ++g.m_out;
-                if (isPitched(part)) g.m_pitched.emplace_back(nt.m_part, nt.m_pitch);
-                else g.m_kit.push_back(nt.m_pitch);
+            e->process( L.data(), R.data(), 256 );
+            for ( int i = 0; i < tap->m_count; ++i )
+            {
+                const NoteTap::Note &nt = tap->m_notes[i];
+                if ( nt.m_velocity == 0 ) continue;
+                const PartE part = static_cast<PartE>( nt.m_part );
+                if ( isOut( part ) ) ++g.m_out;
+                if ( isPitched( part ) )
+                    g.m_pitched.emplace_back( nt.m_part, nt.m_pitch );
+                else
+                    g.m_kit.push_back( nt.m_pitch );
             }
         }
         return g;
     };
-    const Got plain = run(0, false), up = run(3, false), down = run(-5, false), brk = run(0, true);
-    bool shifted = !plain.m_pitched.empty() && up.m_pitched.size() == plain.m_pitched.size() && down.m_pitched.size() == plain.m_pitched.size();
-    for (size_t i = 0; shifted && i < plain.m_pitched.size(); ++i)
-        shifted = up.m_pitched[i].first == plain.m_pitched[i].first && up.m_pitched[i].second == std::min(127, plain.m_pitched[i].second + 3)
-               && down.m_pitched[i].second == std::max(0, plain.m_pitched[i].second - 5);
-    check(shifted, "the pitched parts play the jam's transposition, note for note (+3 and -5)",
-          fmt("%d pitched notes", static_cast<int>(plain.m_pitched.size())));
-    check(up.m_kit == plain.m_kit && !plain.m_kit.empty(), "the kit plays as written", fmt("%d hits", static_cast<int>(plain.m_kit.size())));
-    check(plain.m_out > 0 && brk.m_out == 0, "in the leader's break the rhythm's foundation is out",
-          fmt("%d notes as written, %d in the break", plain.m_out, brk.m_out));
+    const Got plain = run( 0, false ), up = run( 3, false ), down = run( -5, false ), brk = run( 0, true );
+    bool      shifted = !plain.m_pitched.empty() && up.m_pitched.size() == plain.m_pitched.size() &&
+                        down.m_pitched.size() == plain.m_pitched.size();
+    for ( size_t i = 0; shifted && i < plain.m_pitched.size(); ++i )
+        shifted = up.m_pitched[i].first == plain.m_pitched[i].first &&
+                  up.m_pitched[i].second == std::min( 127, plain.m_pitched[i].second + 3 ) &&
+                  down.m_pitched[i].second == std::max( 0, plain.m_pitched[i].second - 5 );
+    check( shifted, "the pitched parts play the jam's transposition, note for note (+3 and -5)",
+           fmt( "%d pitched notes", static_cast<int>( plain.m_pitched.size() ) ) );
+    check( up.m_kit == plain.m_kit && !plain.m_kit.empty(), "the kit plays as written",
+           fmt( "%d hits", static_cast<int>( plain.m_kit.size() ) ) );
+    check( plain.m_out > 0 && brk.m_out == 0, "in the leader's break the rhythm's foundation is out",
+           fmt( "%d notes as written, %d in the break", plain.m_out, brk.m_out ) );
 }
 
 /** The keyboard's split (02.10.2026): a key that names its target plays that voice, whatever Keyboard Plays says --
  *  with Keyboard Plays off a plain key is silent, a key naming Bass sounds; its release finds it. */
 void testKeySplit()
 {
-    section("keyboard split (a key names its voice)");
-    auto p = std::make_unique<ParamStore>();
-    const Score score = composeTrack(*p, 9);
-    auto run = [&](int target) {
+    section( "keyboard split (a key names its voice)" );
+    auto        p = std::make_unique<ParamStore>();
+    const Score score = composeTrack( *p, 9 );
+    auto        run = [&]( int target )
+    {
         auto e = std::make_unique<Engine>();
-        e->params().parseText("perform.composer=0");
-        e->setLive(true);
-        e->prepare(48000.0, 256);
-        e->load(score);
-        e->seek(128.0);
-        std::vector<float> L(256), R(256);
-        double held = 0.0, after = 0.0;
-        for (int b = 0; b < 48000 * 4 / 256; ++b) {
-            if (b == 50) e->queueLive(5, 48, 110, 0, true, target);
-            if (b == 200) e->queueLive(5, 48, 0, 0, false, target);
-            e->process(L.data(), R.data(), 256);
+        e->params().parseText( "perform.composer=0" );
+        e->setLive( true );
+        e->prepare( 48000.0, 256 );
+        e->load( score );
+        e->seek( 128.0 );
+        std::vector<float> L( 256 ), R( 256 );
+        double             held = 0.0, after = 0.0;
+        for ( int b = 0; b < 48000 * 4 / 256; ++b )
+        {
+            if ( b == 50 ) e->queueLive( 5, 48, 110, 0, true, target );
+            if ( b == 200 ) e->queueLive( 5, 48, 0, 0, false, target );
+            e->process( L.data(), R.data(), 256 );
             double sum = 0.0;
-            for (int i = 0; i < 256; ++i) sum += static_cast<double>(L[static_cast<size_t>(i)]) * L[static_cast<size_t>(i)];
-            if (b >= 60 && b < 200) held += sum;
-            if (b >= 650) after += sum;
+            for ( int i = 0; i < 256; ++i )
+                sum += static_cast<double>( L[static_cast<size_t>( i )] ) * L[static_cast<size_t>( i )];
+            if ( b >= 60 && b < 200 ) held += sum;
+            if ( b >= 650 ) after += sum;
         }
-        return std::pair<double, double>(held, after);
+        return std::pair<double, double>( held, after );
     };
-    const auto plain = run(-1);
-    const auto named = run(perform::keys::BASS);
-    check(plain.first < 1e-9, "Keyboard Plays off: a plain key is silent", fmt("%.3g", plain.first));
-    check(named.first > 1e-3, "a key naming its voice plays it", fmt("%.3g", named.first));
-    check(named.second < 0.05 * named.first, "and its release ends it", fmt("%.3g after, %.3g held", named.second, named.first));
+    const auto plain = run( -1 );
+    const auto named = run( perform::keys::BASS );
+    check( plain.first < 1e-9, "Keyboard Plays off: a plain key is silent", fmt( "%.3g", plain.first ) );
+    check( named.first > 1e-3, "a key naming its voice plays it", fmt( "%.3g", named.first ) );
+    check( named.second < 0.05 * named.first, "and its release ends it",
+           fmt( "%.3g after, %.3g held", named.second, named.first ) );
 }
 
 /** The factory presets (Presets.h): 1024 per engine, every name unique in its engine, every value in its knob's range, the
  *  mix and the pitch left alone, the same presets every time; the composer's choice follows the style and a lane's role. */
 void testPresets()
 {
-    section("factory presets");
-    const ModuleE engines[] = { ModuleE::KICK, ModuleE::RUMBLE, ModuleE::SUB, ModuleE::PERC, ModuleE::PING, ModuleE::BASS, ModuleE::ACID,
-                               ModuleE::CHORD, ModuleE::DRONE, ModuleE::TEXTURE };
-    auto p = std::make_unique<ParamStore>();
-    int total = 0, badCount = 0, badNames = 0, badRange = 0, badLeave = 0;
-    std::string first;
-    for (ModuleE m : engines) {
-        const std::vector<SoundPreset>& list = factoryPresets(m);
-        total += static_cast<int>(list.size());
-        if (list.size() != 1024) { ++badCount; if (first.empty()) first = fmt("module %d has %zu", static_cast<int>(m), list.size()); }
+    section( "factory presets" );
+    const ModuleE engines[] = { ModuleE::KICK, ModuleE::RUMBLE, ModuleE::SUB,   ModuleE::PERC,  ModuleE::PING,
+                                ModuleE::BASS, ModuleE::ACID,   ModuleE::CHORD, ModuleE::DRONE, ModuleE::TEXTURE };
+    auto          p = std::make_unique<ParamStore>();
+    int           total = 0, badCount = 0, badNames = 0, badRange = 0, badLeave = 0;
+    std::string   first;
+    for ( ModuleE m : engines )
+    {
+        const std::vector<SoundPreset> &list = factoryPresets( m );
+        total += static_cast<int>( list.size() );
+        if ( list.size() != 1024 )
+        {
+            ++badCount;
+            if ( first.empty() ) first = fmt( "module %d has %zu", static_cast<int>( m ), list.size() );
+        }
         std::set<std::string> names;
-        for (const SoundPreset& s : list) {
-            if (!names.insert(s.m_name).second) { ++badNames; if (first.empty()) first = "twice: " + s.m_name + " (" + s.m_group + ")"; }
-            for (const auto& [k, v] : s.m_values) {
-                const ParamDesc& d = p->desc(p->id(m, 0, k));
-                if (!(v >= d.m_minValue && v <= d.m_maxValue)) { ++badRange; if (first.empty()) first = fmt("%s: %s out of range", s.m_name.c_str(), d.m_name); }
-                if (presetLeaves(m, k)) { ++badLeave; if (first.empty()) first = fmt("%s sets %s", s.m_name.c_str(), d.m_name); }
+        for ( const SoundPreset &s : list )
+        {
+            if ( !names.insert( s.m_name ).second )
+            {
+                ++badNames;
+                if ( first.empty() ) first = "twice: " + s.m_name + " (" + s.m_group + ")";
+            }
+            for ( const auto &[k, v] : s.m_values )
+            {
+                const ParamDesc &d = p->desc( p->id( m, 0, k ) );
+                if ( !( v >= d.m_minValue && v <= d.m_maxValue ) )
+                {
+                    ++badRange;
+                    if ( first.empty() ) first = fmt( "%s: %s out of range", s.m_name.c_str(), d.m_name );
+                }
+                if ( presetLeaves( m, k ) )
+                {
+                    ++badLeave;
+                    if ( first.empty() ) first = fmt( "%s sets %s", s.m_name.c_str(), d.m_name );
+                }
             }
         }
     }
-    check(badCount == 0 && badNames == 0 && badRange == 0 && badLeave == 0, "1024 presets per engine, unique names, in range, the mix left alone",
-          badCount + badNames + badRange + badLeave == 0 ? fmt("%d presets", total) : first);
-    const SoundPreset& a = factoryPresets(ModuleE::KICK)[517];
-    bool same = true;
-    for (int i = 0; i < 3; ++i) same = same && factoryPresets(ModuleE::KICK)[517].m_values == a.m_values;
+    check( badCount == 0 && badNames == 0 && badRange == 0 && badLeave == 0,
+           "1024 presets per engine, unique names, in range, the mix left alone",
+           badCount + badNames + badRange + badLeave == 0 ? fmt( "%d presets", total ) : first );
+    const SoundPreset &a = factoryPresets( ModuleE::KICK )[517];
+    bool               same = true;
+    for ( int i = 0; i < 3; ++i ) same = same && factoryPresets( ModuleE::KICK )[517].m_values == a.m_values;
     // The composer's choice: a Dub track's kick from the dub groups mostly, a hat lane's preset made for hats.
     Rng rng;
-    rng.seed(7);
+    rng.seed( 7 );
     const float dub[4] = { 0.0f, 0.0f, 1.0f, 0.0f };
-    int dubFit = 0, hatFit = 0;
-    for (int i = 0; i < 200; ++i) {
-        const SoundPreset& k = factoryPresets(ModuleE::KICK)[static_cast<size_t>(pickPreset(ModuleE::KICK, dub, -1, rng))];
+    int         dubFit = 0, hatFit = 0;
+    for ( int i = 0; i < 200; ++i )
+    {
+        const SoundPreset &k =
+            factoryPresets( ModuleE::KICK )[static_cast<size_t>( pickPreset( ModuleE::KICK, dub, -1, rng ) )];
         dubFit += k.m_styles[2] >= 0.5f;
-        const SoundPreset& h = factoryPresets(ModuleE::PERC)[static_cast<size_t>(pickPreset(ModuleE::PERC, dub, static_cast<int>(PercRoleE::CLOSED_HAT), rng))];
-        hatFit += (h.m_roles & (1u << static_cast<int>(PercRoleE::CLOSED_HAT))) != 0;
+        const SoundPreset &h = factoryPresets( ModuleE::PERC )[static_cast<size_t>(
+            pickPreset( ModuleE::PERC, dub, static_cast<int>( PercRoleE::CLOSED_HAT ), rng ) )];
+        hatFit += ( h.m_roles & ( 1u << static_cast<int>( PercRoleE::CLOSED_HAT ) ) ) != 0;
     }
-    check(same && dubFit >= 170 && hatFit == 200, "the choice follows the style and a lane's role",
-          fmt("%d of 200 dub kicks from dub groups, %d of 200 hat presets for hats", dubFit, hatFit));
+    check( same && dubFit >= 170 && hatFit == 200, "the choice follows the style and a lane's role",
+           fmt( "%d of 200 dub kicks from dub groups, %d of 200 hat presets for hats", dubFit, hatFit ) );
 }
 
 /** The composer's sounds on the knobs (Score::knobs, Engine.h): a track brings a preset per synth; loaded, its values stand
@@ -2308,144 +2929,191 @@ void testPresets()
  *  track while the outgoing deck keeps its own; a reroll of the sounds changes the presets and nothing else. */
 void testKnobs()
 {
-    section("the composer's sounds on the knobs");
-    auto p = std::make_unique<ParamStore>();
-    TrackInfo info;
-    const Score s = composeTrack(*p, 11, TrackRequest{}, nullptr, std::string(), &info);
-    int synths = 0, lanes = 0;
-    for (const SoundPick& k : s.m_sounds) (k.m_module == static_cast<int>(ModuleE::PERC) ? lanes : synths) += k.m_preset >= 0;
-    check(synths == 9 && lanes == PercLanes && s.m_knobs.size() > 300, "a preset per synth and per lane, every managed knob set",
-          fmt("%d synths, %d lanes, %zu knob settings", synths, lanes, s.m_knobs.size()));
+    section( "the composer's sounds on the knobs" );
+    auto        p = std::make_unique<ParamStore>();
+    TrackInfo   info;
+    const Score s = composeTrack( *p, 11, TrackRequest{}, nullptr, std::string(), &info );
+    int         synths = 0, lanes = 0;
+    for ( const SoundPick &k : s.m_sounds )
+        ( k.m_module == static_cast<int>( ModuleE::PERC ) ? lanes : synths ) += k.m_preset >= 0;
+    check( synths == 9 && lanes == PercLanes && s.m_knobs.size() > 300,
+           "a preset per synth and per lane, every managed knob set",
+           fmt( "%d synths, %d lanes, %zu knob settings", synths, lanes, s.m_knobs.size() ) );
 
     auto e = std::make_unique<Engine>();
-    e->prepare(48000.0, 256);
-    e->load(s);
-    std::vector<float> L(256), R(256);
-    e->process(L.data(), R.data(), 256);
+    e->prepare( 48000.0, 256 );
+    e->load( s );
+    std::vector<float> L( 256 ), R( 256 );
+    e->process( L.data(), R.data(), 256 );
     std::set<int> gestured;
-    for (const Gesture& g : s.m_gestures) gestured.insert(g.m_param);
+    for ( const Gesture &g : s.m_gestures ) gestured.insert( g.m_param );
     int shown = 0, played = 0, total = 0;
-    for (const KnobSet& k : s.m_knobs) {
+    for ( const KnobSet &k : s.m_knobs )
+    {
         ++total;
-        shown += e->params().get(k.m_param) == e->params().get(k.m_param) && std::fabs(e->params().get(k.m_param) - k.m_value) <= 1e-4f * (1.0f + std::fabs(k.m_value));
-        if (gestured.count(k.m_param) == 0) played += std::fabs(e->played(k.m_param) - k.m_value) <= 1e-4f * (1.0f + std::fabs(k.m_value));
-        else ++played;
+        shown += e->params().get( k.m_param ) == e->params().get( k.m_param ) &&
+                 std::fabs( e->params().get( k.m_param ) - k.m_value ) <= 1e-4f * ( 1.0f + std::fabs( k.m_value ) );
+        if ( gestured.count( k.m_param ) == 0 )
+            played += std::fabs( e->played( k.m_param ) - k.m_value ) <= 1e-4f * ( 1.0f + std::fabs( k.m_value ) );
+        else
+            ++played;
     }
-    check(e->soundsVersion() >= 1 && shown == total && played == total, "loaded, the track's values stand on the knobs and its deck plays them",
-          fmt("%d of %d shown, %d played, %u writes", shown, total, played, e->soundsVersion()));
+    check( e->soundsVersion() >= 1 && shown == total && played == total,
+           "loaded, the track's values stand on the knobs and its deck plays them",
+           fmt( "%d of %d shown, %d played, %u writes", shown, total, played, e->soundsVersion() ) );
     // A hand turns a knob: the sound moves by as much (in the knob's own scale).
-    const int id = e->params().find("kick.pitch_decay");
-    const float before = e->played(id), n0 = e->params().toNormalised(id, e->params().get(id));
-    e->params().setNormalised(id, n0 + 0.1f);
-    const float after = e->played(id);
-    const float moved = e->params().toNormalised(id, after) - e->params().toNormalised(id, before);
-    check(std::fabs(moved - 0.1f) < 1e-3f, "a hand's turn of the knob moves the sound by as much", fmt("%.4f of the knob's range", moved));
+    const int   id = e->params().find( "kick.pitch_decay" );
+    const float before = e->played( id ), n0 = e->params().toNormalised( id, e->params().get( id ) );
+    e->params().setNormalised( id, n0 + 0.1f );
+    const float after = e->played( id );
+    const float moved = e->params().toNormalised( id, after ) - e->params().toNormalised( id, before );
+    check( std::fabs( moved - 0.1f ) < 1e-3f, "a hand's turn of the knob moves the sound by as much",
+           fmt( "%.4f of the knob's range", moved ) );
 
     // A set: at the incoming track's start the knobs show it, the outgoing deck keeps its own.
-    auto q = std::make_unique<ParamStore>();
-    SetInfo si;
-    const SetScore set = composeSet(*q, 3, 16.0, nullptr, &si);
-    auto f = std::make_unique<Engine>();
-    f->prepare(48000.0, 256);
-    f->loadSet(set);
-    const SetTrack& t1 = si.m_tracks[0];
-    const SetTrack& t2 = si.m_tracks[1];
-    const int probe = f->params().find("ping.band");
-    const float v1 = set.m_decks[t1.m_deck].knobAt(probe, t1.m_start), v2 = set.m_decks[t2.m_deck].knobAt(probe, t2.m_start);
-    f->seek(t2.m_start - 16.0);
+    auto           q = std::make_unique<ParamStore>();
+    SetInfo        si;
+    const SetScore set = composeSet( *q, 3, 16.0, nullptr, &si );
+    auto           f = std::make_unique<Engine>();
+    f->prepare( 48000.0, 256 );
+    f->loadSet( set );
+    const SetTrack &t1 = si.m_tracks[0];
+    const SetTrack &t2 = si.m_tracks[1];
+    const int       probe = f->params().find( "ping.band" );
+    const float     v1 = set.m_decks[t1.m_deck].knobAt( probe, t1.m_start ),
+                    v2 = set.m_decks[t2.m_deck].knobAt( probe, t2.m_start );
+    f->seek( t2.m_start - 16.0 );
     const double stop = t2.m_start + 8.0;
-    int leadBefore = -2;
-    while (f->beat() < stop) {
-        if (leadBefore == -2 && f->beat() > t2.m_start - 8.0) leadBefore = f->leadDeck();
-        f->process(L.data(), R.data(), 256);
+    int          leadBefore = -2;
+    while ( f->beat() < stop )
+    {
+        if ( leadBefore == -2 && f->beat() > t2.m_start - 8.0 ) leadBefore = f->leadDeck();
+        f->process( L.data(), R.data(), 256 );
     }
-    const float knobNow = f->params().get(probe), oldDeck = f->deck(t1.m_deck).played(probe), newDeck = f->deck(t2.m_deck).played(probe);
+    const float knobNow = f->params().get( probe ), oldDeck = f->deck( t1.m_deck ).played( probe ),
+                newDeck = f->deck( t2.m_deck ).played( probe );
     // What each deck should play: its track's value moved by its own automation there.
-    const auto expect = [&](int d, float v) {
-        return f->params().fromNormalised(probe, f->params().toNormalised(probe, v) + set.m_decks[d].gestureOffset(probe, f->beat()));
+    const auto expect = [&]( int d, float v )
+    {
+        return f->params().fromNormalised( probe, f->params().toNormalised( probe, v ) +
+                                                      set.m_decks[d].gestureOffset( probe, f->beat() ) );
     };
-    const float e1 = expect(t1.m_deck, v1), e2 = expect(t2.m_deck, v2);
-    check(leadBefore == t1.m_deck && f->leadDeck() == t2.m_deck && std::fabs(knobNow - v2) < 1e-3f * v2 && std::fabs(oldDeck - e1) < 0.01f * e1
-              && std::fabs(newDeck - e2) < 0.01f * e2 && std::fabs(v1 - v2) > 1.0f,
-          "in a blend the knobs show the incoming track, the outgoing deck keeps its own",
-          fmt("ping.band %.0f / %.0f Hz; knob %.0f, deck %c %.0f (%.0f), deck %c %.0f (%.0f)", v1, v2, knobNow, 'A' + t1.m_deck, oldDeck, e1,
-              'A' + t2.m_deck, newDeck, e2));
+    const float e1 = expect( t1.m_deck, v1 ), e2 = expect( t2.m_deck, v2 );
+    check( leadBefore == t1.m_deck && f->leadDeck() == t2.m_deck && std::fabs( knobNow - v2 ) < 1e-3f * v2 &&
+               std::fabs( oldDeck - e1 ) < 0.01f * e1 && std::fabs( newDeck - e2 ) < 0.01f * e2 &&
+               std::fabs( v1 - v2 ) > 1.0f,
+           "in a blend the knobs show the incoming track, the outgoing deck keeps its own",
+           fmt( "ping.band %.0f / %.0f Hz; knob %.0f, deck %c %.0f (%.0f), deck %c %.0f (%.0f)", v1, v2, knobNow,
+                'A' + t1.m_deck, oldDeck, e1, 'A' + t2.m_deck, newDeck, e2 ) );
 
     // A reroll of the sounds: other presets, the same notes.
     Curation c;
-    c.reroll("sounds");
-    const Score r = composeTrack(*p, 11, TrackRequest{}, &c);
-    int differ = 0;
-    for (size_t i = 0; i < r.m_sounds.size() && i < s.m_sounds.size(); ++i) differ += r.m_sounds[i].m_preset != s.m_sounds[i].m_preset;
+    c.reroll( "sounds" );
+    const Score r = composeTrack( *p, 11, TrackRequest{}, &c );
+    int         differ = 0;
+    for ( size_t i = 0; i < r.m_sounds.size() && i < s.m_sounds.size(); ++i )
+        differ += r.m_sounds[i].m_preset != s.m_sounds[i].m_preset;
     bool sameNotes = r.m_notes.size() == s.m_notes.size();
-    for (size_t i = 0; sameNotes && i < r.m_notes.size(); ++i) sameNotes = r.m_notes[i].m_beat == s.m_notes[i].m_beat && r.m_notes[i].m_pitch == s.m_notes[i].m_pitch;
-    check(differ >= 15 && sameNotes, "a reroll of the sounds draws other presets and keeps the notes", fmt("%d of %zu presets changed", differ, s.m_sounds.size()));
+    for ( size_t i = 0; sameNotes && i < r.m_notes.size(); ++i )
+        sameNotes = r.m_notes[i].m_beat == s.m_notes[i].m_beat && r.m_notes[i].m_pitch == s.m_notes[i].m_pitch;
+    check( differ >= 15 && sameNotes, "a reroll of the sounds draws other presets and keeps the notes",
+           fmt( "%d of %zu presets changed", differ, s.m_sounds.size() ) );
 }
 
 /** The master: the true peak under the ceiling, the low end mono. */
 void testMaster()
 {
-    section("the master");
-    for (int owner = 0; owner < 2; ++owner) {
-        const std::vector<float> y = renderStudy(512, 60.0, 11, owner == 1 ? "compose.low_owner=Sub" : "");
-        LoudnessMeter m;
-        m.prepare(48000.0);
-        const size_t n = y.size() / 2;
-        std::vector<float> L(n), R(n);
-        for (size_t i = 0; i < n; ++i) { L[i] = y[2 * i]; R[i] = y[2 * i + 1]; }
-        m.process(L.data(), R.data(), static_cast<int>(n));
+    section( "the master" );
+    for ( int owner = 0; owner < 2; ++owner )
+    {
+        const std::vector<float> y = renderStudy( 512, 60.0, 11, owner == 1 ? "compose.low_owner=Sub" : "" );
+        LoudnessMeter            m;
+        m.prepare( 48000.0 );
+        const size_t       n = y.size() / 2;
+        std::vector<float> L( n ), R( n );
+        for ( size_t i = 0; i < n; ++i )
+        {
+            L[i] = y[2 * i];
+            R[i] = y[2 * i + 1];
+        }
+        m.process( L.data(), R.data(), static_cast<int>( n ) );
         const LoudnessReport r = m.report();
-        check(r.m_truePeak <= -0.9, fmt("owner %d: true peak under the -1 dBTP ceiling", owner).c_str(), fmt("%.2f dBTP", r.m_truePeak));
-        check(r.m_integrated > -30.0 && r.m_integrated < -6.0, fmt("owner %d: loudness in a sane range", owner).c_str(),
-              fmt("%.1f LUFS integrated", r.m_integrated));
+        check( r.m_truePeak <= -0.9, fmt( "owner %d: true peak under the -1 dBTP ceiling", owner ).c_str(),
+               fmt( "%.2f dBTP", r.m_truePeak ) );
+        check( r.m_integrated > -30.0 && r.m_integrated < -6.0,
+               fmt( "owner %d: loudness in a sane range", owner ).c_str(),
+               fmt( "%.1f LUFS integrated", r.m_integrated ) );
         // Side energy under 80 Hz against the mid's.
         Svf a, b, c, d;
-        a.setK(80.0f, 1.8477590f, 48000.0f); b.setK(80.0f, 0.7653669f, 48000.0f);
-        c.setK(80.0f, 1.8477590f, 48000.0f); d.setK(80.0f, 0.7653669f, 48000.0f);
+        a.setK( 80.0f, 1.8477590f, 48000.0f );
+        b.setK( 80.0f, 0.7653669f, 48000.0f );
+        c.setK( 80.0f, 1.8477590f, 48000.0f );
+        d.setK( 80.0f, 0.7653669f, 48000.0f );
         double mid = 0.0, side = 0.0;
-        for (size_t i = 0; i < n; ++i) {
-            const float mm = b.lp(a.lp(0.5f * (L[i] + R[i]))), ss = d.lp(c.lp(0.5f * (L[i] - R[i])));
-            mid += static_cast<double>(mm) * mm;
-            side += static_cast<double>(ss) * ss;
+        for ( size_t i = 0; i < n; ++i )
+        {
+            const float mm = b.lp( a.lp( 0.5f * ( L[i] + R[i] ) ) ), ss = d.lp( c.lp( 0.5f * ( L[i] - R[i] ) ) );
+            mid += static_cast<double>( mm ) * mm;
+            side += static_cast<double>( ss ) * ss;
         }
-        check(10.0 * std::log10(side / mid + 1e-30) < -40.0, fmt("owner %d: under 80 Hz mono", owner).c_str(),
-              fmt("side %.1f dB under mid", -10.0 * std::log10(side / mid + 1e-30)));
+        check( 10.0 * std::log10( side / mid + 1e-30 ) < -40.0, fmt( "owner %d: under 80 Hz mono", owner ).c_str(),
+               fmt( "side %.1f dB under mid", -10.0 * std::log10( side / mid + 1e-30 ) ) );
     }
 }
 
 /** The MIDI export: a note-on for every note, format 1. */
 void testMidi()
 {
-    section("MIDI export");
+    section( "MIDI export" );
     auto p = std::make_unique<ParamStore>();
-    p->set(p->find("compose.low_owner"), 1.0f);
-    const Score s = composeStudy(*p, 9);
-    const std::vector<uint8_t> f = encodeMidi(s, "test", p.get());
-    check(f.size() > 14 && std::memcmp(f.data(), "MThd", 4) == 0 && f[9] == 1, "a format 1 file");
+    p->set( p->find( "compose.low_owner" ), 1.0f );
+    const Score                s = composeStudy( *p, 9 );
+    const std::vector<uint8_t> f = encodeMidi( s, "test", p.get() );
+    check( f.size() > 14 && std::memcmp( f.data(), "MThd", 4 ) == 0 && f[9] == 1, "a format 1 file" );
     // Count note-ons (status 0x9n with velocity > 0) by walking the tracks.
     size_t pos = 14, ons = 0;
-    while (pos + 8 <= f.size()) {
-        const uint32_t len = (static_cast<uint32_t>(f[pos + 4]) << 24) | (static_cast<uint32_t>(f[pos + 5]) << 16) |
-                             (static_cast<uint32_t>(f[pos + 6]) << 8) | f[pos + 7];
-        size_t q = pos + 8;
-        const size_t end = q + len;
-        while (q < end) {
-            while (f[q] & 0x80) ++q;   // delta time
+    while ( pos + 8 <= f.size() )
+    {
+        const uint32_t len = ( static_cast<uint32_t>( f[pos + 4] ) << 24 ) |
+                             ( static_cast<uint32_t>( f[pos + 5] ) << 16 ) |
+                             ( static_cast<uint32_t>( f[pos + 6] ) << 8 ) | f[pos + 7];
+        size_t         q = pos + 8;
+        const size_t   end = q + len;
+        while ( q < end )
+        {
+            while ( f[q] & 0x80 ) ++q;   // delta time
             ++q;
             const uint8_t st = f[q];
-            if (st == 0xFF) { q += 2; uint32_t l = 0; while (f[q] & 0x80) { l = (l << 7) | (f[q] & 0x7F); ++q; } l = (l << 7) | f[q]; q += 1 + l; }
-            else if ((st & 0xF0) == 0x90) { if (f[q + 2] > 0) ++ons; q += 3; }
-            else q += 3;
+            if ( st == 0xFF )
+            {
+                q += 2;
+                uint32_t l = 0;
+                while ( f[q] & 0x80 )
+                {
+                    l = ( l << 7 ) | ( f[q] & 0x7F );
+                    ++q;
+                }
+                l = ( l << 7 ) | f[q];
+                q += 1 + l;
+            }
+            else if ( ( st & 0xF0 ) == 0x90 )
+            {
+                if ( f[q + 2] > 0 ) ++ons;
+                q += 3;
+            }
+            else
+                q += 3;
         }
         pos = end;
     }
-    check(ons == s.m_notes.size(), "a note-on for every note", fmt("%zu of %zu", ons, s.m_notes.size()));
+    check( ons == s.m_notes.size(), "a note-on for every note", fmt( "%zu of %zu", ons, s.m_notes.size() ) );
 }
 
 /** @brief A section of the tests, as main() can run it alone. */
-struct TestSection {
-    const char* m_name;   ///< its name, as the command line names it
-    std::function<void()> m_fn;   ///< the section
+struct TestSection
+{
+    const char           *m_name;   ///< its name, as the command line names it
+    std::function<void()> m_fn;     ///< the section
 };
 
 /** @brief Every section, in the order they run. */
@@ -2489,7 +3157,7 @@ const TestSection Sections[] = {
     { "testKnobs", testKnobs },
 };
 
-} // namespace
+}   // namespace
 
 /**
  * @brief Runs every section, or those the command line names; the exit code is the number of failures.
@@ -2497,17 +3165,19 @@ const TestSection Sections[] = {
  * @param[in,out] argv  the arguments: sections to run
  * @return the number of failures
  */
-int main(int argc, char** argv)
+int main( int argc, char **argv )
 {
     std::string only;
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "--list") == 0) {
-            for (const TestSection& s : Sections) std::printf("%s\n", s.m_name);
+    for ( int i = 1; i < argc; ++i )
+    {
+        if ( std::strcmp( argv[i], "--list" ) == 0 )
+        {
+            for ( const TestSection &s : Sections ) std::printf( "%s\n", s.m_name );
             return 0;
         }
-        if (std::strcmp(argv[i], "--only") == 0 && i + 1 < argc) only = std::string(",") + argv[++i] + ",";
+        if ( std::strcmp( argv[i], "--only" ) == 0 && i + 1 < argc ) only = std::string( "," ) + argv[++i] + ",";
     }
-    for (const TestSection& s : Sections)
-        if (only.empty() || only.find(std::string(",") + s.m_name + ",") != std::string::npos) s.m_fn();
+    for ( const TestSection &s : Sections )
+        if ( only.empty() || only.find( std::string( "," ) + s.m_name + "," ) != std::string::npos ) s.m_fn();
     return finish();
 }

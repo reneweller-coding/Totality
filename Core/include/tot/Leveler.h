@@ -34,20 +34,22 @@
 #include <functional>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief What levelScore found for one track. */
-struct LevelReading {
-    double m_beat = 0.0;       ///< the track's start
-    float m_measured = 0.0f;   ///< its loudest part as composed, LUFS
-    float m_target = 0.0f;     ///< what it should measure
-    float m_trim = 0.0f;       ///< the correction set, dB
-    float m_after = 0.0f;      ///< the part with the correction, LUFS
-    BalanceDbT m_found{};       ///< Phase 18: every part's loudest sample against the kick's as composed, dB (NaN: silent)
-    BalanceDbT m_bal{};         ///< the parts' corrections set, dB
-    BalanceDbT m_lo{};   ///< the lower ends of the windows they were set for (ranked), dB
-    BalanceDbT m_hi{};   ///< the upper ends, dB
-    bool m_guarded = false;    ///< the guard took the room or boosts down (the mids stood over the references')
+struct LevelReading
+{
+    double     m_beat = 0.0;        ///< the track's start
+    float      m_measured = 0.0f;   ///< its loudest part as composed, LUFS
+    float      m_target = 0.0f;     ///< what it should measure
+    float      m_trim = 0.0f;       ///< the correction set, dB
+    float      m_after = 0.0f;      ///< the part with the correction, LUFS
+    BalanceDbT m_found{};   ///< Phase 18: every part's loudest sample against the kick's as composed, dB (NaN: silent)
+    BalanceDbT m_bal{};     ///< the parts' corrections set, dB
+    BalanceDbT m_lo{};      ///< the lower ends of the windows they were set for (ranked), dB
+    BalanceDbT m_hi{};      ///< the upper ends, dB
+    bool       m_guarded = false;   ///< the guard took the room or boosts down (the mids stood over the references')
 };
 
 /**
@@ -58,8 +60,8 @@ struct LevelReading {
  * @param[in]     stop     asked between blocks: true breaks off, and @p score is left as it was
  * @return what was found, a reading per track (nothing if broken off)
  */
-std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, double seconds = 20.0,
-                                     const std::function<bool()>& stop = {});
+std::vector<LevelReading> levelScore( Score &score, const ParamStore &params, double seconds = 20.0,
+                                      const std::function<bool()> &stop = {} );
 
 /**
  * @brief Levels every track of a set: each deck's tracks as levelScore does (a deck alone, without the mixer's moves); a
@@ -71,8 +73,8 @@ std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, dou
  * @param[in]     stop     asked between blocks: true breaks off
  * @return the readings of decks A and B, in deck order
  */
-std::vector<LevelReading> levelSet(SetScore& set, const ParamStore& params, double seconds = 20.0,
-                                   const std::function<bool()>& stop = {});
+std::vector<LevelReading> levelSet( SetScore &set, const ParamStore &params, double seconds = 20.0,
+                                    const std::function<bool()> &stop = {} );
 
 /**
  * @brief Phase 18: the window of part @p part's loudest sample against the kick's, dB, for a track of @p styleMix; a lane
@@ -83,13 +85,13 @@ std::vector<LevelReading> levelSet(SetScore& set, const ParamStore& params, doub
  * @param[out] lo        receives the window's lower edge in dB
  * @param[out] hi        receives its upper edge in dB
  */
-void balanceWindow(const std::array<float, 4>& styleMix, int part, int role, float& lo, float& hi);
+void balanceWindow( const std::array<float, 4> &styleMix, int part, int role, float &lo, float &hi );
 
 /**
  * @brief The loudness the loudest part of a track of style @p style should measure, LUFS (PLAN 8.5).
  * @param[in] style  the style
  * @return its target loudness in LUFS
  */
-float styleTargetLufs(int style);
+float styleTargetLufs( int style );
 
-} // namespace tot
+}   // namespace tot

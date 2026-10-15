@@ -28,15 +28,17 @@
 #include <utility>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief One preset: its group (a submenu), its name, and the values it sets (knob index in its module, value). */
-struct SoundPreset {
-    std::string m_group;   ///< its group (a submenu)
-    std::string m_name;   ///< its name
-    std::vector<std::pair<int, float>> m_values;   ///< the values it sets: knob index in its module, value
-    float m_styles[4] = { 1.0f, 1.0f, 1.0f, 1.0f };   ///< its group's fit to Hypnotic, Ostgut, Dub, Raw (0..1)
-    uint32_t m_roles = 0;                              ///< a kit lane's roles it is made for (bit PercRole), 0: any
+struct SoundPreset
+{
+    std::string                        m_group;          ///< its group (a submenu)
+    std::string                        m_name;           ///< its name
+    std::vector<std::pair<int, float>> m_values;         ///< the values it sets: knob index in its module, value
+    float    m_styles[4] = { 1.0f, 1.0f, 1.0f, 1.0f };   ///< its group's fit to Hypnotic, Ostgut, Dub, Raw (0..1)
+    uint32_t m_roles = 0;                                ///< a kit lane's roles it is made for (bit PercRole), 0: any
 };
 
 /**
@@ -44,20 +46,20 @@ struct SoundPreset {
  * @param[in] module  the module
  * @return true when it has factory presets
  */
-bool hasPresets(ModuleE module);
+bool hasPresets( ModuleE module );
 /**
  * @brief The factory presets of an engine (1024; empty for a module without). Built once, thread-safe.
  * @param[in] module  the module
  * @return its factory presets
  */
-const std::vector<SoundPreset>& factoryPresets(ModuleE module);
+const std::vector<SoundPreset> &factoryPresets( ModuleE module );
 /**
  * @brief Whether a preset leaves knob @p k of @p module alone (the mix, the composer's and the pattern's knobs).
  * @param[in] module  the module
  * @param[in] k       the knob's index within the module
  * @return true when presets leave it alone
  */
-bool presetLeaves(ModuleE module, int k);
+bool presetLeaves( ModuleE module, int k );
 /**
  * @brief The values a preset gives every knob of its module it does not leave: its own, the defaults of instance
  *        @p instance for the rest -- the whole sound, so a preset sounds the same whatever was loaded before.
@@ -66,7 +68,7 @@ bool presetLeaves(ModuleE module, int k);
  * @param[in] preset    the preset
  * @return the knobs and their values
  */
-std::vector<std::pair<int, float>> presetKnobs(ModuleE module, int instance, const SoundPreset& preset);
+std::vector<std::pair<int, float>> presetKnobs( ModuleE module, int instance, const SoundPreset &preset );
 /**
  * @brief Applies @p preset to instance @p instance of @p module in @p params.
  * @param[in,out] params    the knobs, set here
@@ -74,7 +76,7 @@ std::vector<std::pair<int, float>> presetKnobs(ModuleE module, int instance, con
  * @param[in]     instance  its instance
  * @param[in]     preset    the preset
  */
-void applyPreset(ParamStore& params, ModuleE module, int instance, const SoundPreset& preset);
+void applyPreset( ParamStore &params, ModuleE module, int instance, const SoundPreset &preset );
 /**
  * @brief The composer's choice: a preset of @p module for a track of style mix @p styleMix (Hypnotic, Ostgut, Dub,
  *        Raw; weights summing to 1), drawn from @p rng; for a kit lane only among presets made for @p role (-1: any).
@@ -85,6 +87,6 @@ void applyPreset(ParamStore& params, ModuleE module, int instance, const SoundPr
  * @param[in]     prefs     the ratings' weights, or null
  * @return its index in factoryPresets(module), -1 if the engine has none
  */
-int pickPreset(ModuleE module, const float* styleMix, int role, Rng& rng, const Preferences* prefs = nullptr);
+int pickPreset( ModuleE module, const float *styleMix, int role, Rng &rng, const Preferences *prefs = nullptr );
 
-} // namespace tot
+}   // namespace tot

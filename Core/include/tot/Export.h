@@ -12,12 +12,14 @@
 #include <string>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief A cue: seconds and a label. */
-struct CueAt {
-    double m_seconds;   ///< when
-    std::string m_label;   ///< its text
+struct CueAt
+{
+    double      m_seconds;   ///< when
+    std::string m_label;     ///< its text
 };
 
 /**
@@ -28,7 +30,8 @@ struct CueAt {
  * @param[in]     prefix  the cue names' prefix
  * @param[in,out] out     the cues, appended to
  */
-void trackCues(const TrackInfo& t, double at, const TempoMap& tempo, const std::string& prefix, std::vector<CueAt>& out);
+void trackCues( const TrackInfo &t, double at, const TempoMap &tempo, const std::string &prefix,
+                std::vector<CueAt> &out );
 
 /**
  * @brief The cues of a set: every track (its style, form and Camelot key), every swap, every kick-out, every loop; in
@@ -37,7 +40,7 @@ void trackCues(const TrackInfo& t, double at, const TempoMap& tempo, const std::
  * @param[in] tempo  the tempo map
  * @return the cues
  */
-std::vector<CueAt> setCues(const SetInfo& si, const TempoMap& tempo);
+std::vector<CueAt> setCues( const SetInfo &si, const TempoMap &tempo );
 
 /**
  * @brief The cues as JSON (seconds, sample at @p rate, label), beside the WAV for DJ software that does not read its
@@ -47,7 +50,7 @@ std::vector<CueAt> setCues(const SetInfo& si, const TempoMap& tempo);
  * @param[in] rate  the sample rate in Hz
  * @return false when the file cannot be written
  */
-bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, double rate);
+bool writeCuesJson( const std::string &path, const std::vector<CueAt> &cues, double rate );
 
 /**
  * @brief Phase 16: the WAV as a rekordbox collection (rekordbox's "rekordbox xml" import, Preferences > Advanced): one
@@ -64,8 +67,9 @@ bool writeCuesJson(const std::string& path, const std::vector<CueAt>& cues, doub
  * @param[in] rate         the sample rate in Hz
  * @return false when the file cannot be written
  */
-bool writeRekordboxXml(const std::string& path, const std::string& wavPath, const std::string& title, const std::string& tonality,
-                       const std::vector<CueAt>& cues, const TempoMap& tempo, double lengthBeats, double rate);
+bool writeRekordboxXml( const std::string &path, const std::string &wavPath, const std::string &title,
+                        const std::string &tonality, const std::vector<CueAt> &cues, const TempoMap &tempo,
+                        double lengthBeats, double rate );
 
 /**
  * @brief DJ loops (PLAN 9): 4 and 8 bars of a track's loudest block, seamless -- the bars rendered three times over, the
@@ -78,6 +82,7 @@ bool writeRekordboxXml(const std::string& path, const std::string& wavPath, cons
  * @param[in] rate   the sample rate in Hz
  * @return false when a file cannot be written
  */
-bool renderLoops(const ParamStore& knobs, const Score& track, const TrackInfo& info, const std::string& dir, double rate);
+bool renderLoops( const ParamStore &knobs, const Score &track, const TrackInfo &info, const std::string &dir,
+                  double rate );
 
-} // namespace tot
+}   // namespace tot

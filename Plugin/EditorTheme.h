@@ -25,23 +25,25 @@
 #include "tot/Params.h"
 #include <vector>
 
-namespace totui {
+namespace totui
+{
 
 /** @brief The palette. */
-namespace colour {
-const juce::Colour Bg        { 0xff08080a };   ///< the window: the club at night
-const juce::Colour Panel     { 0xa00e0f12 };   ///< a page (the eclipse shows faintly through it)
-const juce::Colour Group     { 0xff141519 };   ///< a group box
-const juce::Colour Raised    { 0xff1e1f24 };   ///< buttons, menus, the knobs' bodies
-const juce::Colour Edge      { 0xff2c2d33 };   ///< hairlines
-const juce::Colour Ink       { 0xffe8e5de };   ///< text: the corona's bone white
-const juce::Colour Dim       { 0xff8c8b91 };   ///< names, secondary text
-const juce::Colour Faint     { 0xff44454c };   ///< tracks, axes, the off state
-const juce::Colour Accent    { 0xffeae3d2 };   ///< the corona: the title, the tab in front
-const juce::Colour Onset     { 0xffd6553f };   ///< the onsets' red: the playhead, a mute
-const juce::Colour Green     { 0xff7fd49a };   ///< a meter in range
-const juce::Colour Red       { 0xffe06a5f };   ///< a meter over
-} // namespace colour
+namespace colour
+{
+const juce::Colour Bg{ 0xff08080a };       ///< the window: the club at night
+const juce::Colour Panel{ 0xa00e0f12 };    ///< a page (the eclipse shows faintly through it)
+const juce::Colour Group{ 0xff141519 };    ///< a group box
+const juce::Colour Raised{ 0xff1e1f24 };   ///< buttons, menus, the knobs' bodies
+const juce::Colour Edge{ 0xff2c2d33 };     ///< hairlines
+const juce::Colour Ink{ 0xffe8e5de };      ///< text: the corona's bone white
+const juce::Colour Dim{ 0xff8c8b91 };      ///< names, secondary text
+const juce::Colour Faint{ 0xff44454c };    ///< tracks, axes, the off state
+const juce::Colour Accent{ 0xffeae3d2 };   ///< the corona: the title, the tab in front
+const juce::Colour Onset{ 0xffd6553f };    ///< the onsets' red: the playhead, a mute
+const juce::Colour Green{ 0xff7fd49a };    ///< a meter in range
+const juce::Colour Red{ 0xffe06a5f };      ///< a meter over
+}   // namespace colour
 
 using Family = frame::FamilyE;   ///< The module families (the frame's).
 /**
@@ -49,33 +51,34 @@ using Family = frame::FamilyE;   ///< The module families (the frame's).
  * @param[in] f  the family
  * @return its colour
  */
-juce::Colour familyColour(Family f);
+juce::Colour familyColour( Family f );
 /**
  * @brief The colour of deck @p d (A, B, C).
  * @param[in] d  the deck
  * @return its colour
  */
-juce::Colour deckColour(int d);
+juce::Colour deckColour( int d );
 /**
  * @brief Totality's skin of the frame: the palette above, the eclipse behind it, the logo.
  * @return the skin
  */
-const frame::Skin& skin();
+const frame::Skin &skin();
 
 /**
  * @brief One group of a module's panel: its title, its family and its parameters by key ("*cutoff": a large one,
  *        "~wave": a narrow menu).
  */
-struct GroupSpec {
-    const char* m_title;   ///< the group's title
-    Family m_family;   ///< its family: the colour
-    std::vector<const char*> m_keys;   ///< its parameters by key
+struct GroupSpec
+{
+    const char               *m_title;    ///< the group's title
+    Family                    m_family;   ///< its family: the colour
+    std::vector<const char *> m_keys;     ///< its parameters by key
 };
 /**
  * @brief The panel of a module: its groups, in order (empty: one group of everything).
  * @param[in] m  the module
  * @return its page's groups
  */
-const std::vector<GroupSpec>& layoutOf(tot::ModuleE m);
+const std::vector<GroupSpec> &layoutOf( tot::ModuleE m );
 
-} // namespace totui
+}   // namespace totui

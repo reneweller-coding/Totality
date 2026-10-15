@@ -23,7 +23,8 @@
 #include <cstdint>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 constexpr int MidiPpq = 960;   ///< ticks per quarter note in exported files
 
@@ -32,7 +33,7 @@ constexpr int MidiPpq = 960;   ///< ticks per quarter note in exported files
  * @param[in] part  the part
  * @return its MIDI channel, 0 .. 15
  */
-int midiChannelOf(PartE part);
+int midiChannelOf( PartE part );
 
 /**
  * @brief Encodes a score as a Standard MIDI File (format 1). Notes need not be sorted.
@@ -41,7 +42,8 @@ int midiChannelOf(PartE part);
  * @param[in] params  the knobs, or null
  * @return the file's bytes
  */
-std::vector<uint8_t> encodeMidi(const Score& score, const char* title = "Totality", const ParamStore* params = nullptr);
+std::vector<uint8_t> encodeMidi( const Score &score, const char *title = "Totality",
+                                 const ParamStore *params = nullptr );
 
 /**
  * @brief Writes encodeMidi() to a file; false if it cannot be written.
@@ -51,6 +53,7 @@ std::vector<uint8_t> encodeMidi(const Score& score, const char* title = "Totalit
  * @param[in] params  the knobs, or null
  * @return false when the file cannot be written
  */
-bool writeMidiFile(const Score& score, const char* path, const char* title = "Totality", const ParamStore* params = nullptr);
+bool writeMidiFile( const Score &score, const char *path, const char *title = "Totality",
+                    const ParamStore *params = nullptr );
 
-} // namespace tot
+}   // namespace tot

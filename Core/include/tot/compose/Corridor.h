@@ -18,12 +18,14 @@
 #include "tot/pattern/Rack.h"
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
 /** @brief One bar's onset profile: velocity per band (0 low, 1 mid, 2 high) and sixteenth, and its onset count. */
-struct BarProfile {
+struct BarProfile
+{
     float m_v[3][Steps] = {};   ///< velocity per band (0 low, 1 mid, 2 high) and sixteenth
-    int m_onsets = 0;   ///< how many onsets the bar has
+    int   m_onsets = 0;         ///< how many onsets the bar has
 };
 
 /**
@@ -31,7 +33,7 @@ struct BarProfile {
  * @param[in]  plan        the rack plan
  * @param[out] bandOfPart  receives each part's band
  */
-void partBands(const RackPlan& plan, int* bandOfPart);
+void partBands( const RackPlan &plan, int *bandOfPart );
 
 /**
  * @brief The profiles of bars @p firstBar .. @p firstBar + @p count - 1 (4 beats each, from beat 0) of @p notes.
@@ -41,10 +43,11 @@ void partBands(const RackPlan& plan, int* bandOfPart);
  * @param[in] bands     partBands()'s table
  * @return the bars' profiles
  */
-std::vector<BarProfile> barProfiles(const std::vector<NoteEvent>& notes, int firstBar, int count, const int* bands);
+std::vector<BarProfile> barProfiles( const std::vector<NoteEvent> &notes, int firstBar, int count, const int *bands );
 
 /** @brief The measures of a stretch. */
-struct CorridorStats {
+struct CorridorStats
+{
     float m_similarity = 0.0f;   ///< median best correlation with the bar 1, 2 or 4 before
     float m_micro = 0.0f;        ///< mean |change| of the bands' energy from bar to bar, dB
     float m_density = 0.0f;      ///< mean onsets per bar
@@ -58,6 +61,6 @@ struct CorridorStats {
  * @param[in] to    one past the last
  * @return the corridor's statistics
  */
-CorridorStats corridorOf(const std::vector<BarProfile>& bars, int from, int to);
+CorridorStats corridorOf( const std::vector<BarProfile> &bars, int from, int to );
 
-} // namespace tot
+}   // namespace tot

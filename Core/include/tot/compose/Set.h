@@ -65,53 +65,72 @@
 #include <string>
 #include <vector>
 
-namespace tot {
+namespace tot
+{
 
-extern const char* const DramaturgyNames[];   ///< "Warm-up", "Peak", "Closing", "Sunday", "Flat"
+extern const char *const DramaturgyNames[];   ///< "Warm-up", "Peak", "Closing", "Sunday", "Flat"
 
 /** @brief One track of a set, where it lies. */
-struct SetTrack {
-    int m_deck = 0;              ///< 0 or 1
-    double m_start = 0.0;        ///< set beat of its first bar
-    double m_swapIn = 0.0;       ///< set beat where its low end opens (its body's first bar; the set's start for the first)
-    double m_swapOut = 0.0;      ///< set beat where it gives the low end up (the next track's swap; its end for the last)
-    double m_end = 0.0;          ///< set beat of its end
-    float m_energy = 0.0f;       ///< the set's energy at its start
-    uint64_t m_seed = 0;         ///< its seed
-    TrackInfo m_info;            ///< what it told
+struct SetTrack
+{
+    int    m_deck = 0;       ///< 0 or 1
+    double m_start = 0.0;    ///< set beat of its first bar
+    double m_swapIn = 0.0;   ///< set beat where its low end opens (its body's first bar; the set's start for the first)
+    double m_swapOut = 0.0;   ///< set beat where it gives the low end up (the next track's swap; its end for the last)
+    double m_end = 0.0;       ///< set beat of its end
+    float  m_energy = 0.0f;   ///< the set's energy at its start
+    uint64_t  m_seed = 0;     ///< its seed
+    TrackInfo m_info;         ///< what it told
 };
 
 /** @brief What the third deck borrows (Phase 9). */
-enum class LoopKindE : int { CARRY = 0, TEASE, LAYER, COUNT };
-extern const char* const LoopKindNames[];     ///< "carry", "tease", "layer"
+enum class LoopKindE : int
+{
+    CARRY = 0,
+    TEASE,
+    LAYER,
+    COUNT
+};
+extern const char *const LoopKindNames[];   ///< "carry", "tease", "layer"
 
 /** @brief A loop on the third deck. */
-struct SetLoop {
-    int m_from = 0;              ///< the track it comes from
-    double m_start = 0.0;        ///< set beat
-    double m_end = 0.0;   ///< set beat where it ends
-    int m_bars = 4;              ///< the loop's length
+struct SetLoop
+{
+    int       m_from = 0;                  ///< the track it comes from
+    double    m_start = 0.0;               ///< set beat
+    double    m_end = 0.0;                 ///< set beat where it ends
+    int       m_bars = 4;                  ///< the loop's length
     LoopKindE m_kind = LoopKindE::CARRY;   ///< what it does (LoopKind)
 };
 
 /** @brief A move of the DJ's hand on a channel (Phase 9). */
-enum class MoveKindE : int { LOW_KILL = 0, HIGH_SWELL, MID_DIP, FILTER_BUILD, ECHO_THROW, COUNT };
-extern const char* const MoveNames[];         ///< "low kill", "high swell", "mid dip", "filter build", "echo throw"
+enum class MoveKindE : int
+{
+    LOW_KILL = 0,
+    HIGH_SWELL,
+    MID_DIP,
+    FILTER_BUILD,
+    ECHO_THROW,
+    COUNT
+};
+extern const char *const MoveNames[];   ///< "low kill", "high swell", "mid dip", "filter build", "echo throw"
 
 /** @brief A move of the DJ's hand: where, on which deck, which. */
-struct SetMove {
-    double m_beat = 0.0;         ///< the line it leads into (or starts on)
-    int m_deck = 0;   ///< the deck it moves
+struct SetMove
+{
+    double    m_beat = 0.0;                   ///< the line it leads into (or starts on)
+    int       m_deck = 0;                     ///< the deck it moves
     MoveKindE m_kind = MoveKindE::LOW_KILL;   ///< which move
 };
 
 /** @brief What a set tells. */
-struct SetInfo {
-    DramaturgyE m_dramaturgy = DramaturgyE::PEAK;   ///< the set's arc
-    std::vector<SetTrack> m_tracks;   ///< its tracks, in order
-    std::vector<SetLoop> m_loops;   ///< the loops on the third deck
-    std::vector<double> m_breaks;   ///< set beats of the mixer's breaks
-    std::vector<SetMove> m_moves;   ///< Phase 9: the DJ's hand
+struct SetInfo
+{
+    DramaturgyE           m_dramaturgy = DramaturgyE::PEAK;   ///< the set's arc
+    std::vector<SetTrack> m_tracks;                           ///< its tracks, in order
+    std::vector<SetLoop>  m_loops;                            ///< the loops on the third deck
+    std::vector<double>   m_breaks;                           ///< set beats of the mixer's breaks
+    std::vector<SetMove>  m_moves;                            ///< Phase 9: the DJ's hand
 };
 
 /**
@@ -126,8 +145,9 @@ struct SetInfo {
  *                       plugin throws the rest away) -- a set of twelve hours is some two hundred tracks
  * @return the set's score
  */
-SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* curation = nullptr, SetInfo* info = nullptr,
-                    const Preferences* prefs = nullptr, const std::function<bool()>& stop = {});
+SetScore composeSet( const ParamStore &p, uint64_t seed, double minutes, const Curation *curation = nullptr,
+                     SetInfo *info = nullptr, const Preferences *prefs = nullptr,
+                     const std::function<bool()> &stop = {} );
 
 /**
  * @brief The energy of dramaturgy @p d at @p t (0..1 of the set).
@@ -135,20 +155,20 @@ SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Cu
  * @param[in] t  the position in the set, 0..1
  * @return the energy, 0..1
  */
-float setEnergy(DramaturgyE d, float t);
+float setEnergy( DramaturgyE d, float t );
 /**
  * @brief The tempo of dramaturgy @p d at @p t, before the 1-BPM rule.
  * @param[in] d  the dramaturgy
  * @param[in] t  the position in the set, 0..1
  * @return the tempo's position in its range, 0..1
  */
-float setTempo(DramaturgyE d, float t);
+float setTempo( DramaturgyE d, float t );
 
 /**
  * @brief All of a set as one score (the decks' notes and markers on the set's tempo; for MIDI and the displays).
  * @param[in] set  the set
  * @return its decks in one score
  */
-Score flattenSet(const SetScore& set);
+Score flattenSet( const SetScore &set );
 
-} // namespace tot
+}   // namespace tot
