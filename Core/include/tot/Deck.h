@@ -63,17 +63,17 @@ namespace tot {
  */
 struct MeterSink {
     /** @brief The mixer page's strips, in its order. */
-    enum Strip : int { Kick = 0, Rumble, Sub, Hats, Perc, Ping, Bass, Acid, Chord, Drone, Texture, Room, Dub, Cloud, kStrips };
-    std::atomic<float> peak[kStrips] = {};   ///< per strip: the loudest sample since the page last took them
-    std::atomic<double> sum[kStrips] = {};   ///< per strip: the sum of squares since the page last took them
+    enum StripE : int { KICK = 0, RUMBLE, SUB, HATS, PERC, PING, BASS, ACID, CHORD, DRONE, TEXTURE, ROOM, DUB, CLOUD, STRIPS };
+    std::atomic<float> m_peak[STRIPS] = {};   ///< per strip: the loudest sample since the page last took them
+    std::atomic<double> m_sum[STRIPS] = {};   ///< per strip: the sum of squares since the page last took them
     /** @brief Adds one block's readings (audio thread). */
     void add(const float* pk, const double* ss, int from, int to)
     {
         for (int s = from; s < to; ++s) {
-            float was = peak[s].load(std::memory_order_relaxed);
-            while (pk[s] > was && !peak[s].compare_exchange_weak(was, pk[s], std::memory_order_relaxed)) {}
-            double w = sum[s].load(std::memory_order_relaxed);
-            while (!sum[s].compare_exchange_weak(w, w + ss[s], std::memory_order_relaxed)) {}
+            float was = m_peak[s].load(std::memory_order_relaxed);
+            while (pk[s] > was && !m_peak[s].compare_exchange_weak(was, pk[s], std::memory_order_relaxed)) {}
+            double w = m_sum[s].load(std::memory_order_relaxed);
+            while (!m_sum[s].compare_exchange_weak(w, w + ss[s], std::memory_order_relaxed)) {}
         }
     }
 };
@@ -82,10 +82,10 @@ struct MeterSink {
 class Deck {
 public:
     /** @brief The stems, in the order Engine::setStems() takes them. */
-    enum Stem : int { kStemKick = 0, kStemRumble, kStemSub, kStemHats, kStemPerc, kStemPing, kStemRoom, kStemBass, kStemAcid,
-                      kStemChord, kStemDrone, kStemTexture, kStemDub, kStemCloud, kStems };
-    static constexpr int kRaster = 32;   ///< the engine's parameter raster, samples
-    static constexpr int64_t kNever = std::numeric_limits<int64_t>::max();   ///< no such sample: nothing is due
+    enum StemE : int { STEM_KICK = 0, STEM_RUMBLE, STEM_SUB, STEM_HATS, STEM_PERC, STEM_PING, STEM_ROOM, STEM_BASS, STEM_ACID,
+                      STEM_CHORD, STEM_DRONE, STEM_TEXTURE, STEM_DUB, STEM_CLOUD, STEMS };
+    static constexpr int Raster = 32;   ///< the engine's parameter raster, samples
+    static constexpr int64_t Never = std::numeric_limits<int64_t>::max();   ///< no such sample: nothing is due
 
     /** @brief Sets the knobs it reads, the rate and which deck it is (0 .. 2). */
     void prepare(const ParamStore* params, double sampleRate, int index);
@@ -99,11 +99,11 @@ public:
     void updateCell(int64_t sample);
     /** @brief Plays every note due at or before @p sample. */
     void dispatchUntil(int64_t sample);
-    /** @brief The sample of the next note not yet played (kNever when none). */
-    int64_t nextEvent() const { return evCursor_ < events_.size() ? events_[evCursor_].sample : kNever; }
+    /** @brief The sample of the next note not yet played (Never when none). */
+    int64_t nextEvent() const { return m_evCursor < m_events.size() ? m_events[m_evCursor].m_sample : Never; }
     /** @brief Whether it plays at @p sample (else it rests). */
     bool playsAt(int64_t sample) const;
-    /** @brief The first sample after @p sample where it starts or stops resting (kNever when none). */
+    /** @brief The first sample after @p sample where it starts or stops resting (Never when none). */
     int64_t nextRestChange(int64_t sample) const;
     /**
      * @brief Renders @p n samples from @p sample into @p L and @p R (replaced): at most up to the next raster line and the
@@ -113,7 +113,7 @@ public:
      */
     void render(int64_t sample, float* L, float* R, int n, float* const* stemL, float* const* stemR);
     /** @brief Live play (Engine::setLive): the performer's mutes act. */
-    void setLive(bool on) { live_ = on; }
+    void setLive(bool on) { m_live = on; }
     /**
      * @brief A key of a MIDI keyboard (01.10.2026, Engine::queueLive), played at @p sample on this deck with its sound as
      *        its knobs have it -- past the mutes, which are the composer's. @p target is a perform::keys value (Kit ..
@@ -124,248 +124,248 @@ public:
     /** @brief Releases every played key (a stop, another keyboard target), and forgets which parts were played. */
     void liveAllOff();
     /** @brief From now on every composer note it plays is also written to @p tap (null: stops; NoteTap.h, MIDI out). */
-    void setNoteTap(NoteTap* tap) { noteTap_ = tap; }
+    void setNoteTap(NoteTap* tap) { m_noteTap = tap; }
     /**
      * @brief The family jam (02.10.2026, the plugin's Jam.h): every pitched part's composed notes @p transpose semitones
      *        from where they were written, from the next note on (a note ends with the shift it began with), and with
      *        @p rhythmOut the rhythm's foundation out, as the leader's break has it.
      */
-    void setJam(int transpose, bool rhythmOut) { jamTranspose_ = transpose; jamMutes_ = rhythmOut ? kJamRhythm : 0u; }
+    void setJam(int transpose, bool rhythmOut) { m_jamTranspose = transpose; m_jamMutes = rhythmOut ? JamRhythm : 0u; }
     /** @brief Where the engine keeps what it wrote on the knobs (Engine.h; NaN: never), read by played(). */
-    void setShown(const float* shown) { shown_ = shown; }
+    void setShown(const float* shown) { m_shown = shown; }
     /** @brief The beat of the knob settings this deck plays from (Score::knobs), -1 before any. */
-    double knobGroup() const { return knobGroup_; }
+    double knobGroup() const { return m_knobGroup; }
     /** @brief Whether a new group of knob settings was taken since the last call (and forgets it). */
-    bool takeNewGroup() { const bool n = newGroup_; newGroup_ = false; return n; }
+    bool takeNewGroup() { const bool n = m_newGroup; m_newGroup = false; return n; }
     /** @brief The value this deck plays parameter @p id from, NaN where it follows the knob. */
-    float baseOf(int id) const { return id >= 0 && static_cast<size_t>(id) < base_.size() ? base_[static_cast<size_t>(id)] : std::numeric_limits<float>::quiet_NaN(); }
+    float baseOf(int id) const { return id >= 0 && static_cast<size_t>(id) < m_base.size() ? m_base[static_cast<size_t>(id)] : std::numeric_limits<float>::quiet_NaN(); }
     /** @brief The Quest's quality (Engine::setQuality): the grain cloud rests, the rumble clips at the rate. */
-    void setQuest(bool on) { quest_ = on; rumble_.setOversampling(!on); }
+    void setQuest(bool on) { m_quest = on; m_rumble.setOversampling(!on); }
     /** @brief The score it plays. */
-    const Score& score() const { return score_; }
+    const Score& score() const { return m_score; }
     /** @brief Whether it has a score. */
-    bool loaded() const { return loaded_; }
+    bool loaded() const { return m_loaded; }
     /** @brief The value of parameter @p id as this deck plays it: the knob plus its score's automation. */
     float played(int id) const;
     /** @brief Reads a module instance as played. */
-    void readPlayed(Module m, int instance, float* out) const;
+    void readPlayed(ModuleE m, int instance, float* out) const;
     /** @brief The samples of its score's steps on the DJ mixer's knobs (a kill, a swap): the engine reads them there. */
-    const std::vector<int64_t>& mixerSteps() const { return mixerSteps_; }
+    const std::vector<int64_t>& mixerSteps() const { return m_mixerSteps; }
     /** @brief The loudness corrections of its tracks (a trim per LevelMark), found after they began; they glide in. No
      *         allocation for as many trims as the score has marks (reserved at load): the Quest sets them on its audio thread. */
-    void setLevelTrims(const std::vector<float>& trims) { lateTrims_.assign(trims.begin(), trims.end()); }
+    void setLevelTrims(const std::vector<float>& trims) { m_lateTrims.assign(trims.begin(), trims.end()); }
     /** @brief Phase 18: the parts' corrections of its tracks (one per LevelMark), found after they began; as the trims. */
-    void setLevelBalance(const std::vector<BalanceDb>& bal) { lateBal_.assign(bal.begin(), bal.end()); }
+    void setLevelBalance(const std::vector<BalanceDbT>& bal) { m_lateBal.assign(bal.begin(), bal.end()); }
     /** @brief Phase 18: from now on keeps the loudest sample of the kick and of every part (after its correction and its
      *         bus's level, before the buses' saturation and the sends) -- the Leveler's reading; switched on, it starts
      *         from nothing. */
     void watchPeaks(bool on);
     /** @brief The kick's loudest sample since watchPeaks(true). */
-    float kickPeak() const { return kickPeak_; }
+    float kickPeak() const { return m_kickPeak; }
     /** @brief Part @p p's (BalPart, a lane 0 .. 11 first) loudest sample since watchPeaks(true). */
-    float partPeak(int p) const { return partPeak_[p]; }
+    float partPeak(int p) const { return m_partPeak[p]; }
     /** @brief The kick (for the tests). */
-    const Kick& kick() const { return kick_; }
+    const Kick& kick() const { return m_kick; }
     /** @brief From now on adds the strips' levels into @p sink (null: stops). */
-    void setMeterSink(MeterSink* sink) { meter_ = sink; }
+    void setMeterSink(MeterSink* sink) { m_meter = sink; }
 
 private:
     /** @brief A note event on the sample grid. */
     struct Ev {
-        int64_t sample;   ///< when
-        uint8_t on;       ///< 0 off, 1 on (offs first at equal samples)
-        uint8_t part;     ///< Part
-        bool accent;      ///< the 303's accent
-        bool slide;       ///< slides into the next note
-        int pitch;        ///< MIDI note
-        float velocity;   ///< 0..1
-        int shift;        ///< a kit hit's pitch shift
-        double late;      ///< how many samples ago it ideally happened (0 <= late < 1)
-        int id;           ///< pairs an off with its on
+        int64_t m_sample;   ///< when
+        uint8_t m_on;       ///< 0 off, 1 on (offs first at equal samples)
+        uint8_t m_part;     ///< Part
+        bool m_accent;      ///< the 303's accent
+        bool m_slide;       ///< slides into the next note
+        int m_pitch;        ///< MIDI note
+        float m_velocity;   ///< 0..1
+        int m_shift;        ///< a kit hit's pitch shift
+        double m_late;      ///< how many samples ago it ideally happened (0 <= late < 1)
+        int m_id;           ///< pairs an off with its on
     };
     /** @brief The automation curves on one parameter, in time order, with a cursor. */
     struct Track {
-        int param;                      ///< the knob
-        std::vector<Gesture> gestures;  ///< its curves
-        size_t cursor = 0;              ///< index of the latest curve that has started, or gestures.size()
-        float offset = 0.0f;            ///< the offset at the current cell
+        int m_param;                      ///< the knob
+        std::vector<Gesture> m_gestures;  ///< its curves
+        size_t m_cursor = 0;              ///< index of the latest curve that has started, or gestures.size()
+        float m_offset = 0.0f;            ///< the offset at the current cell
     };
     /** @brief A voice's sends. */
     struct Sends {
-        float room = 0.0f;    ///< to the room
-        float dub = 0.0f;     ///< to the echo
-        float plate = 0.0f;   ///< to the plate
+        float m_room = 0.0f;    ///< to the room
+        float m_dub = 0.0f;     ///< to the echo
+        float m_plate = 0.0f;   ///< to the plate
     };
 
     /** @brief Plays note event @p e: a voice started or released, past the mutes and the keyboard as they stand. */
     void dispatch(const Ev& e);
 
-    const ParamStore* params_ = nullptr;   ///< the knobs it reads
-    int index_ = 0;   ///< which deck it is (0 .. 2)
-    double sampleRate_ = 48000.0;   ///< the sample rate, Hz
-    bool loaded_ = false;   ///< it has a score
-    bool live_ = false;   ///< live play (setLive): the performer's mutes and the keyboard act
+    const ParamStore* m_params = nullptr;   ///< the knobs it reads
+    int m_index = 0;   ///< which deck it is (0 .. 2)
+    double m_sampleRate = 48000.0;   ///< the sample rate, Hz
+    bool m_loaded = false;   ///< it has a score
+    bool m_live = false;   ///< live play (setLive): the performer's mutes and the keyboard act
     /// The track's absolute knob settings (Score::knobs): the value this deck plays each knob from, NaN where it plays the
-    /// knob; a hand's turn of the knob away from what the engine wrote on it (shown_) moves it from there.
-    std::vector<float> base_;
-    size_t knobCursor_ = 0;   ///< index of the next knob setting of the score not yet taken
-    double knobGroup_ = -1.0;   ///< the beat of the knob settings it plays from, -1 before any
-    bool newGroup_ = false;   ///< a new group of knob settings was taken since takeNewGroup()
-    const float* shown_ = nullptr;   ///< what the engine wrote on the knobs (setShown; NaN never), or null
+    /// knob; a hand's turn of the knob away from what the engine wrote on it (m_shown) moves it from there.
+    std::vector<float> m_base;
+    size_t m_knobCursor = 0;   ///< index of the next knob setting of the score not yet taken
+    double m_knobGroup = -1.0;   ///< the beat of the knob settings it plays from, -1 before any
+    bool m_newGroup = false;   ///< a new group of knob settings was taken since takeNewGroup()
+    const float* m_shown = nullptr;   ///< what the engine wrote on the knobs (setShown; NaN never), or null
     /** @brief Takes the knob settings due up to @p beat (a group's replaces the last group's). */
     void applyKnobs(double beat);
-    bool quest_ = false;   ///< the Quest's quality: the grain cloud rests
-    uint32_t mutes_ = 0;   ///< the performer's muted groups (perform::MuteKick ..), bit k for group k
+    bool m_quest = false;   ///< the Quest's quality: the grain cloud rests
+    uint32_t m_mutes = 0;   ///< the performer's muted groups (perform::MuteKick ..), bit k for group k
     /** @brief Whether a group is muted -- never for a played key (liveNote). */
-    bool muted(int param) const { return !liveEvent_ && (((mutes_ | jamMutes_) >> (param - perform::MuteKick)) & 1u) != 0; }
+    bool muted(int param) const { return !m_liveEvent && (((m_mutes | m_jamMutes) >> (param - perform::MUTE_KICK)) & 1u) != 0; }
     /** @brief The perform mutes the family jam adds in the leader's break (setJam). */
-    static constexpr uint32_t kJamRhythm = (1u << (perform::MuteKick - perform::MuteKick)) | (1u << (perform::MuteSub - perform::MuteKick)) | (1u << (perform::MuteBass - perform::MuteKick));
-    int jamTranspose_ = 0;           ///< the family jam's transposition of the pitched parts (setJam)
-    uint32_t jamMutes_ = 0;          ///< the perform mutes the family jam adds now (setJam)
-    std::array<std::array<int8_t, 128>, kNumParts> jamShift_{};   ///< the shift each held pitched note began with (dispatch)
+    static constexpr uint32_t JamRhythm = (1u << (perform::MUTE_KICK - perform::MUTE_KICK)) | (1u << (perform::MUTE_SUB - perform::MUTE_KICK)) | (1u << (perform::MUTE_BASS - perform::MUTE_KICK));
+    int m_jamTranspose = 0;           ///< the family jam's transposition of the pitched parts (setJam)
+    uint32_t m_jamMutes = 0;          ///< the perform mutes the family jam adds now (setJam)
+    std::array<std::array<int8_t, 128>, NumParts> m_jamShift{};   ///< the shift each held pitched note began with (dispatch)
     /** @brief Plays @p e past the mutes and the keyboard (dispatch, after the family jam's transposition). */
     void dispatchPlayed(const Ev& e);
     // The keyboard (01.10.2026, liveNote): read from the perform module in live play (updateCell).
-    int keyTarget_ = 0;              ///< perform.keyboard_part (perform::keys)
-    bool keyReplace_ = true;         ///< perform.keyboard_mode Replace: the played part's generated notes are left out
-    bool composerOff_ = false;       ///< perform.composer off: no generated note at all
-    uint32_t keyPlayed_ = 0;         ///< by channel: the targets played since the last liveAllOff (bit = target)
-    bool liveEvent_ = false;         ///< dispatch() plays a key now: no mute, no silencing
-    NoteTap* noteTap_ = nullptr;     ///< where the composer's played notes go for MIDI out (setNoteTap), or null
+    int m_keyTarget = 0;              ///< perform.keyboard_part (perform::keys)
+    bool m_keyReplace = true;         ///< perform.keyboard_mode Replace: the played part's generated notes are left out
+    bool m_composerOff = false;       ///< perform.composer off: no generated note at all
+    uint32_t m_keyPlayed = 0;         ///< by channel: the targets played since the last liveAllOff (bit = target)
+    bool m_liveEvent = false;         ///< dispatch() plays a key now: no mute, no silencing
+    NoteTap* m_noteTap = nullptr;     ///< where the composer's played notes go for MIDI out (setNoteTap), or null
     /** @brief The perform mute (perform::MuteKick ..) that silences @p part's notes, -1 for none. */
-    int muteOf(Part part) const;
-    int liveHeld_[perform::keys::Count] = {};   ///< a mono target's sounding key + 1 (0 none)
-    uint8_t liveChord_[128] = {};    ///< the chord's keys that sound (1) -- released by liveAllOff
+    int muteOf(PartE part) const;
+    int m_liveHeld[perform::keys::COUNT] = {};   ///< a mono target's sounding key + 1 (0 none)
+    uint8_t m_liveChord[128] = {};    ///< the chord's keys that sound (1) -- released by liveAllOff
     /** @brief Whether the composer's note-ons of @p part are left out (the composer off, or the keyboard replaces it). */
-    bool silenced(Part part) const;
+    bool silenced(PartE part) const;
     /** @brief The keyboard target a part belongs to (perform::keys; Off for none). */
-    static int targetOf(Part part);
-    Score score_;   ///< the score it plays
-    std::vector<Ev> events_;   ///< the score's notes on the sample grid, in time order
-    size_t evCursor_ = 0;   ///< index of the next event not yet played
-    std::vector<Track> tracks_;   ///< the automation, one track per parameter that has curves
-    std::vector<int> trackOf_;   ///< parameter id -> index into tracks_, or -1
-    std::vector<int64_t> mixerSteps_;   ///< the samples of its score's steps on the DJ mixer's knobs
-    std::vector<std::pair<int64_t, int64_t>> plays_;   ///< where it plays: [from, to) in samples, sorted
+    static int targetOf(PartE part);
+    Score m_score;   ///< the score it plays
+    std::vector<Ev> m_events;   ///< the score's notes on the sample grid, in time order
+    size_t m_evCursor = 0;   ///< index of the next event not yet played
+    std::vector<Track> m_tracks;   ///< the automation, one track per parameter that has curves
+    std::vector<int> m_trackOf;   ///< parameter id -> index into m_tracks, or -1
+    std::vector<int64_t> m_mixerSteps;   ///< the samples of its score's steps on the DJ mixer's knobs
+    std::vector<std::pair<int64_t, int64_t>> m_plays;   ///< where it plays: [from, to) in samples, sorted
 
-    Kick kick_;   ///< the kick
-    Rumble rumble_;   ///< the rumble: the kick through a reverb, filtered and ducked
-    SubBass sub_;   ///< the sub bass sine
-    PercKit kit_;   ///< the percussion: twelve lanes
-    Ping ping_;   ///< the ping (FM blips)
-    MonoSynth bass_;   ///< the bass line
-    MonoSynth acid_;   ///< the 303
-    ChordSynth chord_;   ///< the dub chord stabs
-    Drone drone_;   ///< the drone
-    Texture texture_;   ///< the texture: noise and field sounds
-    int keyRoot_ = 9;   ///< the key's root, 0 = C (compose.key)
-    int scale_ = 0;   ///< the scale (compose.scale)
-    bool subOwns_ = false;   ///< the sub bass owns the low end (compose.low_owner): the sine plays the bass line, the rumble leaves the band
+    Kick m_kick;   ///< the kick
+    Rumble m_rumble;   ///< the rumble: the kick through a reverb, filtered and ducked
+    SubBass m_sub;   ///< the sub bass sine
+    PercKit m_kit;   ///< the percussion: twelve lanes
+    Ping m_ping;   ///< the ping (FM blips)
+    MonoSynth m_bass;   ///< the bass line
+    MonoSynth m_acid;   ///< the 303
+    ChordSynth m_chord;   ///< the dub chord stabs
+    Drone m_drone;   ///< the drone
+    Texture m_texture;   ///< the texture: noise and field sounds
+    int m_keyRoot = 9;   ///< the key's root, 0 = C (compose.key)
+    int m_scale = 0;   ///< the scale (compose.scale)
+    bool m_subOwns = false;   ///< the sub bass owns the low end (compose.low_owner): the sine plays the bass line, the rumble leaves the band
     /// The last kick, for the sub's lock.
-    bool haveKick_ = false;
-    double kickTime_ = 0.0;   ///< its ideal start, in samples
-    double kickC_ = 0.0;   ///< the last kick's asymptotic phase, cycles: the sub's lock
-    double kickF0_ = 50.0;   ///< the last kick's tuned end frequency, Hz: the sub's lock
-    int subNote_ = -1;   ///< the id of the sub's sounding note, -1 none
-    int bassNote_ = -1;   ///< the id of the bass's sounding note, -1 none
-    int acidNote_ = -1;   ///< the id of the 303's sounding note, -1 none
-    int droneNote_ = -1;   ///< the id of the drone's sounding note, -1 none
+    bool m_haveKick = false;
+    double m_kickTime = 0.0;   ///< its ideal start, in samples
+    double m_kickC = 0.0;   ///< the last kick's asymptotic phase, cycles: the sub's lock
+    double m_kickF0 = 50.0;   ///< the last kick's tuned end frequency, Hz: the sub's lock
+    int m_subNote = -1;   ///< the id of the sub's sounding note, -1 none
+    int m_bassNote = -1;   ///< the id of the bass's sounding note, -1 none
+    int m_acidNote = -1;   ///< the id of the 303's sounding note, -1 none
+    int m_droneNote = -1;   ///< the id of the drone's sounding note, -1 none
 
     // Buses, sends, rooms.
-    Svf hatsLp_[2];   ///< the hats bus's low pass, per channel
-    Svf percLp_[2];   ///< the percussion bus's low pass, per channel
-    float hatsGain_ = 1.0f;   ///< the hats bus's level (mix.hats_level, with its motion)
-    float percGain_ = 1.0f;   ///< the percussion bus's level
-    bool laneIsHat_[kPercLanes] = {};   ///< per kit lane: it goes to the hats bus (a hat), else to the percussion bus
-    Reverb room_;   ///< the room (space)
-    float roomReturn_ = 1.0f;   ///< the room's return level
-    float hatsSend_ = 0.0f;   ///< the hats bus's room send
-    float percSend_ = 0.0f;   ///< the percussion bus's room send
-    float pingSend_ = 0.0f;   ///< the ping's room send
-    DubChain dub_;   ///< the dub chain: tape echo, spring, plate
-    Sends bassSends_;   ///< the bass's sends
-    Sends acidSends_;   ///< the 303's sends
-    Sends chordSends_;   ///< the chord's sends
-    Sends droneSends_;   ///< the drone's sends
-    float pingEcho_ = 0.0f;   ///< the ping's echo send
-    float hatsEcho_ = 0.0f;   ///< the hats bus's echo send
-    float percEcho_ = 0.0f;   ///< the percussion bus's echo send
-    float chordLevel_ = 0.25f;   ///< the chord's level, linear (0 at -60 dB)
-    MultibandDucker padsDuck_;   ///< ducks the chord and the drone under the kick, by band
-    MultibandDucker fxDuck_;   ///< ducks the room, the dub chain and the cloud under the kick, by band
-    GrainCloud cloud_;   ///< the grain cloud
-    float cloudPing_ = 0.0f;   ///< the ping's send to the cloud
-    float cloudChord_ = 0.0f;   ///< the chord's send to the cloud
-    float cloudPlate_ = 0.0f;   ///< the cloud's send to the plate
-    float drumSat_ = 0.35f;   ///< the drum bus's saturation, 0 .. 1 (mix.drum_sat)
+    Svf m_hatsLp[2];   ///< the hats bus's low pass, per channel
+    Svf m_percLp[2];   ///< the percussion bus's low pass, per channel
+    float m_hatsGain = 1.0f;   ///< the hats bus's level (mix.hats_level, with its motion)
+    float m_percGain = 1.0f;   ///< the percussion bus's level
+    bool m_laneIsHat[PercLanes] = {};   ///< per kit lane: it goes to the hats bus (a hat), else to the percussion bus
+    Reverb m_room;   ///< the room (space)
+    float m_roomReturn = 1.0f;   ///< the room's return level
+    float m_hatsSend = 0.0f;   ///< the hats bus's room send
+    float m_percSend = 0.0f;   ///< the percussion bus's room send
+    float m_pingSend = 0.0f;   ///< the ping's room send
+    DubChain m_dub;   ///< the dub chain: tape echo, spring, plate
+    Sends m_bassSends;   ///< the bass's sends
+    Sends m_acidSends;   ///< the 303's sends
+    Sends m_chordSends;   ///< the chord's sends
+    Sends m_droneSends;   ///< the drone's sends
+    float m_pingEcho = 0.0f;   ///< the ping's echo send
+    float m_hatsEcho = 0.0f;   ///< the hats bus's echo send
+    float m_percEcho = 0.0f;   ///< the percussion bus's echo send
+    float m_chordLevel = 0.25f;   ///< the chord's level, linear (0 at -60 dB)
+    MultibandDucker m_padsDuck;   ///< ducks the chord and the drone under the kick, by band
+    MultibandDucker m_fxDuck;   ///< ducks the room, the dub chain and the cloud under the kick, by band
+    GrainCloud m_cloud;   ///< the grain cloud
+    float m_cloudPing = 0.0f;   ///< the ping's send to the cloud
+    float m_cloudChord = 0.0f;   ///< the chord's send to the cloud
+    float m_cloudPlate = 0.0f;   ///< the cloud's send to the plate
+    float m_drumSat = 0.35f;   ///< the drum bus's saturation, 0 .. 1 (mix.drum_sat)
     // The track bus.
-    Svf groupHp_[2][2];              ///< the group high pass (mix.low_cut), fourth order, per channel
-    bool groupHpOn_ = false;   ///< the group high pass is in (mix.low_cut above 20.5 Hz)
-    float tiltHigh_ = 1.0f;   ///< the master tilt's gain on the highs (master.tilt)
-    float tiltCoef_ = 0.1f;   ///< the tilt's one-pole coefficient (1 kHz)
-    float tiltState_[2] = {};   ///< the tilt's low pass, per channel
-    BusCompressor glue_;   ///< the bus compressor on the track
-    float trimGain_ = 1.0f;   ///< the loudness trim as it stands, gliding to trimTarget_
-    float trimTarget_ = 1.0f;   ///< the trim of the track that plays now
-    float trimCoef_ = 0.0f;   ///< the trim's glide (about a second)
-    std::vector<float> lateTrims_;   ///< setLevelTrims: the corrections found while playing
+    Svf m_groupHp[2][2];              ///< the group high pass (mix.low_cut), fourth order, per channel
+    bool m_groupHpOn = false;   ///< the group high pass is in (mix.low_cut above 20.5 Hz)
+    float m_tiltHigh = 1.0f;   ///< the master tilt's gain on the highs (master.tilt)
+    float m_tiltCoef = 0.1f;   ///< the tilt's one-pole coefficient (1 kHz)
+    float m_tiltState[2] = {};   ///< the tilt's low pass, per channel
+    BusCompressor m_glue;   ///< the bus compressor on the track
+    float m_trimGain = 1.0f;   ///< the loudness trim as it stands, gliding to m_trimTarget
+    float m_trimTarget = 1.0f;   ///< the trim of the track that plays now
+    float m_trimCoef = 0.0f;   ///< the trim's glide (about a second)
+    std::vector<float> m_lateTrims;   ///< setLevelTrims: the corrections found while playing
     // Phase 18: the parts' gains against the kick (LevelMark::balDb), gliding like the trim; applied at the sources, before
     // the sends, as a fader would.
-    float balGain_[kBalParts] = {};     ///< (1 from prepare() on)
-    float balTarget_[kBalParts] = {};   ///< the parts' gains of the track that plays now
-    bool watch_ = false;   ///< the loudest samples are kept (watchPeaks)
-    float kickPeak_ = 0.0f;   ///< the kick's loudest sample since watchPeaks(true)
-    float partPeak_[kBalParts] = {};   ///< every part's loudest sample since watchPeaks(true)
-    MeterSink* meter_ = nullptr;     ///< setMeterSink
-    std::vector<BalanceDb> lateBal_;   ///< setLevelBalance: the parts' corrections found while playing
+    float m_balGain[BalParts] = {};     ///< (1 from prepare() on)
+    float m_balTarget[BalParts] = {};   ///< the parts' gains of the track that plays now
+    bool m_watch = false;   ///< the loudest samples are kept (watchPeaks)
+    float m_kickPeak = 0.0f;   ///< the kick's loudest sample since watchPeaks(true)
+    float m_partPeak[BalParts] = {};   ///< every part's loudest sample since watchPeaks(true)
+    MeterSink* m_meter = nullptr;     ///< setMeterSink
+    std::vector<BalanceDbT> m_lateBal;   ///< setLevelBalance: the parts' corrections found while playing
 
-    std::vector<float> kickBuf_;   ///< the kick's click and body, mono
-    std::vector<float> bodyBuf_;   ///< the kick's body alone, mono: the rumble's input
-    std::vector<float> rumbleBuf_;   ///< the rumble, mono
-    std::vector<float> subBuf_;   ///< the sub bass, mono
-    std::vector<float> pingL_;   ///< the ping, left
-    std::vector<float> pingR_;   ///< the ping, right
-    std::vector<float> bassL_;   ///< the bass, left
-    std::vector<float> bassR_;   ///< the bass, right
-    std::vector<float> acidL_;   ///< the 303, left
-    std::vector<float> acidR_;   ///< the 303, right
-    std::vector<float> chordL_;   ///< the chord, left
-    std::vector<float> chordR_;   ///< the chord, right
-    std::vector<float> droneL_;   ///< the drone, left
-    std::vector<float> droneR_;   ///< the drone, right
-    std::vector<float> texL_;   ///< the texture, left
-    std::vector<float> texR_;   ///< the texture, right
-    std::vector<float> roomInL_;   ///< the room's input, left
-    std::vector<float> roomInR_;   ///< the room's input, right
-    std::vector<float> roomL_;   ///< the room's return, left
-    std::vector<float> roomR_;   ///< the room's return, right
-    std::vector<float> echoInL_;   ///< the echo's input, left
-    std::vector<float> echoInR_;   ///< the echo's input, right
-    std::vector<float> plateInL_;   ///< the plate's input, left
-    std::vector<float> plateInR_;   ///< the plate's input, right
-    std::vector<float> dubL_;   ///< the dub chain's return, left
-    std::vector<float> dubR_;   ///< the dub chain's return, right
-    std::vector<float> drumL_;   ///< the drum bus after its saturation, left
-    std::vector<float> drumR_;   ///< the drum bus after its saturation, right
-    std::vector<float> cloudInL_;   ///< the cloud's input, left
-    std::vector<float> cloudInR_;   ///< the cloud's input, right
-    std::vector<float> cloudL_;   ///< the cloud's return, left
-    std::vector<float> cloudR_;   ///< the cloud's return, right
+    std::vector<float> m_kickBuf;   ///< the kick's click and body, mono
+    std::vector<float> m_bodyBuf;   ///< the kick's body alone, mono: the rumble's input
+    std::vector<float> m_rumbleBuf;   ///< the rumble, mono
+    std::vector<float> m_subBuf;   ///< the sub bass, mono
+    std::vector<float> m_pingL;   ///< the ping, left
+    std::vector<float> m_pingR;   ///< the ping, right
+    std::vector<float> m_bassL;   ///< the bass, left
+    std::vector<float> m_bassR;   ///< the bass, right
+    std::vector<float> m_acidL;   ///< the 303, left
+    std::vector<float> m_acidR;   ///< the 303, right
+    std::vector<float> m_chordL;   ///< the chord, left
+    std::vector<float> m_chordR;   ///< the chord, right
+    std::vector<float> m_droneL;   ///< the drone, left
+    std::vector<float> m_droneR;   ///< the drone, right
+    std::vector<float> m_texL;   ///< the texture, left
+    std::vector<float> m_texR;   ///< the texture, right
+    std::vector<float> m_roomInL;   ///< the room's input, left
+    std::vector<float> m_roomInR;   ///< the room's input, right
+    std::vector<float> m_roomL;   ///< the room's return, left
+    std::vector<float> m_roomR;   ///< the room's return, right
+    std::vector<float> m_echoInL;   ///< the echo's input, left
+    std::vector<float> m_echoInR;   ///< the echo's input, right
+    std::vector<float> m_plateInL;   ///< the plate's input, left
+    std::vector<float> m_plateInR;   ///< the plate's input, right
+    std::vector<float> m_dubL;   ///< the dub chain's return, left
+    std::vector<float> m_dubR;   ///< the dub chain's return, right
+    std::vector<float> m_drumL;   ///< the drum bus after its saturation, left
+    std::vector<float> m_drumR;   ///< the drum bus after its saturation, right
+    std::vector<float> m_cloudInL;   ///< the cloud's input, left
+    std::vector<float> m_cloudInR;   ///< the cloud's input, right
+    std::vector<float> m_cloudL;   ///< the cloud's return, left
+    std::vector<float> m_cloudR;   ///< the cloud's return, right
 
     // The stems' own copies of the linear stages (render() with stems), and the gains of the nonlinear ones.
     /** @brief A stem's own copy of the track bus's linear stages. */
     struct StemBus {
-        Svf hp[2][2];          ///< the group high pass: two stages per channel
-        float tilt[2] = {};    ///< the tilt's low pass, per channel
+        Svf m_hp[2][2];          ///< the group high pass: two stages per channel
+        float m_tilt[2] = {};    ///< the tilt's low pass, per channel
     };
-    StemBus stemBus_[kStems];   ///< per stem: its copy of the group high pass and the tilt
-    MultibandDucker::Replica stemPads_[2];   ///< the pads duck's crossovers for the stems: chord, drone
-    MultibandDucker::Replica stemFx_[3];     ///< the fx duck's crossovers for the stems: room, dub, cloud
-    float satGain_[2][kRaster] = {};     ///< per channel and sample of a raster cell: the drum bus saturation's gain
-    float padsGains_[2 * kRaster] = {};  ///< the pads duck's gains: low and mid band, two a sample of a cell
-    float fxGains_[2 * kRaster] = {};    ///< the fx duck's gains: low and mid band, two a sample of a cell
-    float glueGains_[kRaster] = {};      ///< the glue's gain per sample of a cell
-    float trimGains_[kRaster] = {};      ///< the trim per sample of a cell
+    StemBus m_stemBus[STEMS];   ///< per stem: its copy of the group high pass and the tilt
+    MultibandDucker::Replica m_stemPads[2];   ///< the pads duck's crossovers for the stems: chord, drone
+    MultibandDucker::Replica m_stemFx[3];     ///< the fx duck's crossovers for the stems: room, dub, cloud
+    float m_satGain[2][Raster] = {};     ///< per channel and sample of a raster cell: the drum bus saturation's gain
+    float m_padsGains[2 * Raster] = {};  ///< the pads duck's gains: low and mid band, two a sample of a cell
+    float m_fxGains[2 * Raster] = {};    ///< the fx duck's gains: low and mid band, two a sample of a cell
+    float m_glueGains[Raster] = {};      ///< the glue's gain per sample of a cell
+    float m_trimGains[Raster] = {};      ///< the trim per sample of a cell
     /** @brief Clears the stems' copies of the linear stages (a seek, a load). */
     void resetStems();
 };

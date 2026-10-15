@@ -9,10 +9,10 @@
 namespace tot::prof {
 
 /** @brief The stages timed. */
-enum Slot : int { Kick, Rumble, Sub, Kit, Ping, Bass, Acid, Chord, Drone, Texture, Buses, Cloud, Room, Dub, Ducks, TrackBus, Glue,
-                  Mixer, MasterTone, Clipper, Limiter, Count };
+enum SlotE : int { KICK, RUMBLE, SUB, KIT, PING, BASS, ACID, CHORD, DRONE, TEXTURE, BUSES, CLOUD, ROOM, DUB, DUCKS, TRACK_BUS, GLUE,
+                  MIXER, MASTER_TONE, CLIPPER, LIMITER, COUNT };
 /** @brief Their names. */
-inline const char* const kNames[Count] = { "kick", "rumble", "sub", "kit (12 lanes)", "ping", "bass", "acid", "chord", "drone",
+inline const char* const Names[COUNT] = { "kick", "rumble", "sub", "kit (12 lanes)", "ping", "bass", "acid", "chord", "drone",
                                            "texture", "buses and sends", "cloud", "room", "dub chain", "ducks", "track bus",
                                            "glue and trim", "mixer", "master tone", "clipper (4x)", "limiter" };
 
@@ -22,13 +22,13 @@ inline const char* const kNames[Count] = { "kick", "rumble", "sub", "kit (12 lan
 #include <chrono>
 namespace tot::prof {
 /** @brief Nanoseconds spent per slot. */
-inline double ns[Count] = {};
+inline double ns[COUNT] = {};
 /** @brief Adds the time from its construction to its end to a slot. */
 struct Scope {
-    int slot;
-    std::chrono::steady_clock::time_point t0;
-    explicit Scope(int s) : slot(s), t0(std::chrono::steady_clock::now()) {}
-    ~Scope() { ns[slot] += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - t0).count(); }
+    int m_slot;
+    std::chrono::steady_clock::time_point m_t0;
+    explicit Scope(int s) : m_slot(s), m_t0(std::chrono::steady_clock::now()) {}
+    ~Scope() { ns[m_slot] += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - m_t0).count(); }
 };
 } // namespace tot::prof
 #define TOT_PROF_CAT2(a, b) a##b

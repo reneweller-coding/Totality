@@ -29,16 +29,16 @@ private:
     void timerCallback() override;
     /** @brief The onsets of the bar at @p beat: per part, (position in the bar 0..1, velocity). */
     void gather(double beat);
-    TotalityProcessor& proc_;   ///< the processor: what plays, where it is
-    int version_ = -1;   ///< the score playing_ was copied from
-    Playing playing_;   ///< a copy of what plays
+    TotalityProcessor& m_proc;   ///< the processor: what plays, where it is
+    int m_version = -1;   ///< the score m_playing was copied from
+    Playing m_playing;   ///< a copy of what plays
     /** @brief One part's ring: its onsets in the bar. */
     struct Ring {
-        int part;                                       ///< the part (Part)
-        std::vector<std::pair<float, float>> onsets;    ///< position in the bar 0..1 and velocity of each onset
+        int m_part;                                       ///< the part (Part)
+        std::vector<std::pair<float, float>> m_onsets;    ///< position in the bar 0..1 and velocity of each onset
     };
-    std::vector<Ring> rings_;   ///< the rings of the bar shown, in part order
-    int bar_ = -1;   ///< the bar shown, -1 none
-    int deck_ = 0;   ///< the deck it is taken from
-    std::vector<float> kick_;   ///< the kick's onsets in the bar (0..1)
+    std::vector<Ring> m_rings;   ///< the rings of the bar shown, in part order
+    int m_bar = -1;   ///< the bar shown, -1 none
+    int m_deck = 0;   ///< the deck it is taken from
+    std::vector<float> m_kick;   ///< the kick's onsets in the bar (0..1)
 };

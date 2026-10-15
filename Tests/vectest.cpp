@@ -24,7 +24,7 @@ using namespace tottest;
 
 namespace {
 
-constexpr int W = kVecWidth;   ///< the lanes of the vector type compiled here
+constexpr int W = VecWidth;   ///< the lanes of the vector type compiled here
 
 /** @brief A float made from @p i that covers signs, magnitudes and the denormals. */
 float testValue(uint32_t i)
@@ -114,9 +114,9 @@ void testKit()
     sk.prepare(48000.0);
     for (PercKit* k : { &vk, &sk }) {
         k->setTempo(130.0);
-        for (int l = 0; l < kPercLanes; ++l) {
+        for (int l = 0; l < PercLanes; ++l) {
             float v[64];
-            params->readModule(Module::Perc, l, v);
+            params->readModule(ModuleE::PERC, l, v);
             k->update(l, v, 9, 0);
         }
     }
@@ -124,7 +124,7 @@ void testKit()
     float peak = 0.0f;
     for (int block = 0; block < 1500; ++block) {
         if (block % 3 == 0) {
-            const int lane = (block / 3) % kPercLanes;
+            const int lane = (block / 3) % PercLanes;
             const float vel = 0.4f + 0.05f * static_cast<float>(block % 12);
             const double late = static_cast<double>(block % 7) / 7.0;
             vk.trigger(lane, vel, block % 5 == 0 ? 2 : 0, late);
@@ -132,7 +132,7 @@ void testKit()
         }
         vk.processLanes(32);
         sk.processLanesWith<float>(32);
-        for (int i = 0; i < 32 * PercKit::kStride; ++i) {
+        for (int i = 0; i < 32 * PercKit::Stride; ++i) {
             if (!sameBits(vk.laneL()[i], sk.laneL()[i]) || !sameBits(vk.laneR()[i], sk.laneR()[i])) ++bad;
             peak = std::max(peak, std::fabs(sk.laneL()[i]));
             ++samples;
@@ -147,9 +147,9 @@ void testKit()
 /** @brief Runs the tests; the exit code is the number of failures. */
 int main()
 {
-    std::printf("tot_vectest: path %s, %d lanes\n", kVecPathName, W);
+    std::printf("tot_vectest: path %s, %d lanes\n", VecPathName, W);
 #if defined(TOT_EXPECT_PATH)
-    check(std::strcmp(kVecPathName, TOT_EXPECT_PATH) == 0, "built for the expected path", fmt("expected %s, got %s", TOT_EXPECT_PATH, kVecPathName));
+    check(std::strcmp(VecPathName, TOT_EXPECT_PATH) == 0, "built for the expected path", fmt("expected %s, got %s", TOT_EXPECT_PATH, VecPathName));
 #endif
     testOps();
     testHalfband();

@@ -53,8 +53,8 @@
 namespace tot {
 
 /** @brief The three forms (PLAN 7.2). */
-enum class FormType : int { Arc = 0, Peak, Endless, Count };
-extern const char* const kFormNames[];   ///< "Arc", "Peak", "Endless"
+enum class FormTypeE : int { ARC = 0, PEAK, ENDLESS, COUNT };
+extern const char* const FormNames[];   ///< "Arc", "Peak", "Endless"
 
 /**
  * @brief Phase 13: what kind of track it is, beside its style -- a set changes between them as the records of a night do.
@@ -72,8 +72,8 @@ extern const char* const kFormNames[];   ///< "Arc", "Peak", "Endless"
  * Each style draws them with its own weights (Hypnotic: Roller and Bleep; Ostgut: Stab and Tool; Dub: Dub Chord; Raw:
  * Acid and Tribal); compose.archetype fixes one, a set draws each track's so that none follows its own kind.
  */
-enum class Archetype : int { Tool = 0, Roller, Stab, Acid, Bleep, DubChord, Tribal, Count };
-extern const char* const kArchetypeNames[];   ///< "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal"
+enum class ArchetypeE : int { TOOL = 0, ROLLER, STAB, ACID, BLEEP, DUB_CHORD, TRIBAL, COUNT };
+extern const char* const ArchetypeNames[];   ///< "Tool", "Roller", "Stab", "Acid", "Bleep", "Dub Chord", "Tribal"
 
 /**
  * @brief Phase 20 (30.09.2026): how a track begins -- never with the kick alone. Of the 30 reference records two begin
@@ -86,60 +86,60 @@ extern const char* const kArchetypeNames[];   ///< "Tool", "Roller", "Stab", "Ac
  * - **Atmosphere**: the texture and the perc from bar 1, the hats on the 8- and 16-bar lines, the kick on bar 9 or 17.
  * Each style draws them with its own weights; the Endless has none (everything from its first bar).
  */
-enum class Opening : int { Drums = 0, PercussionFirst, Atmosphere, Count };
-extern const char* const kOpeningNames[];   ///< "drums", "percussion first", "atmosphere first"
+enum class OpeningE : int { DRUMS = 0, PERCUSSION_FIRST, ATMOSPHERE, COUNT };
+extern const char* const OpeningNames[];   ///< "drums", "percussion first", "atmosphere first"
 
 /** @brief What a set asks of a track; every field left at its default is the composer's (or the knobs') to decide. */
 struct TrackRequest {
-    const StyleProfile* profile = nullptr;   ///< the profile (null: profileOf(the knobs))
-    FormType form = FormType::Count;         ///< Count: compose.form, else drawn from the profile
-    float bpm = 0.0f;                        ///< 0: drawn (compose.auto) or compose.bpm
-    int key = -1;                            ///< -1: drawn (compose.auto) or compose.key
-    int scale = -1;                          ///< -1: drawn or compose.scale
-    int lowOwner = -1;                       ///< -1: drawn or compose.low_owner (0 rumble, 1 sub)
-    int blocks = 0;                          ///< 0: from compose.minutes
-    float energy = -1.0f;                    ///< the set's energy here, 0..1: towards the Peak and a higher density
-    bool mixable = false;                    ///< a set's track: never Endless
+    const StyleProfile* m_profile = nullptr;   ///< the profile (null: profileOf(the knobs))
+    FormTypeE m_form = FormTypeE::COUNT;         ///< Count: compose.form, else drawn from the profile
+    float m_bpm = 0.0f;                        ///< 0: drawn (compose.auto) or compose.bpm
+    int m_key = -1;                            ///< -1: drawn (compose.auto) or compose.key
+    int m_scale = -1;                          ///< -1: drawn or compose.scale
+    int m_lowOwner = -1;                       ///< -1: drawn or compose.low_owner (0 rumble, 1 sub)
+    int m_blocks = 0;                          ///< 0: from compose.minutes
+    float m_energy = -1.0f;                    ///< the set's energy here, 0..1: towards the Peak and a higher density
+    bool m_mixable = false;                    ///< a set's track: never Endless
     /** Phase 11: a set's first track -- nothing under its intro -- brings its hats, its rolling hat and its perc at bars
      *  3, 5 and 9 instead of 9, 17 and 25, and opens the hats' bus over eight bars: the set is under way in 16 bars. */
-    bool quickStart = false;
-    int archetype = -1;                      ///< Phase 13: -1 drawn (compose.archetype, else by the style), else an Archetype
-    int opening = -1;                        ///< Phase 20: -1 drawn by the style, else an Opening
-    const Preferences* prefs = nullptr;      ///< Phase 17: the ratings' weights (the player's, when compose.use_ratings), or null
+    bool m_quickStart = false;
+    int m_archetype = -1;                      ///< Phase 13: -1 drawn (compose.archetype, else by the style), else an Archetype
+    int m_opening = -1;                        ///< Phase 20: -1 drawn by the style, else an Opening
+    const Preferences* m_prefs = nullptr;      ///< Phase 17: the ratings' weights (the player's, when compose.use_ratings), or null
 };
 
 /** @brief What a track tells the set, the cues and the displays. */
 struct TrackInfo {
-    FormType form = FormType::Arc;   ///< the track's form
-    std::string style;           ///< the profile's name
-    float bpm = 130.0f;   ///< the tempo
-    int key = 9;   ///< the key's root, 0 = C
-    int scale = 0;   ///< the scale (compose.scale)
-    bool monotonic = false;      ///< no pitched layer
-    bool subOwns = false;        ///< the sub bass owns the low end
-    int bars = 0;                ///< length
-    int introBars = 0;           ///< the intro's length (0 for the Endless)
-    int outroBar = 0;            ///< where the outro begins (bars for the Endless)
-    int bassBar = 0;             ///< where the body begins: the bass's entry, a set's bass swap
-    std::vector<int> reductions; ///< the first bar of each kick-out
-    std::vector<int> returns;    ///< the bar of each return
-    int peakBar = 0;             ///< where the loudest part begins (the LevelMark)
-    std::string camelot;         ///< "8A", or "monotonic"
-    std::vector<int> layers;     ///< the pool, in order of entry (LayerId)
-    float similarity = 0.0f;     ///< the corridor over the body: bar similarity
-    float micro = 0.0f;          ///< micro-change, dB
-    float density = 0.0f;        ///< onsets per bar
-    int archetype = 0;           ///< Phase 13: its Archetype
-    int opening = 0;             ///< Phase 20: its Opening
-    int kickBar = 0;             ///< Phase 20: where its kick enters (0: with its first bar)
-    int kickLeaves = 0;          ///< Phase 20: how many bars before the end its kick leaves (0: it plays to the end)
-    std::vector<std::string> groups;   ///< Phase 17: the groups of the presets it plays (what a rating remembers)
-    int figure = -1;             ///< Phase 8: the signature voice (LayerId), -1: none
-    int figureBar = -1;          ///< where it enters
-    int figureBars = 1;          ///< its motif's length in bars
-    std::vector<int> landings;   ///< Phase 8: the bars where a wave lands
+    FormTypeE m_form = FormTypeE::ARC;   ///< the track's form
+    std::string m_style;           ///< the profile's name
+    float m_bpm = 130.0f;   ///< the tempo
+    int m_key = 9;   ///< the key's root, 0 = C
+    int m_scale = 0;   ///< the scale (compose.scale)
+    bool m_monotonic = false;      ///< no pitched layer
+    bool m_subOwns = false;        ///< the sub bass owns the low end
+    int m_bars = 0;                ///< length
+    int m_introBars = 0;           ///< the intro's length (0 for the Endless)
+    int m_outroBar = 0;            ///< where the outro begins (bars for the Endless)
+    int m_bassBar = 0;             ///< where the body begins: the bass's entry, a set's bass swap
+    std::vector<int> m_reductions; ///< the first bar of each kick-out
+    std::vector<int> m_returns;    ///< the bar of each return
+    int m_peakBar = 0;             ///< where the loudest part begins (the LevelMark)
+    std::string m_camelot;         ///< "8A", or "monotonic"
+    std::vector<int> m_layers;     ///< the pool, in order of entry (LayerId)
+    float m_similarity = 0.0f;     ///< the corridor over the body: bar similarity
+    float m_micro = 0.0f;          ///< micro-change, dB
+    float m_density = 0.0f;        ///< onsets per bar
+    int m_archetype = 0;           ///< Phase 13: its Archetype
+    int m_opening = 0;             ///< Phase 20: its Opening
+    int m_kickBar = 0;             ///< Phase 20: where its kick enters (0: with its first bar)
+    int m_kickLeaves = 0;          ///< Phase 20: how many bars before the end its kick leaves (0: it plays to the end)
+    std::vector<std::string> m_groups;   ///< Phase 17: the groups of the presets it plays (what a rating remembers)
+    int m_figure = -1;             ///< Phase 8: the signature voice (LayerId), -1: none
+    int m_figureBar = -1;          ///< where it enters
+    int m_figureBars = 1;          ///< its motif's length in bars
+    std::vector<int> m_landings;   ///< Phase 8: the bars where a wave lands
     /** @brief Phase 8: what moves between the operations -- the waves' downs and breaths -- as (bar, text). */
-    std::vector<std::pair<int, std::string>> moments;
+    std::vector<std::pair<int, std::string>> m_moments;
 };
 
 /**
@@ -155,13 +155,13 @@ Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req =
                    const std::string& unit = std::string(), TrackInfo* info = nullptr);
 
 /** @brief The names of a track's units, in stream order. */
-extern const char* const kUnitNames[9];
+extern const char* const UnitNames[9];
 
 /**
  * @brief Phase 13: an archetype for a track of profile @p prof, drawn with @p u (0..1) by the style's weights; never
  *        @p exclude (a set's last track's kind, -1: none).
  */
-Archetype pickArchetype(const StyleProfile& prof, float u, int exclude = -1, const Preferences* prefs = nullptr);
+ArchetypeE pickArchetype(const StyleProfile& prof, float u, int exclude = -1, const Preferences* prefs = nullptr);
 
 /** @brief The Camelot label of a minor key on pitch class @p key ("8A" for A). */
 std::string camelotOf(int key);

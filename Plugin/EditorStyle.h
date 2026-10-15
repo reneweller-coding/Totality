@@ -22,8 +22,8 @@ public:
 private:
     /** @brief Follows the style chosen. */
     void timerCallback() override;
-    TotalityProcessor& proc_;   ///< the processor
-    ScrollingPage custom_;   ///< the custom style's knobs
-    juce::TextButton take_{ "Take the profile's numbers" };   ///< copies the profile's numbers into the custom style
-    juce::String shown_;   ///< the profile's numbers as last drawn
+    TotalityProcessor& m_proc;   ///< the processor
+    ScrollingPage m_custom;   ///< the custom style's knobs
+    juce::TextButton m_take{ "Take the profile's numbers" };   ///< copies the profile's numbers into the custom style
+    juce::String m_shown;   ///< the profile's numbers as last drawn
 };

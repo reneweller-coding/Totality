@@ -39,14 +39,14 @@
 class PresetBar final : public juce::Component, private juce::Timer {
 public:
     /** @brief The presets of instance @p instance of module @p m, chosen through @p p. */
-    PresetBar(TotalityProcessor& p, tot::Module m, int instance);
+    PresetBar(TotalityProcessor& p, tot::ModuleE m, int instance);
     /** @brief The step buttons either side of the menu, the browser, the disk, the composed preset beside them. */
     void resized() override;
     /** @brief Nothing of its own: its children draw. */
     void paint(juce::Graphics& g) override;
-    /** @brief Shows menu item @p menuId as chosen (a factory preset's index + 1, or kYours + one of the player's). */
+    /** @brief Shows menu item @p menuId as chosen (a factory preset's index + 1, or Yours + one of the player's). */
     void chosen(int menuId);
-    static constexpr int kYours = 10000;   ///< the menu ids of the player's own presets start above this
+    static constexpr int Yours = 10000;   ///< the menu ids of the player's own presets start above this
 
 private:
     /** @brief Follows the composer's choice while no other preset was chosen by hand; the star. */
@@ -57,22 +57,22 @@ private:
     void fillMenu();
     /** @brief Asks for a name and saves the knobs as one of the player's presets. */
     void saveAs();
-    TotalityProcessor& proc_;   ///< the processor: its presets and its undo
-    tot::Module module_;   ///< the synth module
-    int instance_;   ///< its instance
-    int shown_ = -2;   ///< the composer's preset the label shows
-    int loaded_ = -1;   ///< the menu id of the preset the knobs came from (-1: none known)
-    std::vector<std::pair<int, float>> loadedKnobs_;   ///< the knobs that preset put (store id, real value): the star compares
-    juce::ComboBox menu_;   ///< the presets in their groups
-    juce::TextButton prev_{ "<" };   ///< the preset before
-    juce::TextButton next_{ ">" };   ///< the preset after
+    TotalityProcessor& m_proc;   ///< the processor: its presets and its undo
+    tot::ModuleE m_module;   ///< the synth module
+    int m_instance;   ///< its instance
+    int m_shown = -2;   ///< the composer's preset the label shows
+    int m_loaded = -1;   ///< the menu id of the preset the knobs came from (-1: none known)
+    std::vector<std::pair<int, float>> m_loadedKnobs;   ///< the knobs that preset put (store id, real value): the star compares
+    juce::ComboBox m_menu;   ///< the presets in their groups
+    juce::TextButton m_prev{ "<" };   ///< the preset before
+    juce::TextButton m_next{ ">" };   ///< the preset after
     /** @brief Opens the preset browser on this synth's presets. */
-    frame::IconButton browse_{ frame::IconButton::Icon::Search, "Browse the presets: by name, group, favourites, recently played; hold a row's triangle to listen" };
+    frame::IconButton m_browse{ frame::IconButton::IconE::SEARCH, "Browse the presets: by name, group, favourites, recently played; hold a row's triangle to listen" };
     /** @brief Saves the sound as a preset of the player's own. */
-    frame::IconButton save_{ frame::IconButton::Icon::Save, "Save this sound as a preset of your own (Documents/Totality/Presets)" };
-    juce::Label star_;   ///< "*" while the knobs have moved from the preset
-    juce::Label composed_;   ///< the preset the composer chose
-    std::unique_ptr<juce::AlertWindow> ask_;   ///< the name dialog while it is open
+    frame::IconButton m_save{ frame::IconButton::IconE::SAVE, "Save this sound as a preset of your own (Documents/Totality/Presets)" };
+    juce::Label m_star;   ///< "*" while the knobs have moved from the preset
+    juce::Label m_composed;   ///< the preset the composer chose
+    std::unique_ptr<juce::AlertWindow> m_ask;   ///< the name dialog while it is open
 };
 
 /**
@@ -88,18 +88,18 @@ public:
      * @param instances how many instances the modules have; above one, a selector picks the instance
      * @param names     the instances' names for the selector (empty: 1, 2, 3 ...)
      */
-    ParamPage(TotalityProcessor& p, std::vector<std::pair<tot::Module, int>> groups, int instances = 1,
+    ParamPage(TotalityProcessor& p, std::vector<std::pair<tot::ModuleE, int>> groups, int instances = 1,
               std::vector<juce::String> names = {});
     void resized() override;                  ///< lays the groups out, flowing across the page
     void paint(juce::Graphics& g) override;   ///< the group boxes and their titles
     /** @brief The height the page needs at @p width (for a page in a viewport). */
     int heightFor(int width) const;
     /** @brief The height the page has in its window (the scrolling page around it says so before heightFor). */
-    void setAvailableHeight(int h) { available_ = h; }
+    void setAvailableHeight(int h) { m_available = h; }
     /** @brief The page's parameters in words, group by group (the help's topic for the tab). */
     juce::String describe() const;
     /** @brief The instance shown (the lane of the kit), 0 for a page of one. */
-    int instance() const { return instances_ > 1 ? instance_.getSelectedId() - 1 : 0; }
+    int instance() const { return m_instances > 1 ? m_instance.getSelectedId() - 1 : 0; }
     /** @brief Shows the section holding @p part (the search found it there). */
     void reveal(juce::Component& part) override;
     /** @brief Shows the instance whose controls hold store id @p id (a lane of the kit); false when none of them does. */
@@ -108,51 +108,51 @@ public:
 private:
     /** @brief Makes the controls of every group (once, in the constructor). */
     void build();
-    TotalityProcessor& proc_;   ///< the processor: the parameters, the undo, MIDI learn
-    frame::ControlActions actions_;               ///< the controls' right-click menu
-    frame::LiveRings live_;                       ///< where each knob's value plays
-    std::vector<std::pair<tot::Module, int>> groups_;   ///< the module instances shown, in order
-    int instances_;   ///< how many instances the modules have
-    juce::ComboBox instance_;   ///< the instance selector (above one instance)
-    juce::OwnedArray<juce::Component> controls_;   ///< the knobs, menus, switches and preset bars
-    juce::OwnedArray<juce::Label> labels_;   ///< the names above them
+    TotalityProcessor& m_proc;   ///< the processor: the parameters, the undo, MIDI learn
+    frame::ControlActions m_actions;               ///< the controls' right-click menu
+    frame::LiveRings m_live;                       ///< where each knob's value plays
+    std::vector<std::pair<tot::ModuleE, int>> m_groups;   ///< the module instances shown, in order
+    int m_instances;   ///< how many instances the modules have
+    juce::ComboBox m_instance;   ///< the instance selector (above one instance)
+    juce::OwnedArray<juce::Component> m_controls;   ///< the knobs, menus, switches and preset bars
+    juce::OwnedArray<juce::Label> m_labels;   ///< the names above them
     /** @brief A control of the page: its name above it, large or not (EditorTheme.h, layoutOf). */
     struct Cell {
-        int control = -1;          ///< index into controls_ and labels_
-        bool big = false;          ///< a large encoder
-        bool narrow = false;       ///< a narrow menu
-        int kind = 0;              ///< 0 a knob, 1 a menu, 2 a switch, 4 a preset bar
-        juce::Rectangle<int> bounds;   ///< where it sits on the page
+        int m_control = -1;          ///< index into m_controls and m_labels
+        bool m_big = false;          ///< a large encoder
+        bool m_narrow = false;       ///< a narrow menu
+        int m_kind = 0;              ///< 0 a knob, 1 a menu, 2 a switch, 4 a preset bar
+        juce::Rectangle<int> m_bounds;   ///< where it sits on the page
     };
     /** @brief A titled group of cells, drawn as a box. */
     struct Box {
-        juce::String title;   ///< the group's title
-        juce::Colour colour;   ///< the module family's colour
-        std::vector<Cell> cells;   ///< its controls
-        juce::Rectangle<int> bounds;   ///< where the box sits on the page
+        juce::String m_title;   ///< the group's title
+        juce::Colour m_colour;   ///< the module family's colour
+        std::vector<Cell> m_cells;   ///< its controls
+        juce::Rectangle<int> m_bounds;   ///< where the box sits on the page
     };
-    std::vector<Box> boxes_;   ///< the groups, in order
+    std::vector<Box> m_boxes;   ///< the groups, in order
     /**
      * @brief A page taller than its window shows its groups in sections, one at a time (01.10.2026, frame::planSections):
      *        the sound and the modulation apart, each cut where the window ends.
      */
-    frame::SectionSwitch section_{ totui::skin() };
-    bool split_ = false;                          ///< more than one section
-    std::vector<int> sectionOf_;                  ///< per box its section
-    const std::vector<int>* measuring_ = nullptr; ///< while planning: the boxes being measured
-    int available_ = 0;   ///< the height of the window (setAvailableHeight)
-    int plannedWidth_ = -1;   ///< the width the sections were planned for, -1 never
-    int plannedAvailable_ = -1;   ///< the height the sections were planned for, -1 never
+    frame::SectionSwitch m_section{ totui::skin() };
+    bool m_split = false;                          ///< more than one section
+    std::vector<int> m_sectionOf;                  ///< per box its section
+    const std::vector<int>* m_measuring = nullptr; ///< while planning: the boxes being measured
+    int m_available = 0;   ///< the height of the window (setAvailableHeight)
+    int m_plannedWidth = -1;   ///< the width the sections were planned for, -1 never
+    int m_plannedAvailable = -1;   ///< the height the sections were planned for, -1 never
     bool shown(size_t box) const;                 ///< the box is in the section shown (or being measured)
-    void plan(int width);                         ///< the sections of a page @p width wide in available_
+    void plan(int width);                         ///< the sections of a page @p width wide in m_available
     void applySection();                          ///< the controls of the section shown, the others hidden
     void refit();                                 ///< laid out again, and the scrolling page around it measures again
     int top() const;   ///< height of the instance bar
     /** @brief Places the boxes and their cells in @p area (@p apply: move the components too); returns the height used. */
     int layoutBoxes(juce::Rectangle<int> area, bool apply);
-    std::vector<std::unique_ptr<juce::SliderParameterAttachment>> sliders_;   ///< the knobs on their parameters
-    std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> combos_;   ///< the menus on their parameters
-    std::vector<std::unique_ptr<juce::ButtonParameterAttachment>> buttons_;   ///< the switches on their parameters
+    std::vector<std::unique_ptr<juce::SliderParameterAttachment>> m_sliders;   ///< the knobs on their parameters
+    std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> m_combos;   ///< the menus on their parameters
+    std::vector<std::unique_ptr<juce::ButtonParameterAttachment>> m_buttons;   ///< the switches on their parameters
 };
 
 /** @brief A component in a viewport: it scrolls when it needs more height than the tab gives. */
@@ -160,10 +160,10 @@ class ScrollingPage final : public juce::Component {
 public:
     explicit ScrollingPage(std::unique_ptr<ParamPage> page);   ///< takes the page over
     void resized() override;                                   ///< the page as wide as the view, as tall as it needs
-    const ParamPage& page() const { return *page_; }           ///< the page (the help describes it)
+    const ParamPage& page() const { return *m_page; }           ///< the page (the help describes it)
 private:
-    juce::Viewport view_;   ///< scrolls the page
-    std::unique_ptr<ParamPage> page_;   ///< the page
+    juce::Viewport m_view;   ///< scrolls the page
+    std::unique_ptr<ParamPage> m_page;   ///< the page
 };
 
 /**
@@ -188,20 +188,20 @@ public:
     /** @brief The beats shown, @p from to @p to; false while the view shows the whole length. */
     bool zoomed(double& from, double& to) const;
     /** @brief Shows the beats @p from to @p to (once a score is there; the screenshots' TOT_SHOT_ZOOM). */
-    void zoomTo(double from, double to) { wanted_ = { from, to }; }
+    void zoomTo(double from, double to) { m_wanted = { from, to }; }
     /** @brief Another view whose zoomed window this one marks (the strip on top marks the Arrange tab's). */
-    void setDetail(const ArrangeView* detail) { detail_ = detail; }
-    static constexpr int kLanes = 6;                            ///< kick, hats, perc, ping, bass (sub, bass, 303), pads
-    static const char* const kLaneNames[kLanes];   ///< the lanes' names, top to bottom
+    void setDetail(const ArrangeView* detail) { m_detail = detail; }
+    static constexpr int Lanes = 6;                            ///< kick, hats, perc, ping, bass (sub, bass, 303), pads
+    static const char* const LaneNames[Lanes];   ///< the lanes' names, top to bottom
 
 private:
     /** @brief A note as the matrix draws it: where it begins and ends (beats), how loud. */
     struct Hit {
-        double from;      ///< where it begins, beats
-        double to;        ///< where it ends, beats
-        float velocity;   ///< how loud, 0..1
+        double m_from;      ///< where it begins, beats
+        double m_to;        ///< where it ends, beats
+        float m_velocity;   ///< how loud, 0..1
     };
-    static constexpr double kNarrowest = 16.0;   ///< the least the view shows, in beats (four bars)
+    static constexpr double Narrowest = 16.0;   ///< the least the view shows, in beats (four bars)
     void timerCallback() override;               ///< pages on with the playhead, repaints while it is shown
     void rebuild();                              ///< the hits of a new score
     void fill(double from, double to, int columns);   ///< the matrix of what is shown, a column per pixel
@@ -209,28 +209,28 @@ private:
     void zoomAround(float x, double factor);     ///< the window times @p factor, the beat under @p x staying put
     void window(double& from, double& to) const; ///< the beats shown
     double beatAt(float x) const;                ///< the beat under @p x
-    TotalityProcessor& proc_;   ///< the processor: what plays, where it is
-    bool detailed_;   ///< the Arrange tab's view: the operations' names, a larger matrix
-    int version_ = -1;                    ///< the score the hits were taken from
-    Playing playing_;                     ///< a copy of what plays
-    std::vector<Hit> hits_[kLanes];       ///< per lane, in the order they begin
-    double longest_[kLanes] = {};         ///< a lane's longest hit (how far before a window its hits begin)
-    float typical_[kLanes] = {};          ///< a lane's cover per beat where it plays: what lights it fully
-    std::vector<float> cells_;            ///< kLanes x columns_, 0..1, for cellsFrom_ .. cellsTo_
-    double cellsFrom_ = 0.0;   ///< the first beat cells_ was filled for
-    double cellsTo_ = 0.0;   ///< the last beat cells_ was filled for
-    int columns_ = 0;   ///< how many columns cells_ has
-    int cellsVersion_ = -1;   ///< the score cells_ was filled from, -1 none
-    double from_ = 0.0;   ///< the first beat of the window
-    double span_ = 0.0;   ///< its length in beats (0: the whole length)
-    double lastPos_ = -1.0;   ///< the playhead at the last tick
-    double lastFrom_ = 0.0;   ///< the window's first beat at the last tick
-    double lastTo_ = 0.0;   ///< the window's last beat at the last tick
-    float downX_ = 0.0f;                  ///< where a press began
-    double downFrom_ = 0.0;               ///< the window's beginning then
-    bool dragged_ = false;   ///< the press has moved the view: no jump on release
-    const ArrangeView* detail_ = nullptr;   ///< the view whose window this one marks, or null
-    std::pair<double, double> wanted_{ 0.0, 0.0 };   ///< zoomTo's window, until a score takes it
+    TotalityProcessor& m_proc;   ///< the processor: what plays, where it is
+    bool m_detailed;   ///< the Arrange tab's view: the operations' names, a larger matrix
+    int m_version = -1;                    ///< the score the hits were taken from
+    Playing m_playing;                     ///< a copy of what plays
+    std::vector<Hit> m_hits[Lanes];       ///< per lane, in the order they begin
+    double m_longest[Lanes] = {};         ///< a lane's longest hit (how far before a window its hits begin)
+    float m_typical[Lanes] = {};          ///< a lane's cover per beat where it plays: what lights it fully
+    std::vector<float> m_cells;            ///< Lanes x m_columns, 0..1, for m_cellsFrom .. m_cellsTo
+    double m_cellsFrom = 0.0;   ///< the first beat m_cells was filled for
+    double m_cellsTo = 0.0;   ///< the last beat m_cells was filled for
+    int m_columns = 0;   ///< how many columns m_cells has
+    int m_cellsVersion = -1;   ///< the score m_cells was filled from, -1 none
+    double m_from = 0.0;   ///< the first beat of the window
+    double m_span = 0.0;   ///< its length in beats (0: the whole length)
+    double m_lastPos = -1.0;   ///< the playhead at the last tick
+    double m_lastFrom = 0.0;   ///< the window's first beat at the last tick
+    double m_lastTo = 0.0;   ///< the window's last beat at the last tick
+    float m_downX = 0.0f;                  ///< where a press began
+    double m_downFrom = 0.0;               ///< the window's beginning then
+    bool m_dragged = false;   ///< the press has moved the view: no jump on release
+    const ArrangeView* m_detail = nullptr;   ///< the view whose window this one marks, or null
+    std::pair<double, double> m_wanted{ 0.0, 0.0 };   ///< zoomTo's window, until a score takes it
 };
 
 /**
@@ -245,19 +245,19 @@ public:
     void resized() override;
     /** @brief The background and the headings. */
     void paint(juce::Graphics& g) override;
-    ArrangeView& view() { return view_; }   ///< the large view (the strip on top marks its window)
+    ArrangeView& view() { return m_view; }   ///< the large view (the strip on top marks its window)
 
 private:
     /** @brief Shows the track under the playhead and its rerolls. */
     void timerCallback() override;
-    TotalityProcessor& proc_;   ///< the processor: what plays, the rerolls
-    ArrangeView view_;   ///< the arrangement, large
-    juce::Label which_;   ///< which track is under the playhead
-    juce::Label sounds_;   ///< its sounds (the presets and the kit)
-    juce::OwnedArray<juce::TextButton> rerolls_;   ///< a reroll per unit of the track
-    juce::TextButton track_{ "reroll the whole track" };   ///< rerolls the whole track
-    juce::TextButton set_{ "reroll the mix's plan" };   ///< rerolls the mix's plan
-    juce::String prefix_;   ///< "track3." in a set, empty for a track
+    TotalityProcessor& m_proc;   ///< the processor: what plays, the rerolls
+    ArrangeView m_view;   ///< the arrangement, large
+    juce::Label m_which;   ///< which track is under the playhead
+    juce::Label m_sounds;   ///< its sounds (the presets and the kit)
+    juce::OwnedArray<juce::TextButton> m_rerolls;   ///< a reroll per unit of the track
+    juce::TextButton m_track{ "reroll the whole track" };   ///< rerolls the whole track
+    juce::TextButton m_set{ "reroll the mix's plan" };   ///< rerolls the mix's plan
+    juce::String m_prefix;   ///< "track3." in a set, empty for a track
 };
 
 /** @brief The Export tab (PLAN 10.1): the files, what each holds, the OSC cues' settings. */
@@ -276,16 +276,16 @@ public:
 private:
     /** @brief Shows the export's progress and result. */
     void timerCallback() override;
-    TotalityProcessor& proc_;   ///< the processor: the export, the set file
-    juce::TextButton wav_{ "WAV + MIDI + cues" };   ///< exports the WAV, the MIDI and the cues
-    juce::TextButton stems_{ "... with stems" };   ///< ... and the stems
-    juce::TextButton loops_{ "... with DJ loops" };   ///< ... and the DJ loops
-    juce::TextButton all_{ "... with both" };   ///< ... and both
-    frame::IconButton save_{ frame::IconButton::Icon::Save, "Save the set (Ctrl+S)" };   ///< saves the set (Ctrl+S): a disk
-    frame::IconButton load_{ frame::IconButton::Icon::Open, "Load a set (Ctrl+O)" };   ///< loads a set (Ctrl+O): a folder
-    juce::Label status_;   ///< the export's progress and result
-    std::unique_ptr<ParamPage> cue_;   ///< the OSC cues' settings
-    std::unique_ptr<juce::FileChooser> chooser_;   ///< the file dialog while it is open
+    TotalityProcessor& m_proc;   ///< the processor: the export, the set file
+    juce::TextButton m_wav{ "WAV + MIDI + cues" };   ///< exports the WAV, the MIDI and the cues
+    juce::TextButton m_stems{ "... with stems" };   ///< ... and the stems
+    juce::TextButton m_loops{ "... with DJ loops" };   ///< ... and the DJ loops
+    juce::TextButton m_all{ "... with both" };   ///< ... and both
+    frame::IconButton m_save{ frame::IconButton::IconE::SAVE, "Save the set (Ctrl+S)" };   ///< saves the set (Ctrl+S): a disk
+    frame::IconButton m_load{ frame::IconButton::IconE::OPEN, "Load a set (Ctrl+O)" };   ///< loads a set (Ctrl+O): a folder
+    juce::Label m_status;   ///< the export's progress and result
+    std::unique_ptr<ParamPage> m_cue;   ///< the OSC cues' settings
+    std::unique_ptr<juce::FileChooser> m_chooser;   ///< the file dialog while it is open
 };
 
 /**
@@ -294,12 +294,12 @@ private:
  */
 class EditorBody final : public juce::Component {
 public:
-    std::function<void(juce::Graphics&)> painter;   ///< draws the background and the logo
-    std::function<void()> onResize;                 ///< lays the controls out
+    std::function<void(juce::Graphics&)> m_painter;   ///< draws the background and the logo
+    std::function<void()> m_onResize;                 ///< lays the controls out
     /** @brief Draws through painter. */
-    void paint(juce::Graphics& g) override { if (painter) painter(g); }
+    void paint(juce::Graphics& g) override { if (m_painter) m_painter(g); }
     /** @brief Lays out through onResize. */
-    void resized() override { if (onResize) onResize(); }
+    void resized() override { if (m_onResize) m_onResize(); }
 };
 
 /** @brief The logo (Deploy/make_icon.py, drawn as vectors): the moon's dark disc, its rim, the corona in streamers. */
@@ -316,9 +316,9 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;   ///< the frame's keys (frame::handleKey)
     /**
      * @brief Opens the preset browser on instance @p instance of synth @p m; @p chosen hears the menu id taken (a factory
-     *        preset's index + 1, or PresetBar::kYours + one of the player's).
+     *        preset's index + 1, or PresetBar::Yours + one of the player's).
      */
-    void browsePresets(tot::Module m, int instance, std::function<void(int)> chosen);
+    void browsePresets(tot::ModuleE m, int instance, std::function<void(int)> chosen);
 
 private:
     /** @brief Follows the processor: the status, the play button, the rerolls, the update link; the screenshots. */
@@ -339,57 +339,57 @@ private:
     bool describeControl(int id, juce::String& name, juce::String& text);
     /** @brief Shows the control of store id @p id (its tab, sub-tab, section, lane) and lights it; false when no page has it. */
     bool revealId(int id);
-    TotalityProcessor& proc_;   ///< the processor
-    frame::LookAndFeel lnf_{ totui::skin() };          ///< first, so it outlives every component that uses it
-    juce::TooltipWindow tooltips_{ nullptr, 700 };   ///< the tooltips, after 700 ms
-    EditorBody body_;   ///< everything, at the design size
-    frame::Backdrop backdrop_;   ///< the picture behind the panel
-    int headerBottom_ = 0;                             ///< where the header ends (the backdrop is strong above)
-    juce::SharedResourcePointer<UpdateCheck> updates_;   ///< the update check, shared by every editor
-    juce::HyperlinkButton update_;   ///< the link to a newer release
-    juce::Label status_;   ///< what plays, the status line
-    juce::Label rerolls_;   ///< what was rerolled or locked
-    juce::Component title_;                            ///< the name's place (drawn by the body)
-    juce::Rectangle<float> logo_;   ///< where the logo is drawn
-    frame::IconButton undo_{ frame::IconButton::Icon::Undo, "Undo (Ctrl+Z)" };   ///< undo (Ctrl+Z)
-    frame::IconButton redo_{ frame::IconButton::Icon::Redo, "Redo (Ctrl+Y)" };   ///< redo (Ctrl+Y)
-    frame::IconButton help_{ frame::IconButton::Icon::Help, "Help (F1)" };   ///< the help (F1)
-    frame::IconButton settings_{ frame::IconButton::Icon::Settings, "Settings" };   ///< the settings menu
+    TotalityProcessor& m_proc;   ///< the processor
+    frame::LookAndFeel m_lnf{ totui::skin() };          ///< first, so it outlives every component that uses it
+    juce::TooltipWindow m_tooltips{ nullptr, 700 };   ///< the tooltips, after 700 ms
+    EditorBody m_body;   ///< everything, at the design size
+    frame::Backdrop m_backdrop;   ///< the picture behind the panel
+    int m_headerBottom = 0;                             ///< where the header ends (the backdrop is strong above)
+    juce::SharedResourcePointer<UpdateCheck> m_updates;   ///< the update check, shared by every editor
+    juce::HyperlinkButton m_update;   ///< the link to a newer release
+    juce::Label m_status;   ///< what plays, the status line
+    juce::Label m_rerolls;   ///< what was rerolled or locked
+    juce::Component m_title;                            ///< the name's place (drawn by the body)
+    juce::Rectangle<float> m_logo;   ///< where the logo is drawn
+    frame::IconButton m_undo{ frame::IconButton::IconE::UNDO, "Undo (Ctrl+Z)" };   ///< undo (Ctrl+Z)
+    frame::IconButton m_redo{ frame::IconButton::IconE::REDO, "Redo (Ctrl+Y)" };   ///< redo (Ctrl+Y)
+    frame::IconButton m_help{ frame::IconButton::IconE::HELP, "Help (F1)" };   ///< the help (F1)
+    frame::IconButton m_settings{ frame::IconButton::IconE::SETTINGS, "Settings" };   ///< the settings menu
     /** @brief shown while a headset sends its hands */
-    frame::IconButton headsetIcon_{ frame::IconButton::Icon::Headset, "A headset sends its hands: the Perform page shows them" };
-    std::unique_ptr<frame::HelpView> helpView_;   ///< the help, while it is open
-    juce::ComboBox style_;   ///< compose.style
-    juce::ComboBox key_;   ///< compose.key
-    juce::ComboBox scale_;   ///< compose.scale
+    frame::IconButton m_headsetIcon{ frame::IconButton::IconE::HEADSET, "A headset sends its hands: the Perform page shows them" };
+    std::unique_ptr<frame::HelpView> m_helpView;   ///< the help, while it is open
+    juce::ComboBox m_style;   ///< compose.style
+    juce::ComboBox m_key;   ///< compose.key
+    juce::ComboBox m_scale;   ///< compose.scale
     /** One track or a DJ mix (set.minutes 0 or not, TotalityProcessor::chooseMix), and the length of what is chosen. */
-    juce::TextButton trackMode_{ "Track" };
-    juce::TextButton mixMode_{ "DJ mix" };   ///< a DJ mix (set.minutes)
-    juce::Slider length_;   ///< the length: a track's minutes or a mix's
-    juce::Label lengthLabel_;   ///< the length's name
-    bool lengthOfMix_ = false;                         ///< the slider shows set.minutes (else compose.minutes)
-    bool syncing_ = false;                             ///< the slider is set from its parameter, not by a hand
-    juce::TextButton compose_{ "Compose track" };   ///< composes a track or a mix
-    frame::IconButton seed_{ frame::IconButton::Icon::Dice, "New seed" };   ///< a new seed, then composes: a die
-    frame::IconButton play_{ frame::IconButton::Icon::Play, "Play (Space)" };   ///< play and stop: a triangle, a square
-    frame::IconButton mute_{ frame::IconButton::Icon::Speaker, "Silence the output" };   ///< mutes the output: a speaker, crossed out when muted
+    juce::TextButton m_trackMode{ "Track" };
+    juce::TextButton m_mixMode{ "DJ mix" };   ///< a DJ mix (set.minutes)
+    juce::Slider m_length;   ///< the length: a track's minutes or a mix's
+    juce::Label m_lengthLabel;   ///< the length's name
+    bool m_lengthOfMix = false;                         ///< the slider shows set.minutes (else compose.minutes)
+    bool m_syncing = false;                             ///< the slider is set from its parameter, not by a hand
+    juce::TextButton m_compose{ "Compose track" };   ///< composes a track or a mix
+    frame::IconButton m_seed{ frame::IconButton::IconE::DICE, "New seed" };   ///< a new seed, then composes: a die
+    frame::IconButton m_play{ frame::IconButton::IconE::PLAY, "Play (Space)" };   ///< play and stop: a triangle, a square
+    frame::IconButton m_mute{ frame::IconButton::IconE::SPEAKER, "Silence the output" };   ///< mutes the output: a speaker, crossed out when muted
     /** Phase 17: the ratings, as thumbs since the frame (01.10.2026). */
-    frame::IconButton like_{ frame::IconButton::Icon::ThumbUp, "I like this track: its kind and its sounds come more often (with Favor Ratings)" };
+    frame::IconButton m_like{ frame::IconButton::IconE::THUMB_UP, "I like this track: its kind and its sounds come more often (with Favor Ratings)" };
     /** @brief the thumb down */
-    frame::IconButton dislike_{ frame::IconButton::Icon::ThumbDown, "Not this one: its kind and its sounds come less often (with Favor Ratings)" };
-    juce::String rated_;                             ///< what was rated last, shown a while
-    int ratedTicks_ = 0;   ///< ticks rated_ is still shown
-    std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> combos_;   ///< the header's menus on their parameters
-    ArrangeView arrange_;   ///< the arrange strip on top
-    juce::TabbedComponent tabs_{ juce::TabbedButtonBar::TabsAtTop };   ///< the pages
-    juce::String shotPath_;   ///< TOT_SHOT: where the screenshot goes, empty none
-    int shotTicks_ = 0;   ///< ticks until the screenshot is taken
-    bool shotHands_ = false;                           ///< TOT_SHOT_HEADSET: the headset's hands kept alive
+    frame::IconButton m_dislike{ frame::IconButton::IconE::THUMB_DOWN, "Not this one: its kind and its sounds come less often (with Favor Ratings)" };
+    juce::String m_rated;                             ///< what was rated last, shown a while
+    int m_ratedTicks = 0;   ///< ticks m_rated is still shown
+    std::vector<std::unique_ptr<juce::ComboBoxParameterAttachment>> m_combos;   ///< the header's menus on their parameters
+    ArrangeView m_arrange;   ///< the arrange strip on top
+    juce::TabbedComponent m_tabs{ juce::TabbedButtonBar::TabsAtTop };   ///< the pages
+    juce::String m_shotPath;   ///< TOT_SHOT: where the screenshot goes, empty none
+    int m_shotTicks = 0;   ///< ticks until the screenshot is taken
+    bool m_shotHands = false;                           ///< TOT_SHOT_HEADSET: the headset's hands kept alive
     /** @brief The command palette's button (Ctrl+K). */
-    frame::IconButton search_{ frame::IconButton::Icon::Search, "Search (Ctrl+K): any control, preset or action by a few letters" };
-    std::unique_ptr<frame::InfoLine> info_;            ///< the info line at the bottom: what the control under the mouse is
-    frame::CommandPalette palette_{ totui::skin() };   ///< the command palette, over everything while open
-    frame::PresetBrowser browser_{ totui::skin(), "Totality" };   ///< the preset browser, over everything while open
-    frame::Tour tour_{ totui::skin() };                ///< the first steps
-    frame::WindowKeeper window_;                       ///< the standalone's window back where it was left
-    int tourTicks_ = 0;                                ///< ticks until the first start's tour (-1: considered)
+    frame::IconButton m_search{ frame::IconButton::IconE::SEARCH, "Search (Ctrl+K): any control, preset or action by a few letters" };
+    std::unique_ptr<frame::InfoLine> m_info;            ///< the info line at the bottom: what the control under the mouse is
+    frame::CommandPalette m_palette{ totui::skin() };   ///< the command palette, over everything while open
+    frame::PresetBrowser m_browser{ totui::skin(), "Totality" };   ///< the preset browser, over everything while open
+    frame::Tour m_tour{ totui::skin() };                ///< the first steps
+    frame::WindowKeeper m_window;                       ///< the standalone's window back where it was left
+    int m_tourTicks = 0;                                ///< ticks until the first start's tour (-1: considered)
 };

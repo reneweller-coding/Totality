@@ -22,7 +22,7 @@ namespace tot {
 /** @brief Two springs, one per side; returns the wet signal. */
 class Spring {
 public:
-    static constexpr int kStages = 48;   ///< all-passes per spring: the chirp's strength
+    static constexpr int Stages = 48;   ///< all-passes per spring: the chirp's strength
     /** @brief Sample rate; allocates the loop delays. */
     void prepare(double sampleRate);
     /** @brief Silences both tanks without allocating. (Added in Totality: the engine resets on a seek.) */
@@ -35,18 +35,18 @@ public:
 private:
     /** @brief One spring: a delay line, a chain of first-order all-passes (the chirp), its filters in the loop. */
     struct Tank {
-        std::vector<float> line;   ///< the delay line, a ring
-        size_t mask = 0;   ///< its size - 1
-        size_t write = 0;   ///< where the next sample goes
-        int delay = 1000;   ///< the loop delay, samples
-        float ap[kStages] = {};   ///< one state per first-order all-pass
-        float gain = 0.5f;   ///< the loop's gain (from the decay)
-        Svf lp;   ///< the loop's low pass
-        Svf hp;   ///< the loop's high pass
-        float y = 0.0f;   ///< the loop's last output
+        std::vector<float> m_line;   ///< the delay line, a ring
+        size_t m_mask = 0;   ///< its size - 1
+        size_t m_write = 0;   ///< where the next sample goes
+        int m_delay = 1000;   ///< the loop delay, samples
+        float m_ap[Stages] = {};   ///< one state per first-order all-pass
+        float m_gain = 0.5f;   ///< the loop's gain (from the decay)
+        Svf m_lp;   ///< the loop's low pass
+        Svf m_hp;   ///< the loop's high pass
+        float m_y = 0.0f;   ///< the loop's last output
     };
-    double sr_ = 48000.0;   ///< the sample rate, Hz
-    Tank tanks_[2];   ///< left, right
+    double m_sr = 48000.0;   ///< the sample rate, Hz
+    Tank m_tanks[2];   ///< left, right
 };
 
 } // namespace tot

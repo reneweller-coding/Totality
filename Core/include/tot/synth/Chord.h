@@ -25,7 +25,7 @@ namespace tot {
 /** @brief The chord voices and their bus. */
 class ChordSynth {
 public:
-    static constexpr int kVoices = 8;   ///< two chords of four tones overlapping
+    static constexpr int Voices = 8;   ///< two chords of four tones overlapping
 
     /** @brief Prepares for a sample rate. */
     void prepare(double sampleRate);
@@ -46,51 +46,51 @@ public:
 private:
     /** @brief One tone: two saws, their low passes, its envelopes. */
     struct Voice {
-        bool active = false;           ///< it sounds
-        int pitch = -1;                ///< MIDI note, -1 none
-        VaOscillator a;                ///< the saw on the left
-        VaOscillator b;                ///< the saw on the right
-        Envelope amp;                  ///< the amp envelope
-        double fenv = 0.0;             ///< the filter envelope, 1 .. 0
-        float vel = 1.0f;              ///< the note's velocity
-        Svf lpA;                       ///< saw a's low pass
-        Svf lpB;                       ///< saw b's low pass
-        uint32_t age = 0;              ///< when it started, in notes (the oldest is taken)
-        uint32_t n = 0;                ///< samples since it started
+        bool m_active = false;           ///< it sounds
+        int m_pitch = -1;                ///< MIDI note, -1 none
+        VaOscillator m_a;                ///< the saw on the left
+        VaOscillator m_b;                ///< the saw on the right
+        Envelope m_amp;                  ///< the amp envelope
+        double m_fenv = 0.0;             ///< the filter envelope, 1 .. 0
+        float m_vel = 1.0f;              ///< the note's velocity
+        Svf m_lpA;                       ///< saw a's low pass
+        Svf m_lpB;                       ///< saw b's low pass
+        uint32_t m_age = 0;              ///< when it started, in notes (the oldest is taken)
+        uint32_t m_n = 0;                ///< samples since it started
     };
     /** @brief Sets the bus's band pass and the dip for the absolute sample @p sample (the sweep's phase). */
     void setBus(int64_t sample);
-    double sr_ = 48000.0;   ///< the sample rate, Hz
-    Voice v_[kVoices];   ///< the voices
-    uint32_t clock_ = 0;   ///< counts the notes started (a voice's age)
+    double m_sr = 48000.0;   ///< the sample rate, Hz
+    Voice m_v[Voices];   ///< the voices
+    uint32_t m_clock = 0;   ///< counts the notes started (a voice's age)
     // Settings.
-    float detune_ = 10.0f;   ///< the saws' distance, cents
-    float width_ = 0.6f;   ///< how far the two saws stand apart, 0..1
-    float attack_ = 0.01f;   ///< the amp envelope's attack, seconds
-    float decay_ = 0.3f;   ///< its decay, seconds
-    float sustain_ = 0.15f;   ///< its sustain, 0..1
-    float release_ = 0.4f;   ///< its release, seconds
-    float bright_ = 2500.0f;   ///< the voices' low pass, Hz (Brightness)
-    float envAmt_ = 1.5f;   ///< how far the note's envelope opens it, octaves
-    float bandHz_ = 380.0f;   ///< the bus's band pass, Hz (Band)
-    float bandK_ = 1.4f;   ///< its damping, 1 / Q
-    float sweep_ = 0.5f;   ///< the band's sweep, octaves either way
-    float bits_ = 8.0f;   ///< the crusher's bits
-    float crushMix_ = 0.2f;   ///< the crusher's share
-    float phaser_ = 0.5f;   ///< the phaser's share
-    float dipGain_ = 0.45f;   ///< the dip at 600 Hz, linear
-    double sweepRate_ = 0.2;   ///< the band's sweep rate, Hz
-    double phaserRate_ = 0.5;   ///< the phaser's rate, Hz
-    double fenvDecay_ = 0.999;   ///< the filter envelope's decay per sample
-    int octave_ = 0;   ///< octaves the notes are moved by
-    bool highPass_ = false;   ///< a high pass on the bus instead of the band pass
-    Svf bandL_;   ///< the bus's band pass, left
-    Svf bandR_;   ///< the bus's band pass, right
-    Svf dipL_;   ///< the dip at 600 Hz, left
-    Svf dipR_;   ///< the dip at 600 Hz, right
-    float apL_[4] = {};   ///< the phaser's all-passes, left
-    float apR_[4] = {};   ///< the phaser's all-passes, right
-    float apCoef_ = 0.0f;   ///< the phaser's all-pass coefficient
+    float m_detune = 10.0f;   ///< the saws' distance, cents
+    float m_width = 0.6f;   ///< how far the two saws stand apart, 0..1
+    float m_attack = 0.01f;   ///< the amp envelope's attack, seconds
+    float m_decay = 0.3f;   ///< its decay, seconds
+    float m_sustain = 0.15f;   ///< its sustain, 0..1
+    float m_release = 0.4f;   ///< its release, seconds
+    float m_bright = 2500.0f;   ///< the voices' low pass, Hz (Brightness)
+    float m_envAmt = 1.5f;   ///< how far the note's envelope opens it, octaves
+    float m_bandHz = 380.0f;   ///< the bus's band pass, Hz (Band)
+    float m_bandK = 1.4f;   ///< its damping, 1 / Q
+    float m_sweep = 0.5f;   ///< the band's sweep, octaves either way
+    float m_bits = 8.0f;   ///< the crusher's bits
+    float m_crushMix = 0.2f;   ///< the crusher's share
+    float m_phaser = 0.5f;   ///< the phaser's share
+    float m_dipGain = 0.45f;   ///< the dip at 600 Hz, linear
+    double m_sweepRate = 0.2;   ///< the band's sweep rate, Hz
+    double m_phaserRate = 0.5;   ///< the phaser's rate, Hz
+    double m_fenvDecay = 0.999;   ///< the filter envelope's decay per sample
+    int m_octave = 0;   ///< octaves the notes are moved by
+    bool m_highPass = false;   ///< a high pass on the bus instead of the band pass
+    Svf m_bandL;   ///< the bus's band pass, left
+    Svf m_bandR;   ///< the bus's band pass, right
+    Svf m_dipL;   ///< the dip at 600 Hz, left
+    Svf m_dipR;   ///< the dip at 600 Hz, right
+    float m_apL[4] = {};   ///< the phaser's all-passes, left
+    float m_apR[4] = {};   ///< the phaser's all-passes, right
+    float m_apCoef = 0.0f;   ///< the phaser's all-pass coefficient
 };
 
 } // namespace tot

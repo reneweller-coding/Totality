@@ -25,59 +25,59 @@ namespace tot {
 
 /** @brief A knob a style sets at a track's start (real units). */
 struct SoundValue {
-    const char* key;   ///< the parameter's key ("master.tilt")
-    float value;       ///< its value
+    const char* m_key;   ///< the parameter's key ("master.tilt")
+    float m_value;       ///< its value
 };
 
 /** @brief A knob drawn anew for every track, uniformly in [low, high] (real units; Log knobs drawn on their curve). */
 struct SoundRange {
-    const char* key;   ///< the parameter's key
-    float low;         ///< lowest value
-    float high;        ///< highest value
+    const char* m_key;   ///< the parameter's key
+    float m_low;         ///< lowest value
+    float m_high;        ///< highest value
 };
 
 /** @brief A layer's chance to be in a track's pool (the rest of the pool is fixed: kick, offbeat and rolling hat). */
 struct LayerChance {
-    LayerId layer;     ///< which layer
-    float chance;      ///< 0..1
+    LayerIdE m_layer;     ///< which layer
+    float m_chance;      ///< 0..1
 };
 
 /** @brief One style profile. */
 struct StyleProfile {
-    const char* name;                    ///< the profile's name, as in compose.style
-    float bpmLow;                        ///< lowest tempo
-    float bpmHigh;                       ///< highest tempo
-    float arcWeight;                     ///< the weight of the Arc (the tool: intro, body, outro)
-    float peakWeight;                    ///< of the Peak (a long reduction and the densest block after it)
-    float endlessWeight;                 ///< of the Endless (Erg. 8: full from bar 1, no intro, no outro)
-    float subChance;                     ///< the sub bass owns the low end (else the rumble)
-    float intro64Chance;                 ///< an intro (and outro) of 64 bars instead of 32
-    int blocksLow;                       ///< shortest track in 32-bar blocks
-    int blocksHigh;                      ///< longest
-    std::vector<LayerChance> pool;       ///< the layers a track may have, with their chances
-    float mutation;                      ///< RackPlan::mutation
-    float motionScale;                   ///< RackPlan::motionScale
-    float reroll;                        ///< RackPlan::reroll
-    float polymeterChance;               ///< one or two cyclic percussion layers in a track
-    float swingLow;                      ///< MPC swing range, per cent
-    float swingHigh;   ///< the swing range's upper end, per cent
-    float fillChance;                    ///< a fill at the end of an eight-bar phrase
-    float toolReductionChance;           ///< an Arc has a short kick-out at all (Dok. 8.5: 0.5)
-    float edgeChance;                    ///< the intro and outro filtered by the group high pass (their loudness moving)
-    int maxReduction;                    ///< the longest kick-out in bars (Dok. 8.5's Peak: 8, 16 or 32)
-    float eventRate;                     ///< chance of an event on each 8-bar line of the body
-    float throwShare;                    ///< share of the events that are delay throws
-    int densityCap;                      ///< at most this many layers at once beside kick and rumble
-    float simTarget;                     ///< the corridor: the symbolic bar similarity a block aims at
-    float microTarget;                   ///< the corridor: the symbolic micro-change, dB per bar and band
-    std::vector<SoundValue> recipe;      ///< knobs set at every track's start
-    std::vector<SoundRange> sounds;      ///< knobs drawn per track
-    float peakLufs;                      ///< what a track's loudest part should measure (Leveler.h)
-    float styleMix[4];                   ///< how much of Hypnotic, Ostgut, Dub and Raw it is (the presets' fit, Presets.h)
+    const char* m_name;                    ///< the profile's name, as in compose.style
+    float m_bpmLow;                        ///< lowest tempo
+    float m_bpmHigh;                       ///< highest tempo
+    float m_arcWeight;                     ///< the weight of the Arc (the tool: intro, body, outro)
+    float m_peakWeight;                    ///< of the Peak (a long reduction and the densest block after it)
+    float m_endlessWeight;                 ///< of the Endless (Erg. 8: full from bar 1, no intro, no outro)
+    float m_subChance;                     ///< the sub bass owns the low end (else the rumble)
+    float m_intro64Chance;                 ///< an intro (and outro) of 64 bars instead of 32
+    int m_blocksLow;                       ///< shortest track in 32-bar blocks
+    int m_blocksHigh;                      ///< longest
+    std::vector<LayerChance> m_pool;       ///< the layers a track may have, with their chances
+    float m_mutation;                      ///< RackPlan::mutation
+    float m_motionScale;                   ///< RackPlan::motionScale
+    float m_reroll;                        ///< RackPlan::reroll
+    float m_polymeterChance;               ///< one or two cyclic percussion layers in a track
+    float m_swingLow;                      ///< MPC swing range, per cent
+    float m_swingHigh;   ///< the swing range's upper end, per cent
+    float m_fillChance;                    ///< a fill at the end of an eight-bar phrase
+    float m_toolReductionChance;           ///< an Arc has a short kick-out at all (Dok. 8.5: 0.5)
+    float m_edgeChance;                    ///< the intro and outro filtered by the group high pass (their loudness moving)
+    int m_maxReduction;                    ///< the longest kick-out in bars (Dok. 8.5's Peak: 8, 16 or 32)
+    float m_eventRate;                     ///< chance of an event on each 8-bar line of the body
+    float m_throwShare;                    ///< share of the events that are delay throws
+    int m_densityCap;                      ///< at most this many layers at once beside kick and rumble
+    float m_simTarget;                     ///< the corridor: the symbolic bar similarity a block aims at
+    float m_microTarget;                   ///< the corridor: the symbolic micro-change, dB per bar and band
+    std::vector<SoundValue> m_recipe;      ///< knobs set at every track's start
+    std::vector<SoundRange> m_sounds;      ///< knobs drawn per track
+    float m_peakLufs;                      ///< what a track's loudest part should measure (Leveler.h)
+    float m_styleMix[4];                   ///< how much of Hypnotic, Ostgut, Dub and Raw it is (the presets' fit, Presets.h)
 };
 
 /** @brief The profile of a style. */
-const StyleProfile& styleProfile(Style style);
+const StyleProfile& styleProfile(StyleE style);
 
 /**
  * @brief A profile between @p a and @p b: at @p t = 0 exactly @p a, at 1 exactly @p b. Numbers are interpolated (counts

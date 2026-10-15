@@ -37,16 +37,16 @@ namespace tot {
 
 /** @brief What levelScore found for one track. */
 struct LevelReading {
-    double beat = 0.0;       ///< the track's start
-    float measured = 0.0f;   ///< its loudest part as composed, LUFS
-    float target = 0.0f;     ///< what it should measure
-    float trim = 0.0f;       ///< the correction set, dB
-    float after = 0.0f;      ///< the part with the correction, LUFS
-    BalanceDb found{};       ///< Phase 18: every part's loudest sample against the kick's as composed, dB (NaN: silent)
-    BalanceDb bal{};         ///< the parts' corrections set, dB
-    BalanceDb lo{};   ///< the lower ends of the windows they were set for (ranked), dB
-    BalanceDb hi{};   ///< the upper ends, dB
-    bool guarded = false;    ///< the guard took the room or boosts down (the mids stood over the references')
+    double m_beat = 0.0;       ///< the track's start
+    float m_measured = 0.0f;   ///< its loudest part as composed, LUFS
+    float m_target = 0.0f;     ///< what it should measure
+    float m_trim = 0.0f;       ///< the correction set, dB
+    float m_after = 0.0f;      ///< the part with the correction, LUFS
+    BalanceDbT m_found{};       ///< Phase 18: every part's loudest sample against the kick's as composed, dB (NaN: silent)
+    BalanceDbT m_bal{};         ///< the parts' corrections set, dB
+    BalanceDbT m_lo{};   ///< the lower ends of the windows they were set for (ranked), dB
+    BalanceDbT m_hi{};   ///< the upper ends, dB
+    bool m_guarded = false;    ///< the guard took the room or boosts down (the mids stood over the references')
 };
 
 /**

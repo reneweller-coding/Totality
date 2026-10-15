@@ -21,8 +21,8 @@ namespace tot {
 
 /** @brief One bar's onset profile: velocity per band (0 low, 1 mid, 2 high) and sixteenth, and its onset count. */
 struct BarProfile {
-    float v[3][kSteps] = {};   ///< velocity per band (0 low, 1 mid, 2 high) and sixteenth
-    int onsets = 0;   ///< how many onsets the bar has
+    float m_v[3][Steps] = {};   ///< velocity per band (0 low, 1 mid, 2 high) and sixteenth
+    int m_onsets = 0;   ///< how many onsets the bar has
 };
 
 /** @brief The band of every part for a plan's lanes (-1: not counted: the drone, the texture, the noise lane). */
@@ -36,9 +36,9 @@ std::vector<BarProfile> barProfiles(const std::vector<NoteEvent>& notes, int fir
 
 /** @brief The measures of a stretch. */
 struct CorridorStats {
-    float similarity = 0.0f;   ///< median best correlation with the bar 1, 2 or 4 before
-    float micro = 0.0f;        ///< mean |change| of the bands' energy from bar to bar, dB
-    float density = 0.0f;      ///< mean onsets per bar
+    float m_similarity = 0.0f;   ///< median best correlation with the bar 1, 2 or 4 before
+    float m_micro = 0.0f;        ///< mean |change| of the bands' energy from bar to bar, dB
+    float m_density = 0.0f;      ///< mean onsets per bar
 };
 
 /**

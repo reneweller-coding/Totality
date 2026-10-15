@@ -63,19 +63,19 @@ std::string jsonEscape(const std::string& s)
 /** @brief A track's info as JSON. */
 std::string infoJson(const TrackInfo& t)
 {
-    std::string s = "{\"style\":\"" + jsonEscape(t.style) + "\",\"form\":\"" + kFormNames[static_cast<int>(t.form)] + "\"";
+    std::string s = "{\"style\":\"" + jsonEscape(t.m_style) + "\",\"form\":\"" + FormNames[static_cast<int>(t.m_form)] + "\"";
     char buf[512];
     std::snprintf(buf, sizeof(buf), ",\"bpm\":%.2f,\"key\":%d,\"scale\":%d,\"camelot\":\"%s\",\"monotonic\":%s,\"sub\":%s,\"bars\":%d,"
                   "\"intro\":%d,\"bass\":%d,\"outro\":%d,\"peak\":%d,\"similarity\":%.4f,\"micro\":%.3f,\"density\":%.2f",
-                  t.bpm, t.key, t.scale, t.camelot.c_str(), t.monotonic ? "true" : "false", t.subOwns ? "true" : "false", t.bars,
-                  t.introBars, t.bassBar, t.outroBar, t.peakBar, t.similarity, t.micro, t.density);
+                  t.m_bpm, t.m_key, t.m_scale, t.m_camelot.c_str(), t.m_monotonic ? "true" : "false", t.m_subOwns ? "true" : "false", t.m_bars,
+                  t.m_introBars, t.m_bassBar, t.m_outroBar, t.m_peakBar, t.m_similarity, t.m_micro, t.m_density);
     s += buf;
     s += ",\"reductions\":[";
-    for (size_t i = 0; i < t.reductions.size(); ++i) s += (i ? "," : "") + std::to_string(t.reductions[i]);
+    for (size_t i = 0; i < t.m_reductions.size(); ++i) s += (i ? "," : "") + std::to_string(t.m_reductions[i]);
     s += "],\"returns\":[";
-    for (size_t i = 0; i < t.returns.size(); ++i) s += (i ? "," : "") + std::to_string(t.returns[i]);
+    for (size_t i = 0; i < t.m_returns.size(); ++i) s += (i ? "," : "") + std::to_string(t.m_returns[i]);
     s += "],\"layers\":[";
-    for (size_t i = 0; i < t.layers.size(); ++i) s += (i ? ",\"" : "\"") + jsonEscape(kLayerNames[t.layers[i]]) + "\"";
+    for (size_t i = 0; i < t.m_layers.size(); ++i) s += (i ? ",\"" : "\"") + jsonEscape(LayerNames[t.m_layers[i]]) + "\"";
     return s + "]}";
 }
 
@@ -93,25 +93,25 @@ bool writeScoreJson(const std::string& path, const Score& notes, const std::vect
     for (size_t i = 0; i < tracks.size(); ++i) {
         const double b0 = where[i].first;
         std::fprintf(f, "{\"start\":%.4f,\"deck\":%d,\"start_s\":%.4f,\"bass_s\":%.4f,\"end_s\":%.4f,\"info\":%s}%s\n", b0,
-                     where[i].second, notes.tempo.secondsAt(b0), notes.tempo.secondsAt(b0 + 4.0 * tracks[i].bassBar),
-                     notes.tempo.secondsAt(b0 + 4.0 * tracks[i].bars), infoJson(tracks[i]).c_str(), i + 1 < tracks.size() ? "," : "");
+                     where[i].second, notes.m_tempo.secondsAt(b0), notes.m_tempo.secondsAt(b0 + 4.0 * tracks[i].m_bassBar),
+                     notes.m_tempo.secondsAt(b0 + 4.0 * tracks[i].m_bars), infoJson(tracks[i]).c_str(), i + 1 < tracks.size() ? "," : "");
     }
     std::fprintf(f, "],\n\"parts\":[");
-    for (int i = 0; i < kNumParts; ++i) std::fprintf(f, "%s\"%s\"", i ? "," : "", kPartNames[i]);
+    for (int i = 0; i < NumParts; ++i) std::fprintf(f, "%s\"%s\"", i ? "," : "", PartNames[i]);
     std::fprintf(f, "],\n\"notes\":[\n");
-    for (size_t i = 0; i < notes.notes.size(); ++i) {
-        const NoteEvent& n = notes.notes[i];
-        std::fprintf(f, "[%.5f,%d,%d,%.3f,%d]%s\n", n.beat, static_cast<int>(n.part), n.pitch, static_cast<double>(n.velocity),
-                     i < noteDecks.size() ? noteDecks[i] : 0, i + 1 < notes.notes.size() ? "," : "");
+    for (size_t i = 0; i < notes.m_notes.size(); ++i) {
+        const NoteEvent& n = notes.m_notes[i];
+        std::fprintf(f, "[%.5f,%d,%d,%.3f,%d]%s\n", n.m_beat, static_cast<int>(n.m_part), n.m_pitch, static_cast<double>(n.m_velocity),
+                     i < noteDecks.size() ? noteDecks[i] : 0, i + 1 < notes.m_notes.size() ? "," : "");
     }
     std::fprintf(f, "],\n\"ops\":[\n");
     for (size_t i = 0; i < ops.size(); ++i)
-        std::fprintf(f, "[%.4f,\"%s\",%d,%d]%s\n", ops[i].first.beat, kOpNames[static_cast<int>(ops[i].first.kind)], ops[i].first.layer,
+        std::fprintf(f, "[%.4f,\"%s\",%d,%d]%s\n", ops[i].first.m_beat, OpNames[static_cast<int>(ops[i].first.m_kind)], ops[i].first.m_layer,
                      ops[i].second, i + 1 < ops.size() ? "," : "");
     std::fprintf(f, "],\n\"tempo\":[");
-    const auto& pts = notes.tempo.points();
-    for (size_t i = 0; i < pts.size(); ++i) std::fprintf(f, "%s[%.4f,%.3f]", i ? "," : "", pts[i].beat, pts[i].bpm);
-    std::fprintf(f, "],\n\"length\":%.4f\n}\n", notes.lengthBeats);
+    const auto& pts = notes.m_tempo.points();
+    for (size_t i = 0; i < pts.size(); ++i) std::fprintf(f, "%s[%.4f,%.3f]", i ? "," : "", pts[i].m_beat, pts[i].m_bpm);
+    std::fprintf(f, "],\n\"length\":%.4f\n}\n", notes.m_lengthBeats);
     return std::fclose(f) == 0;
 }
 
@@ -122,13 +122,13 @@ std::string balanceText(const LevelReading& r)
 {
     std::string t;
     char buf[64];
-    for (int p = 0; p < kBalParts; ++p) {
-        const float f = r.found[static_cast<size_t>(p)];
+    for (int p = 0; p < BalParts; ++p) {
+        const float f = r.m_found[static_cast<size_t>(p)];
         if (std::isnan(f)) continue;
-        std::snprintf(buf, sizeof buf, " %s %.0f (%+.0f)", kBalPartNames[p], f, r.bal[static_cast<size_t>(p)]);
+        std::snprintf(buf, sizeof buf, " %s %.0f (%+.0f)", BalPartNames[p], f, r.m_bal[static_cast<size_t>(p)]);
         t += buf;
     }
-    const float room = r.bal[static_cast<size_t>(BalPart::Room)];
+    const float room = r.m_bal[static_cast<size_t>(BalPartE::ROOM)];
     if (room != 0.0f) {
         std::snprintf(buf, sizeof buf, "; the room's return %+.0f", room);
         t += buf;
@@ -209,15 +209,15 @@ int main(int argc, char** argv)
         for (int id = 0; id < p.count(); ++id) {
             const ParamDesc& d = p.desc(id);
             std::string choices = "[]";
-            if (d.curve == Curve::Choice && d.choices != nullptr) {
+            if (d.m_curve == CurveE::CHOICE && d.m_choices != nullptr) {
                 choices = "[";
-                for (int c = 0; c <= static_cast<int>(d.maxValue); ++c) choices += (c ? ", " : "") + quoted(d.choices[c]);
+                for (int c = 0; c <= static_cast<int>(d.m_maxValue); ++c) choices += (c ? ", " : "") + quoted(d.m_choices[c]);
                 choices += "]";
             }
             std::fprintf(f, "  {\"key\": %s, \"name\": %s, \"unit\": %s, \"min\": %g, \"max\": %g, \"default\": %g, \"curve\": \"%s\", \"choices\": %s}%s\n",
-                         quoted(p.key(id).c_str()).c_str(), quoted(d.name).c_str(), quoted(d.unit).c_str(),
-                         static_cast<double>(d.minValue), static_cast<double>(d.maxValue), static_cast<double>(p.defaultValue(id)),
-                         curves[static_cast<int>(d.curve)], choices.c_str(), id + 1 < p.count() ? "," : "");
+                         quoted(p.key(id).c_str()).c_str(), quoted(d.m_name).c_str(), quoted(d.m_unit).c_str(),
+                         static_cast<double>(d.m_minValue), static_cast<double>(d.m_maxValue), static_cast<double>(p.defaultValue(id)),
+                         curves[static_cast<int>(d.m_curve)], choices.c_str(), id + 1 < p.count() ? "," : "");
         }
         std::fprintf(f, "]\n");
         std::fclose(f);
@@ -227,21 +227,21 @@ int main(int argc, char** argv)
     if (!loadSetPath.empty()) {
         SetFile sf;
         if (!loadSet(loadSetPath.c_str(), sf, p, &error)) { std::fprintf(stderr, "--load-set: %s\n", error.c_str()); return 2; }
-        if (!seedGiven) seed = sf.seed;
-        for (const auto& r : sf.curation.rerolls) curation.rerolls[r.first] += r.second;
-        if (sf.minutes > 0.0 && minutes <= 0.0f) minutes = static_cast<float>(sf.minutes);
-        if (sf.set > 0.0 && setMinutes <= 0.0) setMinutes = sf.set;
+        if (!seedGiven) seed = sf.m_seed;
+        for (const auto& r : sf.m_curation.m_rerolls) curation.m_rerolls[r.first] += r.second;
+        if (sf.m_minutes > 0.0 && minutes <= 0.0f) minutes = static_cast<float>(sf.m_minutes);
+        if (sf.m_set > 0.0 && setMinutes <= 0.0) setMinutes = sf.m_set;
     }
-    if (minutes > 0.0f) p.set(p.id(Module::Compose, 0, compose::Minutes), minutes);
-    if (bpm > 0.0f) p.set(p.id(Module::Compose, 0, compose::Bpm), bpm);
-    if (low >= 0) p.set(p.id(Module::Compose, 0, compose::LowOwner), static_cast<float>(low));
+    if (minutes > 0.0f) p.set(p.id(ModuleE::COMPOSE, 0, compose::MINUTES), minutes);
+    if (bpm > 0.0f) p.set(p.id(ModuleE::COMPOSE, 0, compose::BPM), bpm);
+    if (low >= 0) p.set(p.id(ModuleE::COMPOSE, 0, compose::LOW_OWNER), static_cast<float>(low));
     if (!set.empty() && !p.parseText(set, &error)) { std::fprintf(stderr, "--set: %s\n", error.c_str()); return 2; }
     if (!saveSetPath.empty()) {
         SetFile sf;
-        sf.seed = seed;
-        sf.minutes = p.get(p.id(Module::Compose, 0, compose::Minutes));
-        sf.set = setMinutes;
-        sf.curation = curation;
+        sf.m_seed = seed;
+        sf.m_minutes = p.get(p.id(ModuleE::COMPOSE, 0, compose::MINUTES));
+        sf.m_set = setMinutes;
+        sf.m_curation = curation;
         if (!saveSet(saveSetPath.c_str(), sf, p)) { std::fprintf(stderr, "cannot write %s\n", saveSetPath.c_str()); return 1; }
         std::printf("set: %s\n", saveSetPath.c_str());
     }
@@ -255,87 +255,87 @@ int main(int argc, char** argv)
     double cueLength = 0.0;
     if (setMinutes <= 0.0) {
         TrackRequest req;
-        if (bpm > 0.0f) req.bpm = bpm;           // what the command line names, the composer does not draw
-        if (low >= 0) req.lowOwner = low;
-        if (form >= 0) req.form = static_cast<FormType>(form);
+        if (bpm > 0.0f) req.m_bpm = bpm;           // what the command line names, the composer does not draw
+        if (low >= 0) req.m_lowOwner = low;
+        if (form >= 0) req.m_form = static_cast<FormTypeE>(form);
         TrackInfo info;
         Score score = study ? composeStudy(p, seed) : composeTrack(p, seed, req, &curation, std::string(), &info);
         // The Leveler: the loudest part to the style's target (PLAN 8.5), before a sample is written.
         const std::vector<LevelReading> levels = bench || planOnly ? std::vector<LevelReading>{} : levelScore(score, p);
         t1 = std::chrono::steady_clock::now();
-        if (quest) engine->setQuality(Engine::Quality::Quest);
+        if (quest) engine->setQuality(Engine::QualityE::QUEST);
         engine->prepare(rate, block);
         engine->load(score);
 
         std::printf("Totality %s  seed %llu  %.1f BPM  key %s  %s  %.0f bars  %.1f s\n", TOT_VERSION,
-                    static_cast<unsigned long long>(seed), score.tempo.bpmAt(0.0),
-                    kKeyNames[score.keyRoot], (study ? p.getInt(p.id(Module::Compose, 0, compose::LowOwner)) == 1 : info.subOwns) ? "sub owns the low end" : "rumble owns the low end",
-                    score.lengthBeats / 4.0, engine->lengthSeconds());
+                    static_cast<unsigned long long>(seed), score.m_tempo.bpmAt(0.0),
+                    KeyNames[score.m_keyRoot], (study ? p.getInt(p.id(ModuleE::COMPOSE, 0, compose::LOW_OWNER)) == 1 : info.m_subOwns) ? "sub owns the low end" : "rumble owns the low end",
+                    score.m_lengthBeats / 4.0, engine->lengthSeconds());
         std::printf("kick tuned to %.1f Hz; %zu notes, %zu automation curves, %zu operations\n",
-                    static_cast<double>(Kick::tuneToKey(score.keyRoot, p.getInt(p.id(Module::Kick, 0, kick::Tune)),
-                                                        p.get(p.id(Module::Kick, 0, kick::PitchEnd)))),
-                    score.notes.size(), score.gestures.size(), score.ops.size());
+                    static_cast<double>(Kick::tuneToKey(score.m_keyRoot, p.getInt(p.id(ModuleE::KICK, 0, kick::TUNE)),
+                                                        p.get(p.id(ModuleE::KICK, 0, kick::PITCH_END)))),
+                    score.m_notes.size(), score.m_gestures.size(), score.m_ops.size());
         if (!study) {
             std::printf("%s, %s, %s %s (%s), %s; intro %d bars, body from bar %d, outro from bar %d, loudest from bar %d\n",
-                        info.style.c_str(), kFormNames[static_cast<int>(info.form)], kKeyNames[info.key], kScaleNames[info.scale],
-                        info.camelot.c_str(), info.subOwns ? "sub bass" : "rumble", info.introBars, info.bassBar + 1,
-                        info.outroBar + 1, info.peakBar + 1);
-            for (size_t r = 0; r < info.reductions.size(); ++r)
-                std::printf("kick-out bars %d .. %d, return bar %d\n", info.reductions[r] + 1, info.returns[r], info.returns[r] + 1);
+                        info.m_style.c_str(), FormNames[static_cast<int>(info.m_form)], KeyNames[info.m_key], ScaleNames[info.m_scale],
+                        info.m_camelot.c_str(), info.m_subOwns ? "sub bass" : "rumble", info.m_introBars, info.m_bassBar + 1,
+                        info.m_outroBar + 1, info.m_peakBar + 1);
+            for (size_t r = 0; r < info.m_reductions.size(); ++r)
+                std::printf("kick-out bars %d .. %d, return bar %d\n", info.m_reductions[r] + 1, info.m_returns[r], info.m_returns[r] + 1);
             std::string layers;
-            for (int l : info.layers) { layers += layers.empty() ? "" : ", "; layers += kLayerNames[l]; }
-            std::printf("archetype: %s; layers in order: %s\n", kArchetypeNames[info.archetype], layers.c_str());
-            if (info.form != FormType::Endless)
-                std::printf("opening: %s%s\n", kOpeningNames[info.opening],
-                            info.kickBar > 0 ? (", the kick from bar " + std::to_string(info.kickBar + 1)).c_str() : ", the kick from bar 1");
-            if (info.form != FormType::Endless)
-                std::printf("ending: %s\n", info.kickLeaves > 0 ? ("the kick leaves " + std::to_string(info.kickLeaves) + " bars before the end").c_str()
+            for (int l : info.m_layers) { layers += layers.empty() ? "" : ", "; layers += LayerNames[l]; }
+            std::printf("archetype: %s; layers in order: %s\n", ArchetypeNames[info.m_archetype], layers.c_str());
+            if (info.m_form != FormTypeE::ENDLESS)
+                std::printf("opening: %s%s\n", OpeningNames[info.m_opening],
+                            info.m_kickBar > 0 ? (", the kick from bar " + std::to_string(info.m_kickBar + 1)).c_str() : ", the kick from bar 1");
+            if (info.m_form != FormTypeE::ENDLESS)
+                std::printf("ending: %s\n", info.m_kickLeaves > 0 ? ("the kick leaves " + std::to_string(info.m_kickLeaves) + " bars before the end").c_str()
                                                               : "the kick to the end");
             // Phase 8: the figure, the waves' landings and what moves between the operations.
-            if (info.figure >= 0)
-                std::printf("figure: the %s, a motif of %d bar%s, from bar %d\n", kLayerNames[info.figure], info.figureBars,
-                            info.figureBars == 1 ? "" : "s", info.figureBar + 1);
-            if (!info.landings.empty()) {
+            if (info.m_figure >= 0)
+                std::printf("figure: the %s, a motif of %d bar%s, from bar %d\n", LayerNames[info.m_figure], info.m_figureBars,
+                            info.m_figureBars == 1 ? "" : "s", info.m_figureBar + 1);
+            if (!info.m_landings.empty()) {
                 std::string lands;
-                for (int l : info.landings) lands += (lands.empty() ? "" : ", ") + std::to_string(l + 1);
+                for (int l : info.m_landings) lands += (lands.empty() ? "" : ", ") + std::to_string(l + 1);
                 std::printf("waves land on bars %s\n", lands.c_str());
             }
-            for (const auto& [bar, what] : info.moments) std::printf("  bar %4d  %s\n", bar + 1, what.c_str());
+            for (const auto& [bar, what] : info.m_moments) std::printf("  bar %4d  %s\n", bar + 1, what.c_str());
             // The composer's presets (Presets.h): per synth, and per lane of the kit.
             std::string sounds;
-            for (const SoundPick& k : score.sounds) {
-                const Module m = static_cast<Module>(k.module);
+            for (const SoundPick& k : score.m_sounds) {
+                const ModuleE m = static_cast<ModuleE>(k.m_module);
                 const std::vector<SoundPreset>& presets = factoryPresets(m);
-                if (k.preset < 0 || k.preset >= static_cast<int>(presets.size())) continue;
-                const std::string& key = p.key(p.id(m, k.instance, 0));
-                sounds += (sounds.empty() ? "" : "; ") + key.substr(0, key.find('.')) + " " + presets[static_cast<size_t>(k.preset)].name
-                        + " (" + presets[static_cast<size_t>(k.preset)].group + ")";
+                if (k.m_preset < 0 || k.m_preset >= static_cast<int>(presets.size())) continue;
+                const std::string& key = p.key(p.id(m, k.m_instance, 0));
+                sounds += (sounds.empty() ? "" : "; ") + key.substr(0, key.find('.')) + " " + presets[static_cast<size_t>(k.m_preset)].m_name
+                        + " (" + presets[static_cast<size_t>(k.m_preset)].m_group + ")";
             }
             if (!sounds.empty()) std::printf("sounds: %s\n", sounds.c_str());
-            std::printf("corridor over the body: bar similarity %.3f, micro-change %.2f dB, %.1f onsets a bar\n", info.similarity,
-                        info.micro, info.density);
+            std::printf("corridor over the body: bar similarity %.3f, micro-change %.2f dB, %.1f onsets a bar\n", info.m_similarity,
+                        info.m_micro, info.m_density);
         }
         for (const LevelReading& r : levels) {
             std::printf("level: the loudest part (bar %.0f) measured %.1f LUFS, target %.1f, trim %+.1f dB (%.1f after the first)\n",
-                        score.levels.empty() ? 0.0 : score.levels[0].peakBeat / 4.0 + 1.0, r.measured, r.target, r.trim, r.after);
+                        score.m_levels.empty() ? 0.0 : score.m_levels[0].m_peakBeat / 4.0 + 1.0, r.m_measured, r.m_target, r.m_trim, r.m_after);
             std::printf("balance against the kick (loudest sample, dB; correction):%s\n", balanceText(r).c_str());
         }
-        for (const BlockOp& o : score.ops) {
-            std::printf("  bar %4.0f  %-8s %s\n", o.beat / 4.0 + 1.0, kOpNames[static_cast<int>(o.kind)],
-                        o.layer >= 0 ? kLayerNames[o.layer] : "");
+        for (const BlockOp& o : score.m_ops) {
+            std::printf("  bar %4.0f  %-8s %s\n", o.m_beat / 4.0 + 1.0, OpNames[static_cast<int>(o.m_kind)],
+                        o.m_layer >= 0 ? LayerNames[o.m_layer] : "");
         }
         if (stats) {
             // Symbolic repetition (PLAN 7.9): per part, the share of the body's bars (the middle three fifths) whose onsets
             // on the sixteenth grid equal the bar before's, and the share of bars it plays in.
-            const int bars = static_cast<int>(score.lengthBeats / 4.0);
-            std::vector<std::vector<uint32_t>> grid(kNumParts, std::vector<uint32_t>(static_cast<size_t>(bars), 0u));
-            for (const NoteEvent& n : score.notes) {
-                const int step = static_cast<int>(std::floor(n.beat * 4.0 + 0.5));
+            const int bars = static_cast<int>(score.m_lengthBeats / 4.0);
+            std::vector<std::vector<uint32_t>> grid(NumParts, std::vector<uint32_t>(static_cast<size_t>(bars), 0u));
+            for (const NoteEvent& n : score.m_notes) {
+                const int step = static_cast<int>(std::floor(n.m_beat * 4.0 + 0.5));
                 const int bar = step / 16;
-                if (bar >= 0 && bar < bars) grid[static_cast<size_t>(n.part)][static_cast<size_t>(bar)] |= 1u << (step % 16);
+                if (bar >= 0 && bar < bars) grid[static_cast<size_t>(n.m_part)][static_cast<size_t>(bar)] |= 1u << (step % 16);
             }
             std::printf("repetition per part over bars %d .. %d (same as the bar before / playing):\n", bars / 5, bars - bars / 5);
-            for (int pi = 0; pi < kNumParts; ++pi) {
+            for (int pi = 0; pi < NumParts; ++pi) {
                 int same = 0, playing = 0, total = 0;
                 for (int b = bars / 5 + 1; b < bars - bars / 5; ++b) {
                     const uint32_t g = grid[static_cast<size_t>(pi)][static_cast<size_t>(b)];
@@ -344,17 +344,17 @@ int main(int argc, char** argv)
                     same += g == grid[static_cast<size_t>(pi)][static_cast<size_t>(b - 1)] ? 1 : 0;
                 }
                 total = bars - 2 * (bars / 5) - 1;
-                if (playing > 0) std::printf("  %-7s %4.0f %% same  %4.0f %% playing\n", kPartNames[pi], 100.0 * same / playing, 100.0 * playing / total);
+                if (playing > 0) std::printf("  %-7s %4.0f %% same  %4.0f %% playing\n", PartNames[pi], 100.0 * same / playing, 100.0 * playing / total);
             }
         }
         if (patterns) {
             // The first bar of every block of every layer in mini-notation (PLAN 6.7).
             const RackPlan plan = makeRackPlan(p, mixSeed(seed, 1));
-            static const char* const kSound[kNumLayers] = { "bd", "bd:1", "hh", "hh:1", "oh", "ride", "cp", "cp", "cp:1", "shaker",
+            static const char* const Sound[NumLayers] = { "bd", "bd:1", "hh", "hh:1", "oh", "ride", "cp", "cp", "cp:1", "shaker",
                                                             "lt", "rim", "bass", "ping", "chord", "drone", "acid", "tex" };
-            for (int li = 0; li < kNumLayers; ++li) {
-                if (static_cast<LayerId>(li) == LayerId::ClapB) continue;
-                std::printf("  %-11s \"%s\"\n", kLayerNames[li], miniNotation(plan, static_cast<LayerId>(li), 32, kSound[li]).c_str());
+            for (int li = 0; li < NumLayers; ++li) {
+                if (static_cast<LayerIdE>(li) == LayerIdE::CLAP_B) continue;
+                std::printf("  %-11s \"%s\"\n", LayerNames[li], miniNotation(plan, static_cast<LayerIdE>(li), 32, Sound[li]).c_str());
             }
         }
         if (!midi.empty()) {
@@ -362,21 +362,21 @@ int main(int argc, char** argv)
             std::printf("MIDI: %s\n", midi.c_str());
         }
         if (!study) {
-            trackCues(info, 0.0, score.tempo, std::string(), cues);
-            tonality = std::string(kKeyNames[info.key]) + "m";
-            cueTempo = score.tempo;
-            cueLength = score.lengthBeats;
-            infoTitle = "Totality " + info.style + " " + kFormNames[static_cast<int>(info.form)] + " " + kKeyNames[info.key] + " "
-                      + info.camelot + " seed " + std::to_string(seed);
+            trackCues(info, 0.0, score.m_tempo, std::string(), cues);
+            tonality = std::string(KeyNames[info.m_key]) + "m";
+            cueTempo = score.m_tempo;
+            cueLength = score.m_lengthBeats;
+            infoTitle = "Totality " + info.m_style + " " + FormNames[static_cast<int>(info.m_form)] + " " + KeyNames[info.m_key] + " "
+                      + info.m_camelot + " seed " + std::to_string(seed);
             if (!scoreJson.empty()) {
                 std::vector<std::pair<BlockOp, int>> ops;
-                for (const BlockOp& o : score.ops) ops.push_back({ o, 0 });
+                for (const BlockOp& o : score.m_ops) ops.push_back({ o, 0 });
                 if (!writeScoreJson(scoreJson, score, { { 0.0, 0 } }, { info }, ops, {})) { std::fprintf(stderr, "cannot write %s\n", scoreJson.c_str()); return 1; }
                 std::printf("score: %s\n", scoreJson.c_str());
             }
             if (!loopsDir.empty() && !planOnly) {
                 if (!renderLoops(p, score, info, loopsDir, rate)) { std::fprintf(stderr, "cannot write the loops\n"); return 1; }
-                std::printf("loops: %s (4 and 8 bars from bar %d, each with _kick, _hats, _perc)\n", loopsDir.c_str(), info.peakBar + 1);
+                std::printf("loops: %s (4 and 8 bars from bar %d, each with _kick, _hats, _perc)\n", loopsDir.c_str(), info.m_peakBar + 1);
             }
         }
     } else {
@@ -385,58 +385,58 @@ int main(int argc, char** argv)
         SetScore setScore = composeSet(p, seed, setMinutes, &curation, &si);
         const std::vector<LevelReading> levels = bench || planOnly ? std::vector<LevelReading>{} : levelSet(setScore, p);
         t1 = std::chrono::steady_clock::now();
-        if (quest) engine->setQuality(Engine::Quality::Quest);
+        if (quest) engine->setQuality(Engine::QualityE::QUEST);
         engine->prepare(rate, block);
         engine->loadSet(setScore);
         std::printf("Totality %s  set of seed %llu, %s, %zu tracks, %zu borrowed loops, %zu breaks, %.1f min\n", TOT_VERSION,
-                    static_cast<unsigned long long>(seed), kDramaturgyNames[static_cast<int>(si.dramaturgy)], si.tracks.size(),
-                    si.loops.size(), si.breaks.size(), engine->lengthSeconds() / 60.0);
-        const TempoMap& tm = setScore.decks[0].tempo;
-        for (size_t i = 0; i < si.tracks.size(); ++i) {
-            const SetTrack& t = si.tracks[i];
+                    static_cast<unsigned long long>(seed), DramaturgyNames[static_cast<int>(si.m_dramaturgy)], si.m_tracks.size(),
+                    si.m_loops.size(), si.m_breaks.size(), engine->lengthSeconds() / 60.0);
+        const TempoMap& tm = setScore.m_decks[0].m_tempo;
+        for (size_t i = 0; i < si.m_tracks.size(); ++i) {
+            const SetTrack& t = si.m_tracks[i];
             std::printf("  T%-2zu deck %c  %6.2f min  %5.1f BPM  %-10s %-9s %-7s %-2s %-16s %-4s  %d bars, swap in %6.2f, energy %.2f; "
                         "opening: %s, the kick from bar %d, leaving %d bars before the end\n",
-                        i + 1, 'A' + t.deck, tm.secondsAt(t.start) / 60.0, t.info.bpm, t.info.style.c_str(), kArchetypeNames[t.info.archetype],
-                        kFormNames[static_cast<int>(t.info.form)], kKeyNames[t.info.key], kScaleNames[t.info.scale],
-                        t.info.camelot.c_str(), t.info.bars, tm.secondsAt(t.swapIn) / 60.0, t.energy, kOpeningNames[t.info.opening],
-                        t.info.kickBar + 1, t.info.kickLeaves);
+                        i + 1, 'A' + t.m_deck, tm.secondsAt(t.m_start) / 60.0, t.m_info.m_bpm, t.m_info.m_style.c_str(), ArchetypeNames[t.m_info.m_archetype],
+                        FormNames[static_cast<int>(t.m_info.m_form)], KeyNames[t.m_info.m_key], ScaleNames[t.m_info.m_scale],
+                        t.m_info.m_camelot.c_str(), t.m_info.m_bars, tm.secondsAt(t.m_swapIn) / 60.0, t.m_energy, OpeningNames[t.m_info.m_opening],
+                        t.m_info.m_kickBar + 1, t.m_info.m_kickLeaves);
         }
-        for (const SetLoop& l : si.loops)
-            std::printf("  %s of T%d (%d bars) on deck C from %.2f to %.2f min\n", kLoopKindNames[static_cast<int>(l.kind)], l.from + 1, l.bars,
-                        tm.secondsAt(l.start) / 60.0, tm.secondsAt(l.end) / 60.0);
+        for (const SetLoop& l : si.m_loops)
+            std::printf("  %s of T%d (%d bars) on deck C from %.2f to %.2f min\n", LoopKindNames[static_cast<int>(l.m_kind)], l.m_from + 1, l.m_bars,
+                        tm.secondsAt(l.m_start) / 60.0, tm.secondsAt(l.m_end) / 60.0);
         // Phase 9: the DJ's hand, counted by kind.
-        if (!si.moves.empty()) {
-            int count[static_cast<int>(MoveKind::Count)] = {};
-            for (const SetMove& m : si.moves) ++count[static_cast<int>(m.kind)];
+        if (!si.m_moves.empty()) {
+            int count[static_cast<int>(MoveKindE::COUNT)] = {};
+            for (const SetMove& m : si.m_moves) ++count[static_cast<int>(m.m_kind)];
             std::string moves;
-            for (int k = 0; k < static_cast<int>(MoveKind::Count); ++k)
-                if (count[k] > 0) moves += (moves.empty() ? "" : ", ") + std::to_string(count[k]) + " " + kMoveNames[k];
-            std::printf("  the DJ's hand: %zu moves (%s)\n", si.moves.size(), moves.c_str());
+            for (int k = 0; k < static_cast<int>(MoveKindE::COUNT); ++k)
+                if (count[k] > 0) moves += (moves.empty() ? "" : ", ") + std::to_string(count[k]) + " " + MoveNames[k];
+            std::printf("  the DJ's hand: %zu moves (%s)\n", si.m_moves.size(), moves.c_str());
         }
         // Phase 9: how much of the set layers sources (Mix-Dok. 6: "zwei bis drei Tracks laufen ständig"): per bar, the
         // tracks heard (from their fader's opening to its closing) and the third deck's loops.
         {
-            const double blend = p.getInt(p.id(Module::Set, 0, set::BlendBars)) == 0 ? 64.0 : 128.0;
+            const double blend = p.getInt(p.id(ModuleE::SET, 0, set::BLEND_BARS)) == 0 ? 64.0 : 128.0;
             int two = 0, three = 0, bars = 0;
-            for (double beat = 2.0; beat < setScore.lengthBeats; beat += 4.0, ++bars) {
+            for (double beat = 2.0; beat < setScore.m_lengthBeats; beat += 4.0, ++bars) {
                 int heard = 0;
-                for (size_t i = 0; i < si.tracks.size(); ++i) {
-                    const SetTrack& t = si.tracks[i];
-                    const double from = i == 0 ? t.start : t.swapIn - blend;
-                    const double to = i + 1 < si.tracks.size() ? t.swapOut + 96.0 : t.end;
+                for (size_t i = 0; i < si.m_tracks.size(); ++i) {
+                    const SetTrack& t = si.m_tracks[i];
+                    const double from = i == 0 ? t.m_start : t.m_swapIn - blend;
+                    const double to = i + 1 < si.m_tracks.size() ? t.m_swapOut + 96.0 : t.m_end;
                     if (beat >= from && beat < to) ++heard;
                 }
-                for (const SetLoop& l : si.loops) if (beat >= l.start && beat < l.end) ++heard;
+                for (const SetLoop& l : si.m_loops) if (beat >= l.m_start && beat < l.m_end) ++heard;
                 two += heard >= 2 ? 1 : 0;
                 three += heard >= 3 ? 1 : 0;
             }
-            const double setMin = tm.secondsAt(setScore.lengthBeats) / 60.0;
+            const double setMin = tm.secondsAt(setScore.m_lengthBeats) / 60.0;
             std::printf("  %.1f tracks an hour; two sources or more in %.0f %% of the bars, three in %.0f %%\n",
-                        si.tracks.size() * 60.0 / std::max(1.0, setMin), 100.0 * two / std::max(1, bars), 100.0 * three / std::max(1, bars));
+                        si.m_tracks.size() * 60.0 / std::max(1.0, setMin), 100.0 * two / std::max(1, bars), 100.0 * three / std::max(1, bars));
         }
         size_t k = 0;
         for (const LevelReading& r : levels)
-            std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB; balance%s\n", ++k, r.measured, r.target, r.trim,
+            std::printf("  level %zu: measured %.1f LUFS, target %.1f, trim %+.1f dB; balance%s\n", ++k, r.m_measured, r.m_target, r.m_trim,
                         balanceText(r).c_str());
         if (!midi.empty()) {
             if (!writeMidiFile(flattenSet(setScore), midi.c_str(), "Totality", &p)) { std::fprintf(stderr, "cannot write %s\n", midi.c_str()); return 1; }
@@ -445,37 +445,37 @@ int main(int argc, char** argv)
         // The set's cues: every track, every swap, every loop.
         std::vector<std::pair<double, int>> where;
         std::vector<TrackInfo> infos;
-        for (const SetTrack& t : si.tracks) { where.push_back({ t.start, t.deck }); infos.push_back(t.info); }
+        for (const SetTrack& t : si.m_tracks) { where.push_back({ t.m_start, t.m_deck }); infos.push_back(t.m_info); }
         cues = setCues(si, tm);
-        tonality = si.tracks.empty() ? std::string() : std::string(kKeyNames[si.tracks[0].info.key]) + "m";
+        tonality = si.m_tracks.empty() ? std::string() : std::string(KeyNames[si.m_tracks[0].m_info.m_key]) + "m";
         cueTempo = tm;
-        cueLength = setScore.lengthBeats;
-        infoTitle = std::string("Totality set ") + kDramaturgyNames[static_cast<int>(si.dramaturgy)] + " seed " + std::to_string(seed);
+        cueLength = setScore.m_lengthBeats;
+        infoTitle = std::string("Totality set ") + DramaturgyNames[static_cast<int>(si.m_dramaturgy)] + " seed " + std::to_string(seed);
         if (!scoreJson.empty()) {
             std::vector<std::pair<BlockOp, int>> ops;   // every deck's operations, with the deck
-            for (int d = 0; d < kDecks; ++d) for (const BlockOp& o : setScore.decks[d].ops) ops.push_back({ o, d });
-            std::stable_sort(ops.begin(), ops.end(), [](const auto& a, const auto& b) { return a.first.beat < b.first.beat; });
+            for (int d = 0; d < Decks; ++d) for (const BlockOp& o : setScore.m_decks[d].m_ops) ops.push_back({ o, d });
+            std::stable_sort(ops.begin(), ops.end(), [](const auto& a, const auto& b) { return a.first.m_beat < b.first.m_beat; });
             // Every deck's notes, with the deck (the loops on deck C are another track's).
             Score all = flattenSet(setScore);
-            all.notes.clear();
+            all.m_notes.clear();
             std::vector<std::pair<NoteEvent, int>> tagged;
-            for (int d = 0; d < kDecks; ++d) for (const NoteEvent& n : setScore.decks[d].notes) tagged.push_back({ n, d });
-            std::stable_sort(tagged.begin(), tagged.end(), [](const auto& a, const auto& b) { return a.first.beat < b.first.beat; });
+            for (int d = 0; d < Decks; ++d) for (const NoteEvent& n : setScore.m_decks[d].m_notes) tagged.push_back({ n, d });
+            std::stable_sort(tagged.begin(), tagged.end(), [](const auto& a, const auto& b) { return a.first.m_beat < b.first.m_beat; });
             std::vector<int> decksOf;
-            for (const auto& t : tagged) { all.notes.push_back(t.first); decksOf.push_back(t.second); }
+            for (const auto& t : tagged) { all.m_notes.push_back(t.first); decksOf.push_back(t.second); }
             if (!writeScoreJson(scoreJson, all, where, infos, ops, decksOf)) { std::fprintf(stderr, "cannot write %s\n", scoreJson.c_str()); return 1; }
             std::printf("score: %s\n", scoreJson.c_str());
         }
     }
     if (planOnly) return 0;   // --plan: what was composed, nothing rendered
     WavWriter wav;
-    if (!out.empty() && !wav.open(out.c_str(), static_cast<int>(rate), 2, WavFormat::Pcm24)) {
+    if (!out.empty() && !wav.open(out.c_str(), static_cast<int>(rate), 2, WavFormatE::PCM24)) {
         std::fprintf(stderr, "cannot write %s\n", out.c_str());
         return 1;
     }
     if (!out.empty()) {
         // The cues (PLAN 9): in the WAV (a cue chunk with labels) and as JSON beside it; the tags.
-        for (const CueAt& c : cues) wav.addCue(static_cast<uint64_t>(std::llround(c.seconds * rate)), c.label);
+        for (const CueAt& c : cues) wav.addCue(static_cast<uint64_t>(std::llround(c.m_seconds * rate)), c.m_label);
         if (!infoTitle.empty()) wav.setInfo("INAM", infoTitle);
         wav.setInfo("ISFT", std::string("Totality ") + TOT_VERSION);
         wav.setInfo("IGNR", "Techno");
@@ -492,17 +492,17 @@ int main(int argc, char** argv)
     if (!stems.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(stems, ec);
-        for (int s = 0; s < Engine::kStems; ++s) {
+        for (int s = 0; s < Engine::STEMS; ++s) {
             stemFiles.push_back(std::make_unique<WavWriter>());
             const std::string path = stems + "/" + Engine::stemName(s) + ".wav";
-            if (!stemFiles.back()->open(path.c_str(), static_cast<int>(rate), 2, WavFormat::Float32)) {
+            if (!stemFiles.back()->open(path.c_str(), static_cast<int>(rate), 2, WavFormatE::FLOAT32)) {
                 std::fprintf(stderr, "cannot write %s\n", path.c_str());
                 return 1;
             }
             stemBufL.emplace_back(static_cast<size_t>(block), 0.0f);
             stemBufR.emplace_back(static_cast<size_t>(block), 0.0f);
         }
-        for (int s = 0; s < Engine::kStems; ++s) { stemL.push_back(stemBufL[static_cast<size_t>(s)].data()); stemR.push_back(stemBufR[static_cast<size_t>(s)].data()); }
+        for (int s = 0; s < Engine::STEMS; ++s) { stemL.push_back(stemBufL[static_cast<size_t>(s)].data()); stemR.push_back(stemBufR[static_cast<size_t>(s)].data()); }
         engine->setStems(stemL.data(), stemR.data());
     }
 
@@ -513,14 +513,14 @@ int main(int argc, char** argv)
     if (!decksDir.empty()) {
         std::error_code ec;
         std::filesystem::create_directories(decksDir, ec);
-        for (int k = 0; k < kDecks; ++k) {
+        for (int k = 0; k < Decks; ++k) {
             tapFiles.push_back(std::make_unique<WavWriter>());
             const std::string path = decksDir + "/deck" + std::string(1, static_cast<char>('A' + k)) + ".wav";
-            if (!tapFiles.back()->open(path.c_str(), static_cast<int>(rate), 2, WavFormat::Float32)) { std::fprintf(stderr, "cannot write %s\n", path.c_str()); return 1; }
+            if (!tapFiles.back()->open(path.c_str(), static_cast<int>(rate), 2, WavFormatE::FLOAT32)) { std::fprintf(stderr, "cannot write %s\n", path.c_str()); return 1; }
             tapBufL.emplace_back(static_cast<size_t>(block), 0.0f);
             tapBufR.emplace_back(static_cast<size_t>(block), 0.0f);
         }
-        for (int k = 0; k < kDecks; ++k) { tapL.push_back(tapBufL[static_cast<size_t>(k)].data()); tapR.push_back(tapBufR[static_cast<size_t>(k)].data()); }
+        for (int k = 0; k < Decks; ++k) { tapL.push_back(tapBufL[static_cast<size_t>(k)].data()); tapR.push_back(tapBufR[static_cast<size_t>(k)].data()); }
         engine->setDeckTaps(tapL.data(), tapR.data());
     }
 
@@ -555,15 +555,15 @@ int main(int argc, char** argv)
     {
         double sum = 0.0;
         for (double v : prof::ns) sum += v;
-        for (int k = 0; k < prof::Count; ++k)
-            std::printf("  %-18s %5.1f %% of the render  %6.3f %% of a core\n", prof::kNames[k], 100.0 * prof::ns[k] / std::max(1.0, sum),
+        for (int k = 0; k < prof::COUNT; ++k)
+            std::printf("  %-18s %5.1f %% of the render  %6.3f %% of a core\n", prof::Names[k], 100.0 * prof::ns[k] / std::max(1.0, sum),
                         100.0 * prof::ns[k] * 1.0e-9 / std::max(1e-9, audioS));
     }
 #endif
     if (!bench) {
         const LoudnessReport r = meter.report();
         std::printf("loudness %.1f LUFS integrated, %.1f LUFS short-term max, true peak %.2f dBTP, LRA %.1f LU, crest %.1f dB,"
-                    " correlation %.2f\n", r.integrated, r.shortTermMax, r.truePeak, r.range, r.crest, r.correlation);
+                    " correlation %.2f\n", r.m_integrated, r.m_shortTermMax, r.m_truePeak, r.m_range, r.m_crest, r.m_correlation);
     }
     if (!out.empty()) std::printf("WAV: %s\n", out.c_str());
     return 0;

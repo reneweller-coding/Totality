@@ -45,19 +45,19 @@ public:
     void process(const float* echoL, const float* echoR, const float* plateL, const float* plateR, float* L, float* R, int n);
 
 private:
-    TapeEcho echo_;   ///< the tape echo
-    Spring spring_;   ///< the springs on the echo send
-    Plate plate_;   ///< the plate
-    std::vector<float> eL_;   ///< the echo's return, left
-    std::vector<float> eR_;   ///< the echo's return, right
-    std::vector<float> sL_;   ///< the springs' return, left
-    std::vector<float> sR_;   ///< the springs' return, right
-    std::vector<float> pL_;   ///< the plate's return, left
-    std::vector<float> pR_;   ///< the plate's return, right
-    float echoGain_ = 0.7f;   ///< the echo's return level
-    float springGain_ = 0.35f;   ///< the springs' return level
-    float plateGain_ = 2.0f;   ///< the plate's return level
-    double sr_ = 48000.0;   ///< the sample rate, Hz
+    TapeEcho m_echo;   ///< the tape echo
+    Spring m_spring;   ///< the springs on the echo send
+    Plate m_plate;   ///< the plate
+    std::vector<float> m_eL;   ///< the echo's return, left
+    std::vector<float> m_eR;   ///< the echo's return, right
+    std::vector<float> m_sL;   ///< the springs' return, left
+    std::vector<float> m_sR;   ///< the springs' return, right
+    std::vector<float> m_pL;   ///< the plate's return, left
+    std::vector<float> m_pR;   ///< the plate's return, right
+    float m_echoGain = 0.7f;   ///< the echo's return level
+    float m_springGain = 0.35f;   ///< the springs' return level
+    float m_plateGain = 2.0f;   ///< the plate's return level
+    double m_sr = 48000.0;   ///< the sample rate, Hz
 };
 
 /** @brief The event-driven three-band duck. */
@@ -70,20 +70,20 @@ public:
     /** @brief Depths of the low and mid bands in dB, and the curve's hold and release. */
     void set(float lowDb, float midDb, float holdMs, float releaseMs);
     /** @brief A kick. */
-    void trigger(double late) { duck_.trigger(late); }
+    void trigger(double late) { m_duck.trigger(late); }
     /** @brief Ducks @p L and @p R in place; with @p gains, keeps each sample's low and mid gain (two a sample). */
     void process(float* L, float* R, int n, float* gains = nullptr);
 
 private:
     /** @brief One channel's crossover: the first and second sections of each LR4, the low band's allpass. */
     struct Bands {
-        Svf split1;   ///< the 200 Hz split
-        Svf low2;     ///< its low pass again (fourth order)
-        Svf high2;    ///< its high pass again
-        Svf split2;   ///< the 2.5 kHz split of the high band
-        Svf mid2;     ///< its low pass again
-        Svf top2;     ///< its high pass again
-        Svf ap;       ///< the 2.5 kHz allpass the low band goes through
+        Svf m_split1;   ///< the 200 Hz split
+        Svf m_low2;     ///< its low pass again (fourth order)
+        Svf m_high2;    ///< its high pass again
+        Svf m_split2;   ///< the 2.5 kHz split of the high band
+        Svf m_mid2;     ///< its low pass again
+        Svf m_top2;     ///< its high pass again
+        Svf m_ap;       ///< the 2.5 kHz allpass the low band goes through
     };
     /** @brief Splits @p x with @p b and puts it back together with the low band times @p gl and the mid band times @p gm. */
     static float band(Bands& b, float x, float gl, float gm);
@@ -91,7 +91,7 @@ private:
 public:
     /** @brief A stem's own crossover: the duck is linear in what it ducks, so the stems' ducks sum to the whole's. */
     struct Replica {
-        Bands b[2];   ///< the crossovers, per channel
+        Bands m_b[2];   ///< the crossovers, per channel
     };
     /** @brief A replica with this ducker's crossover and a clear state. */
     Replica replica() const;
@@ -99,10 +99,10 @@ public:
     static void apply(Replica& r, const float* gains, float* L, float* R, int n);
 
 private:
-    Ducker duck_;   ///< the duck's curve, started by the kicks
-    Bands b_[2];   ///< the crossovers, per channel
-    float lowDepth_ = 0.7f;   ///< the low band's depth, linear
-    float midDepth_ = 0.3f;   ///< the mid band's depth, linear
+    Ducker m_duck;   ///< the duck's curve, started by the kicks
+    Bands m_b[2];   ///< the crossovers, per channel
+    float m_lowDepth = 0.7f;   ///< the low band's depth, linear
+    float m_midDepth = 0.3f;   ///< the mid band's depth, linear
 };
 
 } // namespace tot

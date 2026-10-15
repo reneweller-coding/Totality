@@ -15,8 +15,8 @@ namespace tot {
 
 /** @brief A cue: seconds and a label. */
 struct CueAt {
-    double seconds;   ///< when
-    std::string label;   ///< its text
+    double m_seconds;   ///< when
+    std::string m_label;   ///< its text
 };
 
 /** @brief The cues of a track (PLAN 9): the bass's entry, the kick-outs and returns, the outro, at set beat @p at. */

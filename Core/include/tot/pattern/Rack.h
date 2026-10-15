@@ -44,70 +44,70 @@
 
 namespace tot {
 
-constexpr int kSteps = 16;   ///< sixteenths per bar
+constexpr int Steps = 16;   ///< sixteenths per bar
 
 /** @brief The layers of the rack (Dok. 8.2). Appended to, never reordered. */
-enum class LayerId : int { Kick = 0, GhostKick, ClosedHat, RollingHat, OpenHat, Ride, ClapA, ClapB, ClapGhost, Shaker,
-                           TomConga, Rim, Bass,
+enum class LayerIdE : int { KICK = 0, GHOST_KICK, CLOSED_HAT, ROLLING_HAT, OPEN_HAT, RIDE, CLAP_A, CLAP_B, CLAP_GHOST, SHAKER,
+                           TOM_CONGA, RIM, BASS,
                            /** Phase 2: the ping's figure (always cyclic). */
-                           Ping,
+                           PING,
                            /** Phase 3: the dub chord's stabs, the drone (a note every eight bars), the 303 line, the
                             *  texture (a note every bar). */
-                           Chord, Drone, Acid, Texture, Count };
-constexpr int kNumLayers = static_cast<int>(LayerId::Count);   ///< number of layers
-extern const char* const kLayerNames[kNumLayers];             ///< "kick", "ghost kick", ...
+                           CHORD, DRONE, ACID, TEXTURE, COUNT };
+constexpr int NumLayers = static_cast<int>(LayerIdE::COUNT);   ///< number of layers
+extern const char* const LayerNames[NumLayers];             ///< "kick", "ghost kick", ...
 
 /** @brief When a layer's probabilities are rolled. */
-enum class LayerKind : uint8_t { Anchor, Loop, Motion };
+enum class LayerKindE : uint8_t { ANCHOR, LOOP, MOTION };
 
 /** @brief The fixed description of a layer. */
 struct LayerDef {
-    LayerKind kind;          ///< when its values below one are rolled
-    float p[kSteps];         ///< onset probability per step in the full groove
-    float vel[kSteps];       ///< velocity per step (0..1; 0 where p is 0)
-    float velRandom;         ///< +- random velocity (0..1 units)
-    float offsetLoMs;        ///< the feel offset's range, ms (drawn per track)
-    float offsetHiMs;   ///< the feel offset's upper end, ms
-    float swing;             ///< share of the swing: 0, 0.5 or 1
-    double length;           ///< note length in beats
-    bool perc;               ///< dips when it meets a kick or a hat
+    LayerKindE m_kind;          ///< when its values below one are rolled
+    float m_p[Steps];         ///< onset probability per step in the full groove
+    float m_vel[Steps];       ///< velocity per step (0..1; 0 where p is 0)
+    float m_velRandom;         ///< +- random velocity (0..1 units)
+    float m_offsetLoMs;        ///< the feel offset's range, ms (drawn per track)
+    float m_offsetHiMs;   ///< the feel offset's upper end, ms
+    float m_swing;             ///< share of the swing: 0, 0.5 or 1
+    double m_length;           ///< note length in beats
+    bool m_perc;               ///< dips when it meets a kick or a hat
 };
 /** @brief The description of layer @p id. */
-const LayerDef& layerDef(LayerId id);
+const LayerDef& layerDef(LayerIdE id);
 
 /** @brief An Elektron-style trig condition: an extra onset of @c layer on @c step in the a-th of every b bars. */
 struct TrigCond {
-    LayerId layer = LayerId::OpenHat;   ///< which layer
-    int step = 0;                       ///< on which sixteenth
-    int a = 1;   ///< plays in bar a ...
-    int b = 4;   ///< ... of every b (1-based)
+    LayerIdE m_layer = LayerIdE::OPEN_HAT;   ///< which layer
+    int m_step = 0;                       ///< on which sixteenth
+    int m_a = 1;   ///< plays in bar a ...
+    int m_b = 4;   ///< ... of every b (1-based)
 };
 
 /** @brief What a track decides once about its layers. */
 struct RackPlan {
-    uint64_t seed = 1;                  ///< the track's pattern seed
-    int loopBars[kNumLayers] = {};      ///< loop length of each Loop layer: 1, 2 or 4
-    float offsetMs[kNumLayers] = {};    ///< each layer's feel offset
-    bool clapB = false;                 ///< the displaced clap (Dok. 8.2, variant B) instead of 2 and 4
-    int tomLane = 9;                    ///< which kit lane plays the tom/conga layer (9 tom, 10 conga)
-    int keyRoot = 9;                    ///< pitch class of the key
-    int scale = 0;                      ///< compose.scale
-    int bassRoot = 45;                  ///< the bass line's root as a MIDI note (41 .. 82 Hz)
-    int bassSet[4] = { 0, 0, 0, 0 };    ///< the bass alphabet (semitones above the root, Dok. 4); bassSize of them
-    int bassSize = 1;   ///< how many notes of bassSet the alphabet has
-    float swing = 53.0f;                ///< MPC swing, per cent
-    float humanizeMs = 3.0f;            ///< jitter's standard deviation
+    uint64_t m_seed = 1;                  ///< the track's pattern seed
+    int m_loopBars[NumLayers] = {};      ///< loop length of each Loop layer: 1, 2 or 4
+    float m_offsetMs[NumLayers] = {};    ///< each layer's feel offset
+    bool m_clapB = false;                 ///< the displaced clap (Dok. 8.2, variant B) instead of 2 and 4
+    int m_tomLane = 9;                    ///< which kit lane plays the tom/conga layer (9 tom, 10 conga)
+    int m_keyRoot = 9;                    ///< pitch class of the key
+    int m_scale = 0;                      ///< compose.scale
+    int m_bassRoot = 45;                  ///< the bass line's root as a MIDI note (41 .. 82 Hz)
+    int m_bassSet[4] = { 0, 0, 0, 0 };    ///< the bass alphabet (semitones above the root, Dok. 4); bassSize of them
+    int m_bassSize = 1;   ///< how many notes of bassSet the alphabet has
+    float m_swing = 53.0f;                ///< MPC swing, per cent
+    float m_humanizeMs = 3.0f;            ///< jitter's standard deviation
     // Phase 2.
-    int period[kNumLayers] = {};        ///< a cyclic layer's period in sixteenths (0: the sixteen-step matrix)
-    int resetBars[kNumLayers] = {};     ///< where a cyclic layer starts over: every 16 bars (polymeter) or 32 (slipping)
-    uint64_t cycle[kNumLayers] = {};    ///< a cyclic layer's onsets, bit k for position k of its period
-    uint16_t euclid[kNumLayers] = {};   ///< a Euclidean pattern replacing the matrix (0: none), bit s for step s
-    int displace[kNumLayers] = {};      ///< a whole layer moved later by this many sixteenths
-    int pingRoot = 57;                  ///< the ping's root note (220 .. 415 Hz)
-    int pingNote[64] = {};              ///< the ping's pitch at each position of its period
-    TrigCond conds[4];                  ///< trig conditions
-    int nConds = 0;   ///< how many of conds are in use
-    float fillChance = 0.25f;           ///< a fill at the end of an eight-bar phrase (Dok. 8.2)
+    int m_period[NumLayers] = {};        ///< a cyclic layer's period in sixteenths (0: the sixteen-step matrix)
+    int m_resetBars[NumLayers] = {};     ///< where a cyclic layer starts over: every 16 bars (polymeter) or 32 (slipping)
+    uint64_t m_cycle[NumLayers] = {};    ///< a cyclic layer's onsets, bit k for position k of its period
+    uint16_t m_euclid[NumLayers] = {};   ///< a Euclidean pattern replacing the matrix (0: none), bit s for step s
+    int m_displace[NumLayers] = {};      ///< a whole layer moved later by this many sixteenths
+    int m_pingRoot = 57;                  ///< the ping's root note (220 .. 415 Hz)
+    int m_pingNote[64] = {};              ///< the ping's pitch at each position of its period
+    TrigCond m_conds[4];                  ///< trig conditions
+    int m_nConds = 0;   ///< how many of conds are in use
+    float m_fillChance = 0.25f;           ///< a fill at the end of an eight-bar phrase (Dok. 8.2)
     /**
      * @name The style's restlessness (27.09.2026, the reference measurement, PLAN 13.4)
      * The references' bar similarity (the median correlation of a bar's onset profile with the bar one, two or four
@@ -116,10 +116,10 @@ struct RackPlan {
      * share of the motion steps rolled anew every bar sets it in between (seeds 7 and 8, seven minutes: Hypnotic 1.0 ->
      * 0.87, Raw 0.3 -> 0.93, Dub 0.25 -> 0.94, Ostgut 0.1 -> 0.97).
      * @{ */
-    float mutation = 0.25f;             ///< share of a loop's open steps re-rolled in its bars 2 and 4
-    float motionScale = 1.0f;           ///< factor on the motion layers' probabilities
-    float reroll = 1.0f;                ///< share of the motion layers' steps rolled anew every bar (the rest once per block)
-    float oneBarLoops = 0.10f;          ///< chance of a one-bar loop (the rest two and four bars, 0.55 : 0.35)
+    float m_mutation = 0.25f;             ///< share of a loop's open steps re-rolled in its bars 2 and 4
+    float m_motionScale = 1.0f;           ///< factor on the motion layers' probabilities
+    float m_reroll = 1.0f;                ///< share of the motion layers' steps rolled anew every bar (the rest once per block)
+    float m_oneBarLoops = 0.10f;          ///< chance of a one-bar loop (the rest two and four bars, 0.55 : 0.35)
     /** @} */
     /**
      * @name Phase 3: the harmony (Dok. 8.6, PLAN 7.5)
@@ -128,21 +128,21 @@ struct RackPlan {
      * iv 0.25, bIII 0.2 -- every second or fourth bar, a triad stacked in the scale's thirds (so it stays in the key).
      * Never V-i, never the leading tone, never a major seventh; add9 only where the scale has the ninth.
      * @{ */
-    int chordRoot = 57;                 ///< the chord's root note
-    int chordTones[5] = { 0, 3, 7 };    ///< semitones above the root (the fourth in the bass below it: -7)
-    int nChordTones = 3;
-    int shuttle = 0;                    ///< the second chord's root, semitones from the first (0: none)
-    int shuttleTones[3] = {};           ///< the second chord, semitones above chordRoot
-    int shuttleBars = 0;                ///< it plays every shuttleBars-th bar (2 or 4), 0: never
-    int droneNote = 57;                 ///< the drone's note (tonic or fifth; the voice keeps it above 150 Hz)
-    int acidRoot = 45;                  ///< the 303 line's root, an octave over the bass's
-    uint16_t acidMask = 0x0FFF;         ///< Phase 4: the pitch classes above the root the 303 may play (bit k: k semitones)
+    int m_chordRoot = 57;                 ///< the chord's root note
+    int m_chordTones[5] = { 0, 3, 7 };    ///< semitones above the root (the fourth in the bass below it: -7)
+    int m_nChordTones = 3;
+    int m_shuttle = 0;                    ///< the second chord's root, semitones from the first (0: none)
+    int m_shuttleTones[3] = {};           ///< the second chord, semitones above chordRoot
+    int m_shuttleBars = 0;                ///< it plays every shuttleBars-th bar (2 or 4), 0: never
+    int m_droneNote = 57;                 ///< the drone's note (tonic or fifth; the voice keeps it above 150 Hz)
+    int m_acidRoot = 45;                  ///< the 303 line's root, an octave over the bass's
+    uint16_t m_acidMask = 0x0FFF;         ///< Phase 4: the pitch classes above the root the 303 may play (bit k: k semitones)
     /** @} */
     /**
      * @brief Phase 4: each layer's own seed for its rolls (PLAN 7.8). All start as the track's seed; the composer
      *        draws one layer anew by giving it another, so a layer is locked while the rest is rerolled and back.
      */
-    uint64_t layerSeed[kNumLayers] = {};
+    uint64_t m_layerSeed[NumLayers] = {};
     /**
      * @name Phase 8: the figure (28.09.2026)
      * The track's signature voice (Composer.h) -- what the canon's tracks are remembered by: the motif of "The Bells",
@@ -150,27 +150,27 @@ struct RackPlan {
      * one or two bars that stays the same from its entry to the track's end (Myloops' anchor: "identical every bar") and
      * moves only by its knobs, in the composer's waves; the ping's figure is its cycle, made richer (makeFigure).
      * @{ */
-    LayerId figure = LayerId::Count;    ///< the signature voice (Count: none)
-    int figBars = 1;                    ///< the motif's length: 1 or 2 bars
-    uint32_t figOn = 0;                 ///< its onsets, bit bar * 16 + step
-    int8_t figPitch[32] = {};           ///< semitones above the voice's root at each place
-    uint32_t figAccent = 0;             ///< accented places
-    uint32_t figSlide = 0;              ///< places that glide into the next one (the 303)
-    double figLength = 0.5;             ///< a stab's length in beats
+    LayerIdE m_figure = LayerIdE::COUNT;    ///< the signature voice (Count: none)
+    int m_figBars = 1;                    ///< the motif's length: 1 or 2 bars
+    uint32_t m_figOn = 0;                 ///< its onsets, bit bar * 16 + step
+    int8_t m_figPitch[32] = {};           ///< semitones above the voice's root at each place
+    uint32_t m_figAccent = 0;             ///< accented places
+    uint32_t m_figSlide = 0;              ///< places that glide into the next one (the 303)
+    double m_figLength = 0.5;             ///< a stab's length in beats
     /** @} */
 };
 
 /** @brief What a track decides about its rack before the rack draws its plan (Phase 4: from the style's profile). */
 struct RackSettings {
-    int keyRoot = 9;                    ///< pitch class of the key
-    int scale = 0;                      ///< compose.scale
-    float swing = 53.0f;                ///< MPC swing, per cent
-    float humanizeMs = 3.0f;            ///< jitter's standard deviation
-    float mutation = 0.25f;             ///< RackPlan::mutation
-    float motionScale = 1.0f;           ///< RackPlan::motionScale
-    float reroll = 0.15f;               ///< RackPlan::reroll
-    float polymeterChance = 0.5f;       ///< one or two cyclic percussion layers
-    float fillChance = 0.25f;           ///< RackPlan::fillChance
+    int m_keyRoot = 9;                    ///< pitch class of the key
+    int m_scale = 0;                      ///< compose.scale
+    float m_swing = 53.0f;                ///< MPC swing, per cent
+    float m_humanizeMs = 3.0f;            ///< jitter's standard deviation
+    float m_mutation = 0.25f;             ///< RackPlan::mutation
+    float m_motionScale = 1.0f;           ///< RackPlan::motionScale
+    float m_reroll = 0.15f;               ///< RackPlan::reroll
+    float m_polymeterChance = 0.5f;       ///< one or two cyclic percussion layers
+    float m_fillChance = 0.25f;           ///< RackPlan::fillChance
 };
 /** @brief The settings the knobs describe: compose.key, scale, swing, humanize, and compose.style's profile. */
 RackSettings rackSettings(const ParamStore& p);
@@ -199,20 +199,20 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed);
  *
  * LayerId::Count clears the figure. The motif comes from @p seed alone (the composer's stream "figure").
  */
-void makeFigure(RackPlan& plan, LayerId voice, uint64_t seed);
+void makeFigure(RackPlan& plan, LayerIdE voice, uint64_t seed);
 
 /** @brief What the form asks of the rack in one bar. */
 struct BarSpec {
-    int bar = 0;                            ///< absolute bar index (0-based) of the track
-    int block = 0;                          ///< its 32-bar block
-    int barInBlock = 0;                     ///< 0 .. 31
-    double beat = 0.0;                      ///< the bar's first beat in the score
-    double bpm = 130.0;                     ///< the tempo there (for the ms offsets)
-    bool active[kNumLayers] = {};           ///< which layers play
-    float density[kNumLayers] = {};         ///< a factor on the probabilities below one (1 = the full groove)
-    bool muteStep[kSteps] = {};             ///< steps where nothing but the kick plays ("mute one expected hit", Dok. 8.5)
-    bool fills = true;                      ///< fills allowed in this bar
-    uint32_t variant = 0;                   ///< Phase 4: the block's candidate (PLAN 7.9); 0 the plain rolls
+    int m_bar = 0;                            ///< absolute bar index (0-based) of the track
+    int m_block = 0;                          ///< its 32-bar block
+    int m_barInBlock = 0;                     ///< 0 .. 31
+    double m_beat = 0.0;                      ///< the bar's first beat in the score
+    double m_bpm = 130.0;                     ///< the tempo there (for the ms offsets)
+    bool m_active[NumLayers] = {};           ///< which layers play
+    float m_density[NumLayers] = {};         ///< a factor on the probabilities below one (1 = the full groove)
+    bool m_muteStep[Steps] = {};             ///< steps where nothing but the kick plays ("mute one expected hit", Dok. 8.5)
+    bool m_fills = true;                      ///< fills allowed in this bar
+    uint32_t m_variant = 0;                   ///< Phase 4: the block's candidate (PLAN 7.9); 0 the plain rolls
 };
 /** @brief A BarSpec with every layer off and every density at one. */
 BarSpec emptyBar(int bar, double beat, double bpm);
@@ -230,7 +230,7 @@ void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent
  *        the displacement -- without the rules that involve the other layers (for the tests and the displays).
  * @param busy steps the other ghosts and percussion already took (the ghost chain's cross factor), or null
  */
-void rollSteps(const RackPlan& plan, LayerId id, int bar, int block, float density, bool* on, const bool* busy = nullptr,
+void rollSteps(const RackPlan& plan, LayerIdE id, int bar, int block, float density, bool* on, const bool* busy = nullptr,
                uint32_t variant = 0);
 
 /** @brief k onsets spread as evenly as possible over n steps, the first on step 0 (Toussaint's Euclidean rhythm). */
@@ -248,9 +248,9 @@ uint16_t offQuarterMask(int k, int r);
  *        polymetric "{x ~ x ~ ~}%16".
  * @param name the sound's name in the notation ("bd", "hh" ...)
  */
-std::string miniNotation(const RackPlan& plan, LayerId id, int bar, const char* name);
+std::string miniNotation(const RackPlan& plan, LayerIdE id, int bar, const char* name);
 
 /** @brief The kit lane a layer plays on, or -1 (the kick and the bass are no lanes). */
-int layerLane(const RackPlan& plan, LayerId id);
+int layerLane(const RackPlan& plan, LayerIdE id);
 
 } // namespace tot
