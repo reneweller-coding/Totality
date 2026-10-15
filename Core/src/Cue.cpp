@@ -2,6 +2,7 @@
  * @file Cue.cpp
  * @brief Score cues for a visualiser (Cue.h).
  * @note Copied from Ephemeris `Core/src/Cue.cpp` (namespace eph) at d047d79 (27.09.2026); the marks are Totality's.
+ * @author Rene Weller
  */
 #include "tot/Cue.h"
 #include "tot/Dsp.h"
@@ -34,20 +35,32 @@ namespace tot {
 
 namespace {
 
-/** @brief Copies @p src into @p dst, cut at 23 characters and terminated. */
+/**
+ * @brief Copies @p src into @p dst, cut at 23 characters and terminated.
+ * @param[out] dst  receives the text
+ * @param[in]  src  the text
+ */
 void copyText(char (&dst)[24], const char* src)
 {
     std::strncpy(dst, src, sizeof(dst) - 1);
     dst[sizeof(dst) - 1] = 0;
 }
 
-/** @brief Appends @p v big-endian (OSC). */
+/**
+ * @brief Appends @p v big-endian (OSC).
+ * @param[in,out] out  the bytes, appended to
+ * @param[in]     v    the value
+ */
 void put32(std::vector<uint8_t>& out, uint32_t v)
 {
     for (int s = 24; s >= 0; s -= 8) out.push_back(static_cast<uint8_t>(v >> s));
 }
 
-/** @brief Appends @p s as an OSC string: terminated and padded to four bytes. */
+/**
+ * @brief Appends @p s as an OSC string: terminated and padded to four bytes.
+ * @param[in,out] out  the bytes, appended to
+ * @param[in]     s    the string
+ */
 void putString(std::vector<uint8_t>& out, const char* s)
 {
     const size_t n = std::strlen(s);

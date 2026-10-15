@@ -11,6 +11,7 @@
  *    schools (PLAN 2.9 Nachtrag: Hypnotic 0.87, Ostgut 0.955);
  *  - **micro-change**: the mean absolute change of each band's energy from bar to bar, dB;
  *  - **density**: onsets per bar.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Score.h"
@@ -25,12 +26,20 @@ struct BarProfile {
     int m_onsets = 0;   ///< how many onsets the bar has
 };
 
-/** @brief The band of every part for a plan's lanes (-1: not counted: the drone, the texture, the noise lane). */
+/**
+ * @brief The band of every part for a plan's lanes (-1: not counted: the drone, the texture, the noise lane).
+ * @param[in]  plan        the rack plan
+ * @param[out] bandOfPart  receives each part's band
+ */
 void partBands(const RackPlan& plan, int* bandOfPart);
 
 /**
  * @brief The profiles of bars @p firstBar .. @p firstBar + @p count - 1 (4 beats each, from beat 0) of @p notes.
- * @param bands partBands()'s table
+ * @param[in] notes     the notes
+ * @param[in] firstBar  the first bar
+ * @param[in] count     how many bars
+ * @param[in] bands     partBands()'s table
+ * @return the bars' profiles
  */
 std::vector<BarProfile> barProfiles(const std::vector<NoteEvent>& notes, int firstBar, int count, const int* bands);
 
@@ -44,6 +53,10 @@ struct CorridorStats {
 /**
  * @brief The measures of bars @p from .. @p to - 1 of @p bars (the bars before @p from serve as the lags' context; a bar
  *        without four predecessors counts only the lags it has).
+ * @param[in] bars  the bars' profiles
+ * @param[in] from  the first bar
+ * @param[in] to    one past the last
+ * @return the corridor's statistics
  */
 CorridorStats corridorOf(const std::vector<BarProfile>& bars, int from, int to);
 

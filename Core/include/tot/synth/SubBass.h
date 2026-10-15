@@ -14,6 +14,7 @@
  * **Duck** event-driven (Ducker.h): 6 to 12 dB, a short hold, a raised-cosine return of 150 to 350 ms (Dok. 8.7).
  * **Envelope:** Dsp.h's ADSR with the sub-sample onset of Phosphene; the release never shorter than half a period
  * (Phosphene's release floor), so a note's end does not click.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Adaa.h"
@@ -25,36 +26,61 @@ namespace tot {
 /** @brief The sub bass voice (monophonic). */
 class SubBass {
 public:
-    /** @brief Prepares for a sample rate. */
+    /**
+     * @brief Prepares for a sample rate.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence. */
     void reset();
-    /** @brief Reads the effective parameter values (indexed by sub::). */
+    /**
+     * @brief Reads the effective parameter values (indexed by sub::).
+     * @param[in] v  the effective parameter values, indexed by sub::
+     */
     void update(const float* v);
     /**
      * @brief Starts a note.
-     * @param pitch    MIDI note (before sub.octave)
-     * @param velocity 0..1
-     * @param late     samples since its ideal start (0 <= late < 1)
-     * @param phase    the phase to start at, in cycles, or a negative value for "free" (the running phase)
+     * @param[in] pitch     MIDI note (before sub.octave)
+     * @param[in] velocity  0..1
+     * @param[in] late      samples since its ideal start (0 <= late < 1)
+     * @param[in] phase     the phase to start at, in cycles, or a negative value for "free" (the running phase)
      */
     void noteOn(int pitch, float velocity, double late, double phase);
     /** @brief Releases the note. */
     void noteOff();
-    /** @brief A kick starts: the duck. */
+    /**
+     * @brief A kick starts: the duck.
+     * @param[in] late  samples since the kick's ideal start
+     */
     void kick(double late) { m_duck.trigger(late); }
-    /** @brief Renders @p n samples (replacing @p out, mono). */
+    /**
+     * @brief Renders @p n samples (replacing @p out, mono).
+     * @param[out] out  receives the mono output (replaced)
+     * @param[in]  n    how many samples
+     */
     void process(float* out, int n);
-    /** @brief The frequency a note of @p pitch plays at, after the octave setting. */
+    /**
+     * @brief The frequency a note of @p pitch plays at, after the octave setting.
+     * @param[in] pitch  the MIDI note
+     * @return the frequency it plays at, in Hz
+     */
     double noteHz(int pitch) const;
-    /** @brief Whether sub.lock asks for the kick's phase. */
+    /**
+     * @brief Whether sub.lock asks for the kick's phase.
+     * @return true when sub.lock asks for the kick's phase
+     */
     bool locked() const { return m_lock; }
     /**
      * @brief Phase in cycles the voice's chain adds at @p hz (half a sample of ADAA, the low pass): a locked note starts
      *        this much earlier in its cycle, so that what leaves the voice is in the kick's phase.
+     * @param[in] hz  the frequency in Hz
+     * @return the phase the voice's chain adds there, in cycles
      */
     double chainPhase(double hz) const;
-    /** @brief Whether anything sounds. */
+    /**
+     * @brief Whether anything sounds.
+     * @return true while anything sounds
+     */
     bool active() const { return m_env.isActive(); }
 
 private:

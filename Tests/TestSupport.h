@@ -3,6 +3,7 @@
  * @brief A minimal check framework and measurement helpers for the self tests.
  * @note Copied from Phosphene `Tests/TestSupport.h` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
  * @note Copied from Ephemeris `Tests/TestSupport.h` at d047d79 (27.09.2026); namespace tottest.
+ * @author Rene Weller
  */
 #pragma once
 #include <chrono>
@@ -20,14 +21,17 @@ struct Tally {
     int m_failed = 0;   ///< checks that did not
 };
 
-/** @brief The one tally of a test executable. */
+/**
+ * @brief The one tally of a test executable.
+ * @return the tally
+ */
 inline Tally& tally() { static Tally t; return t; }
 
 /**
  * @brief Records a check; prints failures always and passes when @p verbose.
- * @param ok     outcome
- * @param what   short description
- * @param detail measured values, printed with the description
+ * @param[in] ok      outcome
+ * @param[in] what    short description
+ * @param[in] detail  measured values, printed with the description
  */
 inline void check(bool ok, const char* what, const std::string& detail = std::string())
 {
@@ -36,7 +40,12 @@ inline void check(bool ok, const char* what, const std::string& detail = std::st
     std::printf("  [%s] %s%s%s\n", ok ? " ok " : "FAIL", what, detail.empty() ? "" : "  -- ", detail.c_str());
 }
 
-/** @brief printf into a std::string. */
+/**
+ * @brief printf into a std::string.
+ * @param[in] f     the printf format
+ * @param[in] args  its arguments
+ * @return the text
+ */
 template <class... AT>
 inline std::string fmt(const char* f, AT... args)
 {
@@ -51,7 +60,10 @@ inline std::string fmt(const char* f, AT... args)
     return buf;
 }
 
-/** @brief Seconds since the previous section began (steady clock). */
+/**
+ * @brief Seconds since the previous section began (steady clock).
+ * @return the seconds since the previous section began
+ */
 inline double sectionSeconds()
 {
     static auto last = std::chrono::steady_clock::now();
@@ -61,20 +73,29 @@ inline double sectionSeconds()
     return s;
 }
 
-/** @brief Prints a section header, with the time the previous section took. */
+/**
+ * @brief Prints a section header, with the time the previous section took.
+ * @param[in] name  the section's name
+ */
 inline void section(const char* name)
 {
     std::printf("         (%.1f s)\n%s\n", sectionSeconds(), name);
 }
 
-/** @brief Ends the run: prints totals and returns the process exit code. */
+/**
+ * @brief Ends the run: prints totals and returns the process exit code.
+ * @return the exit code: the number of failures
+ */
 inline int finish()
 {
     std::printf("\n%d passed, %d failed\n", tally().m_passed, tally().m_failed);
     return tally().m_failed == 0 ? 0 : 1;
 }
 
-/** @brief In-place radix-2 FFT (n a power of two). */
+/**
+ * @brief In-place radix-2 FFT (n a power of two).
+ * @param[in,out] a  the samples, replaced by their spectrum
+ */
 inline void fft(std::vector<std::complex<double>>& a)
 {
     const size_t n = a.size();
@@ -101,8 +122,8 @@ inline void fft(std::vector<std::complex<double>>& a)
 
 /**
  * @brief Power spectrum of a Blackman-Harris-windowed segment.
- * @param x signal, at least @p n samples
- * @param n FFT length (power of two)
+ * @param[in] x  signal, at least @p n samples
+ * @param[in] n  FFT length (power of two)
  * @return power per bin, bins 0..n/2
  */
 inline std::vector<double> powerSpectrum(const float* x, size_t n)
@@ -119,7 +140,11 @@ inline std::vector<double> powerSpectrum(const float* x, size_t n)
     return p;
 }
 
-/** @brief Decibels of a power ratio. */
+/**
+ * @brief Decibels of a power ratio.
+ * @param[in] ratio  the power ratio
+ * @return the ratio in dB
+ */
 inline double powDb(double ratio) { return 10.0 * std::log10(ratio > 1e-300 ? ratio : 1e-300); }
 
 } // namespace tottest

@@ -2,6 +2,7 @@
  * @file GestureEngine.cpp
  * @brief The player's hands.
  * @note Copied from Ephemeris `Core/src/compose/GestureEngine.cpp` (namespace eph) at d047d79 (27.09.2026); the grid added.
+ * @author Rene Weller
  */
 #include "tot/compose/GestureEngine.h"
 #include <algorithm>

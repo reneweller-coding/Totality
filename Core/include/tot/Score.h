@@ -19,6 +19,7 @@
  *
  * @note The gesture curve and the housekeeping are copied from Ephemeris `Core/include/eph/Score.h` at d047d79
  *       (27.09.2026); parts, block operations and the rest are Totality's.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Clock.h"
@@ -38,11 +39,23 @@ enum class PartE : int { KICK = 0, SUB,
                         BASS, ACID, CHORD, DRONE, TEXTURE, COUNT };
 constexpr int NumParts = static_cast<int>(PartE::COUNT);   ///< number of parts
 extern const char* const PartNames[NumParts];            ///< "kick", "sub", "perc1" .. "perc12", "ping", "bass", ...
-/** @brief Whether a part's notes are one-shots (the kick, the kit, the ping) or held until their end. */
+/**
+ * @brief Whether a part's notes are one-shots (the kick, the kit, the ping) or held until their end.
+ * @param[in] p  the part
+ * @return true when its notes are one-shots
+ */
 constexpr bool isOneShot(PartE p) { return p == PartE::KICK || p == PartE::PING || (static_cast<int>(p) >= 2 && static_cast<int>(p) < 14); }
-/** @brief The part of kit lane @p lane (0-based). */
+/**
+ * @brief The part of kit lane @p lane (0-based).
+ * @param[in] lane  the kit lane, 0-based
+ * @return its part
+ */
 constexpr PartE percPart(int lane) { return static_cast<PartE>(static_cast<int>(PartE::PERC1) + lane); }
-/** @brief The kit lane of @p part, or -1 if it is not a lane. */
+/**
+ * @brief The kit lane of @p part, or -1 if it is not a lane.
+ * @param[in] part  the part
+ * @return its kit lane, -1 if it is not a lane
+ */
 constexpr int laneOf(PartE part)
 {
     const int i = static_cast<int>(part) - static_cast<int>(PartE::PERC1);
@@ -79,9 +92,19 @@ struct Gesture {
     GestureShapeE m_shape = GestureShapeE::MINIMUM_JERK;   ///< the path between the two
     uint8_t m_hand = 0;           ///< which hand (PLAN 7.3: at most two at once)
 };
-/** @brief Position 0..1 along a shape at normalised time @p t (clamped to 0..1). */
+/**
+ * @brief Position 0..1 along a shape at normalised time @p t (clamped to 0..1).
+ * @param[in] shape  the shape
+ * @param[in] t      the position in the gesture, 0..1
+ * @return the shape's value, 0..1
+ */
 double gestureShape(GestureShapeE shape, double t);
-/** @brief Offset of one curve at @p beat: @p from before it, its shape during it, @p to after it. */
+/**
+ * @brief Offset of one curve at @p beat: @p from before it, its shape during it, @p to after it.
+ * @param[in] g     the gesture
+ * @param[in] beat  the position in beats
+ * @return its offset there
+ */
 float gestureValue(const Gesture& g, double beat);
 
 /** @brief What a block boundary did (PLAN 7.2). */
@@ -164,21 +187,40 @@ struct Score {
     std::vector<LevelMark> m_levels;   ///< every track's loudness mark, in beat order (Leveler.h)
     std::vector<KnobSet> m_knobs;      ///< the knobs every track sets at its start, sorted by beat after sort()
     std::vector<SoundPick> m_sounds;   ///< the presets the composer chose, sorted by beat after sort()
-    /** @brief The value the latest knob setting of @p param at or before @p beat gives it; NaN if none does. */
+    /**
+     * @brief The value the latest knob setting of @p param at or before @p beat gives it; NaN if none does.
+     * @param[in] param  the parameter
+     * @param[in] beat   the position in beats
+     * @return the value the latest knob setting gives it, NaN if none does
+     */
     float knobAt(int param, double beat) const;
-    /** @brief The loudness correction at @p beat in dB: the latest mark's (0 before the first). */
+    /**
+     * @brief The loudness correction at @p beat in dB: the latest mark's (0 before the first).
+     * @param[in] beat  the position in beats
+     * @return the loudness correction there in dB
+     */
     float trimAt(double beat) const;
-    /** @brief The parts' corrections at @p beat, dB: the latest mark's (none before the first). */
+    /**
+     * @brief The parts' corrections at @p beat, dB: the latest mark's (none before the first).
+     * @param[in] beat  the position in beats
+     * @return the parts' corrections there in dB
+     */
     BalanceDbT balanceAt(double beat) const;
     /** @brief Sorts every list by beat (stable, so equal beats keep the order they were written in). */
     void sort();
-    /** @brief Empties the score and resets the tempo to @p bpm. */
+    /**
+     * @brief Empties the score and resets the tempo to @p bpm.
+     * @param[in] bpm  the new tempo in beats per minute
+     */
     void clear(double bpm);
     /**
      * @brief The automation offset of @p param at @p beat, in the normalised range.
      *
      * Of the curves on one knob, the latest that has started counts; before the first one the offset is 0. Linear
      * in the number of curves -- for the offline render and the tests; the audio thread keeps a cursor instead.
+     * @param[in] param  the parameter
+     * @param[in] beat   the position in beats
+     * @return the automation offset in the normalised range
      */
     float gestureOffset(int param, double beat) const;
 };

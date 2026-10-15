@@ -3,6 +3,7 @@
  * @brief A deck: events on the sample grid, the parameter raster, the low end as one system, buses, sends, track bus.
  * @note The raster, the event splitting and the automation cursors follow Ephemeris `Core/src/Engine.cpp` at d047d79
  *       (27.09.2026); the signal flow is Totality's. Until Phase 4 this was the engine itself.
+ * @author Rene Weller
  */
 #include "tot/Deck.h"
 #include "tot/Profile.h"

@@ -1,12 +1,12 @@
 /**
  * @file EditorTheme.cpp
  * @brief The palette, the families, the modules' panels and the look and feel (EditorTheme.h).
+ * @author Rene Weller
  */
 #include "EditorTheme.h"
+#include "PluginEditor.h"   // drawLogo
 #include "TotalityData.h"
 #include <cmath>
-
-void drawLogo(juce::Graphics& g, juce::Rectangle<float> r);   ///< PluginEditor.cpp
 
 namespace totui {
 

@@ -3,6 +3,11 @@
  * @brief What each stage of the engine costs (PLAN 11): with the CMake option TOT_PROFILE, the stages of Deck::render and
  *        of the engine's mixer and master add their wall time to a slot each, and tot_render prints the table. Without
  *        it the scopes compile to nothing.
+ * @author Rene Weller
+ *
+ * @par Compile Flags:
+ *   @arg @c TOT_PROFILE - times the stages of the engine into a slot each (the CMake option of the same name); without
+ *                         it the scopes compile to nothing
  */
 #pragma once
 
@@ -38,10 +43,19 @@ struct Scope {
 #define TOT_PROF_BEGIN(slot) const auto totProfT_##slot = std::chrono::steady_clock::now()
 #define TOT_PROF_END(slot)     (::tot::prof::ns[::tot::prof::slot] += std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - totProfT_##slot).count())
 #else
-/** @brief Times the enclosing scope into @p slot (nothing without TOT_PROFILE). */
+/**
+ * @brief Times the enclosing scope into @p slot (nothing without TOT_PROFILE).
+ * @param[in] slot  the profile slot (prof::SlotE)
+ */
 #define TOT_PROF(slot) ((void)0)
-/** @brief Starts timing into @p slot (nothing without TOT_PROFILE). */
+/**
+ * @brief Starts timing into @p slot (nothing without TOT_PROFILE).
+ * @param[in] slot  the profile slot (prof::SlotE)
+ */
 #define TOT_PROF_BEGIN(slot) ((void)0)
-/** @brief Ends timing into @p slot (nothing without TOT_PROFILE). */
+/**
+ * @brief Ends timing into @p slot (nothing without TOT_PROFILE).
+ * @param[in] slot  the profile slot (prof::SlotE)
+ */
 #define TOT_PROF_END(slot) ((void)0)
 #endif

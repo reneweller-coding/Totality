@@ -1,6 +1,7 @@
 /**
  * @file Drone.cpp
  * @brief The drone and the texture.
+ * @author Rene Weller
  */
 #include "tot/synth/Drone.h"
 #include "tot/Params.h"

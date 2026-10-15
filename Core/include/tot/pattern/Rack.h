@@ -34,6 +34,7 @@
  * beat 2 had none). Trig conditions (Elektron's A:B): an extra open hat in the second of four bars, a single shaker in
  * the third. Fills: a sixteenth roll of the tom or conga through the sixteenths after the last quarter of an
  * eight-bar phrase, rising, p 0.25, never a snare roll. The ping (Ping.h) plays a cyclic figure of one or two pitch classes.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -72,7 +73,11 @@ struct LayerDef {
     double m_length;           ///< note length in beats
     bool m_perc;               ///< dips when it meets a kick or a hat
 };
-/** @brief The description of layer @p id. */
+/**
+ * @brief The description of layer @p id.
+ * @param[in] id  the layer
+ * @return its definition
+ */
 const LayerDef& layerDef(LayerIdE id);
 
 /** @brief An Elektron-style trig condition: an extra onset of @c layer on @c step in the a-th of every b bars. */
@@ -172,15 +177,25 @@ struct RackSettings {
     float m_polymeterChance = 0.5f;       ///< one or two cyclic percussion layers
     float m_fillChance = 0.25f;           ///< RackPlan::fillChance
 };
-/** @brief The settings the knobs describe: compose.key, scale, swing, humanize, and compose.style's profile. */
+/**
+ * @brief The settings the knobs describe: compose.key, scale, swing, humanize, and compose.style's profile.
+ * @param[in] p  the knobs
+ * @return the rack's settings
+ */
 RackSettings rackSettings(const ParamStore& p);
 /**
  * @brief Makes the plan of a track.
- * @param s    what the track decided
- * @param seed the track's pattern seed
+ * @param[in] s     what the track decided
+ * @param[in] seed  the track's pattern seed
+ * @return the plan
  */
 RackPlan makeRackPlan(const RackSettings& s, uint64_t seed);
-/** @brief makeRackPlan(rackSettings(p), seed). */
+/**
+ * @brief makeRackPlan(rackSettings(p), seed).
+ * @param[in] p     the knobs
+ * @param[in] seed  the seed
+ * @return the plan
+ */
 RackPlan makeRackPlan(const ParamStore& p, uint64_t seed);
 /**
  * @brief Phase 8: makes @p voice the plan's figure and writes its motif (RackPlan::figure).
@@ -198,6 +213,9 @@ RackPlan makeRackPlan(const ParamStore& p, uint64_t seed);
  *   third, fourth), a third 0.2.
  *
  * LayerId::Count clears the figure. The motif comes from @p seed alone (the composer's stream "figure").
+ * @param[in,out] plan   the plan, changed in place
+ * @param[in]     voice  the voice
+ * @param[in]     seed   the seed
  */
 void makeFigure(RackPlan& plan, LayerIdE voice, uint64_t seed);
 
@@ -214,43 +232,79 @@ struct BarSpec {
     bool m_fills = true;                      ///< fills allowed in this bar
     uint32_t m_variant = 0;                   ///< Phase 4: the block's candidate (PLAN 7.9); 0 the plain rolls
 };
-/** @brief A BarSpec with every layer off and every density at one. */
+/**
+ * @brief A BarSpec with every layer off and every density at one.
+ * @param[in] bar   the bar
+ * @param[in] beat  its first beat
+ * @param[in] bpm   its tempo
+ * @return the bar without notes
+ */
 BarSpec emptyBar(int bar, double beat, double bpm);
 
 /**
  * @brief The notes of one bar.
- * @param plan the track's plan
- * @param spec what the form asks
- * @param out  receives the notes (appended; beats absolute, with offsets, swing and jitter)
+ * @param[in]  plan  the track's plan
+ * @param[in]  spec  what the form asks
+ * @param[out] out   receives the notes (appended; beats absolute, with offsets, swing and jitter)
  */
 void realizeBar(const RackPlan& plan, const BarSpec& spec, std::vector<NoteEvent>& out);
 
 /**
  * @brief Which steps of layer @p id sound in a bar, before velocity and timing: the rolls, the cycle, the ghost chain,
  *        the displacement -- without the rules that involve the other layers (for the tests and the displays).
- * @param busy steps the other ghosts and percussion already took (the ghost chain's cross factor), or null
+ * @param[in]  plan     the plan
+ * @param[in]  id       the layer
+ * @param[in]  bar      the bar
+ * @param[in]  block    the block
+ * @param[in]  density  the density, 0..1
+ * @param[out] on       receives the steps that play
+ * @param[in]  busy     steps the other ghosts and percussion already took (the ghost chain's cross factor), or null
+ * @param[in]  variant  the candidate (0: the layer's own seed)
  */
 void rollSteps(const RackPlan& plan, LayerIdE id, int bar, int block, float density, bool* on, const bool* busy = nullptr,
                uint32_t variant = 0);
 
-/** @brief k onsets spread as evenly as possible over n steps, the first on step 0 (Toussaint's Euclidean rhythm). */
+/**
+ * @brief k onsets spread as evenly as possible over n steps, the first on step 0 (Toussaint's Euclidean rhythm).
+ * @param[in] k  the hits
+ * @param[in] n  the steps
+ * @return the hits as bits
+ */
 uint64_t euclidMask(int k, int n);
-/** @brief @p mask of @p n steps rotated later by @p r. */
+/**
+ * @brief @p mask of @p n steps rotated later by @p r.
+ * @param[in] mask  the steps as bits
+ * @param[in] n     how many steps
+ * @param[in] r     the rotation in steps
+ * @return the rotated mask
+ */
 uint64_t rotateMask(uint64_t mask, int n, int r);
 /**
  * @brief @p k onsets spread as evenly as possible over the twelve sixteenths of a bar that are no quarter (1, 2, 3, 5,
  *        ... 15) -- E(k,12) there, rotated by @p r of them; a bar's mask, bit s for step s.
+ * @param[in] k  the hits
+ * @param[in] r  the rotation
+ * @return the hits as bits
  */
 uint16_t offQuarterMask(int k, int r);
 
 /**
  * @brief A layer's bar in Tidal/Strudel mini-notation (PLAN 6.7): sixteen steps as "bd ~ ~ ~ ...", a cyclic layer as a
  *        polymetric "{x ~ x ~ ~}%16".
- * @param name the sound's name in the notation ("bd", "hh" ...)
+ * @param[in] plan  the plan
+ * @param[in] id    the layer
+ * @param[in] bar   the bar
+ * @param[in] name  the sound's name in the notation ("bd", "hh" ...)
+ * @return the bar in mini notation
  */
 std::string miniNotation(const RackPlan& plan, LayerIdE id, int bar, const char* name);
 
-/** @brief The kit lane a layer plays on, or -1 (the kick and the bass are no lanes). */
+/**
+ * @brief The kit lane a layer plays on, or -1 (the kick and the bass are no lanes).
+ * @param[in] plan  the plan
+ * @param[in] id    the layer
+ * @return its kit lane, -1 for none
+ */
 int layerLane(const RackPlan& plan, LayerIdE id);
 
 } // namespace tot

@@ -53,6 +53,7 @@
  *
  * **Streams.** The set's own choices (keys, lengths, loops) on the stream `set`; each track on its own seed (reroll
  * `track<n>`) and its units as `track<n>.form` and so on (SetFile.h).
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -115,24 +116,39 @@ struct SetInfo {
 
 /**
  * @brief Writes a set of about @p minutes.
- * @param p        the knobs (set.*, compose.*)
- * @param seed     the set's seed
- * @param minutes  its length; the last track ends at or after it
- * @param curation rerolls, or null
- * @param info     receives where everything lies, or null
- * @param prefs    Phase 17: the ratings' weights, or null
- * @param stop     asked before every track: true breaks off with what is composed (a newer set is wanted; the plugin
- *                 throws the rest away) -- a set of twelve hours is some two hundred tracks
+ * @param[in]  p         the knobs (set.*, compose.*)
+ * @param[in]  seed      the set's seed
+ * @param[in]  minutes   its length; the last track ends at or after it
+ * @param[in]  curation  rerolls, or null
+ * @param[out] info      receives where everything lies, or null
+ * @param[in]  prefs     Phase 17: the ratings' weights, or null
+ * @param[in]  stop      asked before every track: true breaks off with what is composed (a newer set is wanted; the
+ *                       plugin throws the rest away) -- a set of twelve hours is some two hundred tracks
+ * @return the set's score
  */
 SetScore composeSet(const ParamStore& p, uint64_t seed, double minutes, const Curation* curation = nullptr, SetInfo* info = nullptr,
                     const Preferences* prefs = nullptr, const std::function<bool()>& stop = {});
 
-/** @brief The energy of dramaturgy @p d at @p t (0..1 of the set). */
+/**
+ * @brief The energy of dramaturgy @p d at @p t (0..1 of the set).
+ * @param[in] d  the dramaturgy
+ * @param[in] t  the position in the set, 0..1
+ * @return the energy, 0..1
+ */
 float setEnergy(DramaturgyE d, float t);
-/** @brief The tempo of dramaturgy @p d at @p t, before the 1-BPM rule. */
+/**
+ * @brief The tempo of dramaturgy @p d at @p t, before the 1-BPM rule.
+ * @param[in] d  the dramaturgy
+ * @param[in] t  the position in the set, 0..1
+ * @return the tempo's position in its range, 0..1
+ */
 float setTempo(DramaturgyE d, float t);
 
-/** @brief All of a set as one score (the decks' notes and markers on the set's tempo; for MIDI and the displays). */
+/**
+ * @brief All of a set as one score (the decks' notes and markers on the set's tempo; for MIDI and the displays).
+ * @param[in] set  the set
+ * @return its decks in one score
+ */
 Score flattenSet(const SetScore& set);
 
 } // namespace tot

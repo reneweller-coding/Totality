@@ -15,6 +15,7 @@
  *
  * @note The shape (designated initialisers, morph) follows Ephemeris `Core/include/eph/compose/Style.h` at d047d79
  *       (27.09.2026); the fields are Totality's.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -76,20 +77,41 @@ struct StyleProfile {
     float m_styleMix[4];                   ///< how much of Hypnotic, Ostgut, Dub and Raw it is (the presets' fit, Presets.h)
 };
 
-/** @brief The profile of a style. */
+/**
+ * @brief The profile of a style.
+ * @param[in] style  the style
+ * @return its profile
+ */
 const StyleProfile& styleProfile(StyleE style);
 
 /**
  * @brief A profile between @p a and @p b: at @p t = 0 exactly @p a, at 1 exactly @p b. Numbers are interpolated (counts
  *        rounded), the pool's chances per layer (a layer only one has counts 0 in the other), the recipes per knob (a
  *        knob only one sets counts its default in the other), the sound ranges per knob; the name is the nearer one's.
+ * @param[in] a  the profile at 0
+ * @param[in] b  the profile at 1
+ * @param[in] t  the morph, 0..1
+ * @param[in] p  the knobs
+ * @return the profile between
  */
 StyleProfile morphProfile(const StyleProfile& a, const StyleProfile& b, float t, const ParamStore& p);
 
-/** @brief @p base pulled towards Dub by @p dubShare and then towards Hypnotic by @p hypnoticShare (Dok. 8.0's axes). */
+/**
+ * @brief @p base pulled towards Dub by @p dubShare and then towards Hypnotic by @p hypnoticShare (Dok. 8.0's axes).
+ * @param[in] base           the profile
+ * @param[in] dubShare       the dub axis, 0..1
+ * @param[in] hypnoticShare  the hypnotic axis, 0..1
+ * @param[in] p              the knobs
+ * @return the profile with its shares
+ */
 StyleProfile axisProfile(const StyleProfile& base, float dubShare, float hypnoticShare, const ParamStore& p);
 
-/** @brief The profile the knobs describe: compose.style, morphed towards compose.morph_to by compose.morph, and the axes. */
+/**
+ * @brief The profile the knobs describe: compose.style, morphed towards compose.morph_to by compose.morph, and the
+ *        axes.
+ * @param[in] p  the knobs
+ * @return the profile they ask for
+ */
 StyleProfile profileOf(const ParamStore& p);
 
 } // namespace tot

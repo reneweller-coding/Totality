@@ -3,6 +3,7 @@
  * @brief Module descriptor tables and the parameter store.
  * @note The store below the tables is copied from Ephemeris `Core/src/Params.cpp` at d047d79 (27.09.2026); the
  *       tables are Totality's own.
+ * @author Rene Weller
  */
 #include "tot/Params.h"
 #include <algorithm>
@@ -579,10 +580,18 @@ const ModuleSpec Modules[static_cast<int>(ModuleE::COUNT)] = {
     { "custom",  CustomParams,  custom::COUNT,  1 },
 };
 
-/** @brief Whether a curve takes whole steps (Int, Choice, Toggle). */
+/**
+ * @brief Whether a curve takes whole steps (Int, Choice, Toggle).
+ * @param[in] c  the curve
+ * @return true when it takes whole steps
+ */
 bool isDiscrete(CurveE c) { return c == CurveE::INT || c == CurveE::CHOICE || c == CurveE::TOGGLE; }
 
-/** @brief @p s without spaces, tabs and carriage returns at either end. */
+/**
+ * @brief @p s without spaces, tabs and carriage returns at either end.
+ * @param[in] s  the text
+ * @return the text without spaces, tabs and carriage returns at either end
+ */
 std::string_view trim(std::string_view s)
 {
     while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r')) s.remove_prefix(1);
@@ -590,7 +599,11 @@ std::string_view trim(std::string_view s)
     return s;
 }
 
-/** @brief Lower case without spaces, for matching choice names ("909 Metal" = "909metal"). */
+/**
+ * @brief Lower case without spaces, for matching choice names ("909 Metal" = "909metal").
+ * @param[in] s  the name
+ * @return the name folded
+ */
 std::string foldName(std::string_view s)
 {
     std::string out;

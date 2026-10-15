@@ -8,6 +8,10 @@
  *              [--out track.wav] [--midi track.mid] [--stems dir] [--rate 48000] [--block 512] [--bench] [--list]
  * @endcode
  * Without --out nothing is written and the render only measures (the loudness report, the time it took).
+ * @author Rene Weller
+ *
+ * @par Compile Flags:
+ *   @arg @c TOT_PROFILE - prints what each stage of the engine cost after a render (Profile.h)
  */
 #include "tot/Engine.h"
 #include "tot/Export.h"
@@ -48,7 +52,11 @@ void usage()
 }
 
 
-/** @brief @p s escaped for a JSON string. */
+/**
+ * @brief @p s escaped for a JSON string.
+ * @param[in] s  the text
+ * @return the text escaped for a JSON string
+ */
 std::string jsonEscape(const std::string& s)
 {
     std::string o;
@@ -60,7 +68,11 @@ std::string jsonEscape(const std::string& s)
     return o;
 }
 
-/** @brief A track's info as JSON. */
+/**
+ * @brief A track's info as JSON.
+ * @param[in] t  the track's info
+ * @return the JSON
+ */
 std::string infoJson(const TrackInfo& t)
 {
     std::string s = "{\"style\":\"" + jsonEscape(t.m_style) + "\",\"form\":\"" + FormNames[static_cast<int>(t.m_form)] + "\"";
@@ -82,6 +94,13 @@ std::string infoJson(const TrackInfo& t)
 /**
  * @brief The score for the evaluation (Tools/eval_report.py): the tracks (with their set beat and deck), every note
  *        (beat, part, pitch, velocity), the operations, the tempo points.
+ * @param[in] path       the file
+ * @param[in] notes      the notes
+ * @param[in] where      each track's start beat and index
+ * @param[in] tracks     the tracks' info
+ * @param[in] ops        the blocks' operations
+ * @param[in] noteDecks  the deck of each note
+ * @return false when the file cannot be written
  */
 bool writeScoreJson(const std::string& path, const Score& notes, const std::vector<std::pair<double, int>>& where,
                     const std::vector<TrackInfo>& tracks, const std::vector<std::pair<BlockOp, int>>& ops,
@@ -117,7 +136,11 @@ bool writeScoreJson(const std::string& path, const Score& notes, const std::vect
 
 } // namespace
 
-/** @brief Phase 18: a reading's balance -- every part heard, its loudest sample against the kick's and its correction. */
+/**
+ * @brief Phase 18: a reading's balance -- every part heard, its loudest sample against the kick's and its correction.
+ * @param[in] r  the reading
+ * @return the balance as text
+ */
 std::string balanceText(const LevelReading& r)
 {
     std::string t;
@@ -136,7 +159,12 @@ std::string balanceText(const LevelReading& r)
     return t.empty() ? std::string(" none measured") : t;
 }
 
-/** @brief Renders what the command line asks for; the exit code is 0 on success. */
+/**
+ * @brief Renders what the command line asks for; the exit code is 0 on success.
+ * @param[in]     argc  the number of arguments
+ * @param[in,out] argv  the arguments
+ * @return 0 on success
+ */
 int main(int argc, char** argv)
 {
     uint64_t seed = 1;

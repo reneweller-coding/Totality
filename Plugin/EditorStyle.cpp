@@ -1,6 +1,7 @@
 /**
  * @file EditorStyle.cpp
  * @brief The Style tab (EditorStyle.h).
+ * @author Rene Weller
  */
 #include "EditorStyle.h"
 #include "tot/compose/Style.h"
@@ -24,7 +25,11 @@ const RefRow Refs[] = {
     { "Bar similarity (audio)",  { "0.87", "0.955", "0.931", "0.924" } },
 };
 
-/** @brief @p v (0..1) as a percentage. */
+/**
+ * @brief @p v (0..1) as a percentage.
+ * @param[in] v  the value, 0..1
+ * @return the value as a percentage
+ */
 juce::String pct(float v) { return juce::String(juce::roundToInt(100.0f * v)) + " %"; }
 
 } // namespace

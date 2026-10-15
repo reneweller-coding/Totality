@@ -1,6 +1,7 @@
 /**
  * @file Corridor.cpp
  * @brief The hypnosis corridor's measures on the score.
+ * @author Rene Weller
  */
 #include "tot/compose/Corridor.h"
 #include <algorithm>
@@ -10,7 +11,11 @@ namespace tot {
 
 namespace {
 
-/** @brief The band layer @p id counts in: 0 low, 1 mid, 2 high. */
+/**
+ * @brief The band layer @p id counts in: 0 low, 1 mid, 2 high.
+ * @param[in] id  the layer
+ * @return its band: 0 low, 1 mid, 2 high
+ */
 int bandOfLayer(LayerIdE id)
 {
     switch (id) {
@@ -21,7 +26,12 @@ int bandOfLayer(LayerIdE id)
     }
 }
 
-/** @brief Pearson correlation of two profiles over their 48 values; 1 for two silent bars, 0 for one silent. */
+/**
+ * @brief Pearson correlation of two profiles over their 48 values; 1 for two silent bars, 0 for one silent.
+ * @param[in] a  the first bar's profile
+ * @param[in] b  the second bar's profile
+ * @return their correlation
+ */
 float correlation(const BarProfile& a, const BarProfile& b)
 {
     double ma = 0.0, mb = 0.0;

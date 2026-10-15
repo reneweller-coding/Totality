@@ -17,6 +17,7 @@
  *
  * **Low end** (PLAN 5.2): where the rumble owns the band under the split, the engine raises the voice's Low Cut to at
  * least 100 Hz, so the bass carries its harmonics above the kick's fundamental and never its own fundamental under it.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -30,31 +31,47 @@ namespace tot {
 /** @brief One monophonic synth voice with its strip. */
 class MonoSynth {
 public:
-    /** @brief Prepares for a sample rate. */
+    /**
+     * @brief Prepares for a sample rate.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence. */
     void reset();
     /**
      * @brief Reads the effective parameter values (indexed by synth::).
-     * @param minLowCut the lowest Low Cut the engine allows now (0: none; 100 Hz where the rumble owns the low end)
+     * @param[in] v          the effective parameter values, indexed by synth::
+     * @param[in] minLowCut  the lowest Low Cut the engine allows now (0: none; 100 Hz where the rumble owns the low
+     *                       end)
      */
     void update(const float* v, float minLowCut);
     /**
      * @brief Starts a note.
-     * @param pitch    MIDI note
-     * @param velocity 0..1
-     * @param late     samples since its ideal start (0 <= late < 1)
-     * @param accent   the 303's accent
-     * @param slide    this note slides into the next (the next neither retriggers nor jumps)
+     * @param[in] pitch     MIDI note
+     * @param[in] velocity  0..1
+     * @param[in] late      samples since its ideal start (0 <= late < 1)
+     * @param[in] accent    the 303's accent
+     * @param[in] slide     this note slides into the next (the next neither retriggers nor jumps)
      */
     void noteOn(int pitch, float velocity, double late, bool accent, bool slide);
     /** @brief Releases the note (unless a slid note has taken over). */
     void noteOff();
-    /** @brief A kick starts: the duck. */
+    /**
+     * @brief A kick starts: the duck.
+     * @param[in] late  samples since the kick's ideal start
+     */
     void kick(double late) { m_duck.trigger(late); }
-    /** @brief Renders @p n samples into @p L and @p R (replaced). */
+    /**
+     * @brief Renders @p n samples into @p L and @p R (replaced).
+     * @param[out] L  receives the left channel (replaced)
+     * @param[out] R  receives the right channel (replaced)
+     * @param[in]  n  how many samples
+     */
     void process(float* L, float* R, int n);
-    /** @brief Whether anything sounds. */
+    /**
+     * @brief Whether anything sounds.
+     * @return true while anything sounds
+     */
     bool active() const { return m_amp.isActive(); }
 
 private:

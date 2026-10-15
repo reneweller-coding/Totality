@@ -1,6 +1,7 @@
 /**
  * @file Rumble.cpp
  * @brief The rumble: split, hall, clip, band filters, the phase-continuing sub, the duck.
+ * @author Rene Weller
  */
 #include "tot/synth/Rumble.h"
 #include "tot/Params.h"

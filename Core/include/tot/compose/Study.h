@@ -31,6 +31,7 @@
  *
  * The loudness mark: the track's loudest part is the block after the reduction; its target is the style's
  * (styleTargetLufs, Leveler.h). No tonal material in the first and last 32 bars (the ping, the texture included).
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -42,8 +43,8 @@ namespace tot {
 
 /**
  * @brief Composes the study.
- * @param p    the knobs (compose.bpm, compose.minutes, compose.low_owner, the key and scale, the swing)
- * @param seed the seed
+ * @param[in] p     the knobs (compose.bpm, compose.minutes, compose.low_owner, the key and scale, the swing)
+ * @param[in] seed  the seed
  * @return the score, sorted
  */
 Score composeStudy(const ParamStore& p, uint64_t seed);

@@ -2,6 +2,7 @@
  * @file Score.cpp
  * @brief Automation curves and score housekeeping.
  * @note The curves are copied from Ephemeris `Core/src/Score.cpp` at d047d79 (27.09.2026).
+ * @author Rene Weller
  */
 #include "tot/Score.h"
 #include <algorithm>

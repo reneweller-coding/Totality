@@ -10,6 +10,7 @@
  *
  * **The grid** beside it: the same bar as sixteen steps per part, brighter the louder, and whether a step is shifted off
  * the grid (swing, feel) as a tick.
+ * @author Rene Weller
  */
 #pragma once
 #include "PluginProcessor.h"
@@ -19,15 +20,24 @@
 /** @brief The Patterns tab. */
 class EclipsePage final : public juce::Component, private juce::Timer {
 public:
-    /** @brief The tab for @p p. */
+    /**
+     * @brief The tab for @p p.
+     * @param[in,out] p  the processor
+     */
     explicit EclipsePage(TotalityProcessor& p);
-    /** @brief The eclipse of the bar that plays and the grid beside it. */
+    /**
+     * @brief The eclipse of the bar that plays and the grid beside it.
+     * @param[in,out] g  the graphics context to draw into
+     */
     void paint(juce::Graphics& g) override;
 
 private:
     /** @brief Gathers the bar that plays when it changes, and repaints. */
     void timerCallback() override;
-    /** @brief The onsets of the bar at @p beat: per part, (position in the bar 0..1, velocity). */
+    /**
+     * @brief The onsets of the bar at @p beat: per part, (position in the bar 0..1, velocity).
+     * @param[in] beat  a position in the bar
+     */
     void gather(double beat);
     TotalityProcessor& m_proc;   ///< the processor: what plays, where it is
     int m_version = -1;   ///< the score m_playing was copied from

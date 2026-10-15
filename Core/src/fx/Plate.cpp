@@ -2,6 +2,7 @@
  * @file Plate.cpp
  * @brief Dattorro's plate (Plate.h).
  * @note Copied from Ephemeris `Core/src/fx/Plate.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
+ * @author Rene Weller
  */
 #include "tot/fx/Plate.h"
 #include "tot/Dsp.h"

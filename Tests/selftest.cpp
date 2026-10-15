@@ -5,6 +5,7 @@
  * Sections are registered in the table at the bottom; `tot_selftest --list` prints their names (ctest registers one
  * test per name) and `--only a,b` runs the named ones. Only checks that protect something real belong here (the
  * user's rule for Ephemeris, 24.09.2026).
+ * @author Rene Weller
  */
 #include "tot/Clock.h"
 #include "tot/Cue.h"
@@ -101,7 +102,16 @@ void testParams()
     check(same, "text form round-trips every value", fmt("%d parameters", p->count()));
 }
 
-/** Renders a kick triggered at @p late with the store's kick settings; returns the output. */
+/**
+ * Renders a kick triggered at @p late with the store's kick settings; returns the output.
+ * @param[in]     p        the knobs
+ * @param[in]     keyRoot  the key's root, 0 .. 11
+ * @param[in]     late     samples since the kick's ideal start
+ * @param[in]     n        how many samples
+ * @param[in,out] k        the kick
+ * @param[out]    body     receives the body alone, or null
+ * @return the rendered kick
+ */
 std::vector<float> renderKick(const ParamStore& p, int keyRoot, double late, int n, Kick& k, std::vector<float>* body = nullptr)
 {
     float v[64];
@@ -116,7 +126,16 @@ std::vector<float> renderKick(const ParamStore& p, int keyRoot, double late, int
     return out;
 }
 
-/** Phase of @p x at @p hz over [from, from + len) samples, relative to the sample grid's t = 0, in cycles. */
+/**
+ * Phase of @p x at @p hz over [from, from + len) samples, relative to the sample grid's t = 0, in cycles.
+ * @param[in] x          the signal
+ * @param[in] hz         the frequency in Hz
+ * @param[in] from       the first sample
+ * @param[in] len        how many samples
+ * @param[in] sr         the sample rate in Hz
+ * @param[in] t0Samples  the time the phase is relative to, in samples
+ * @return the phase in cycles
+ */
 double phaseAt(const std::vector<float>& x, double hz, int from, int len, double sr, double t0Samples)
 {
     double re = 0.0, im = 0.0;
@@ -129,7 +148,11 @@ double phaseAt(const std::vector<float>& x, double hz, int from, int len, double
     return std::atan2(re, im) / (2.0 * PiD);
 }
 
-/** @brief Phase @p c in cycles, wrapped into -0.5 .. 0.5. */
+/**
+ * @brief Phase @p c in cycles, wrapped into -0.5 .. 0.5.
+ * @param[in] c  the phase in cycles
+ * @return the phase wrapped into -0.5 .. 0.5
+ */
 double wrapCycles(double c) { return c - std::round(c); }
 
 /**
@@ -375,7 +398,12 @@ void testMetalTable()
 constexpr float LaneTargetDb[PercLanes] = { -8.0f, -12.0f, -10.0f, -14.0f, -10.0f, -16.0f, -14.0f, -15.0f, -15.0f, -15.0f,
                                               -15.0f, -10.0f };
 
-/** @brief Peak of one hit of lane @p lane at velocity 1 with the store's knobs, stereo. */
+/**
+ * @brief Peak of one hit of lane @p lane at velocity 1 with the store's knobs, stereo.
+ * @param[in] p     the knobs
+ * @param[in] lane  the lane
+ * @return the hit's peak
+ */
 float lanePeak(const ParamStore& p, int lane)
 {
     PercKit kit;
@@ -1136,7 +1164,13 @@ void testSet()
     }
 }
 
-/** A module instance's knobs as the engine hands them to a voice. */
+/**
+ * A module instance's knobs as the engine hands them to a voice.
+ * @param[in] p         the knobs
+ * @param[in] m         the module
+ * @param[in] instance  its instance
+ * @return the instance's values
+ */
 std::vector<float> moduleValues(const ParamStore& p, ModuleE m, int instance = 0)
 {
     std::vector<float> v(static_cast<size_t>(ParamStore::moduleCount(m)));
@@ -1145,7 +1179,13 @@ std::vector<float> moduleValues(const ParamStore& p, ModuleE m, int instance = 0
     return v;
 }
 
-/** The pitch of @p x at 48 kHz: the normalised autocorrelation's highest peak between @p lo and @p hi Hz, interpolated. */
+/**
+ * The pitch of @p x at 48 kHz: the normalised autocorrelation's highest peak between @p lo and @p hi Hz, interpolated.
+ * @param[in] x   the signal at 48 kHz
+ * @param[in] lo  the lowest pitch looked at, Hz
+ * @param[in] hi  the highest, Hz
+ * @return the pitch in Hz
+ */
 double pitchHz(const std::vector<float>& x, double lo, double hi)
 {
     const int minLag = static_cast<int>(48000.0 / hi), maxLag = static_cast<int>(48000.0 / lo) + 1;
@@ -1169,7 +1209,14 @@ double pitchHz(const std::vector<float>& x, double lo, double hi)
     return 48000.0 / (best + off);
 }
 
-/** Renders @p n samples of a mono synth into @p out (its left channel), updating it on the engine's raster. */
+/**
+ * Renders @p n samples of a mono synth into @p out (its left channel), updating it on the engine's raster.
+ * @param[in,out] s       the synth
+ * @param[in]     v       its parameter values
+ * @param[in]     minCut  the lowest Low Cut allowed
+ * @param[out]    out     receives the left channel
+ * @param[in]     n       how many samples
+ */
 void runSynth(MonoSynth& s, const std::vector<float>& v, float minCut, std::vector<float>& out, int n)
 {
     std::vector<float> L(32), R(32);
@@ -1596,7 +1643,12 @@ void testBalance()
           first.empty() ? fmt("%d of %d", agreed, again) : first);
 }
 
-/** Eight bars with every layer and both low owners' voices at once, a throw on the echo. */
+/**
+ * Eight bars with every layer and both low owners' voices at once, a throw on the echo.
+ * @param[in]  block  the block size
+ * @param[out] stems  receives the stems, or null
+ * @return the mix
+ */
 std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems = nullptr)
 {
     auto e = std::make_unique<Engine>();
@@ -1659,7 +1711,14 @@ std::vector<float> renderFull(int block, std::vector<std::vector<float>>* stems 
 }
 
 
-/** Renders @p seconds of the study with block size @p block. */
+/**
+ * Renders @p seconds of the study with block size @p block.
+ * @param[in] block     the block size
+ * @param[in] seconds   how long
+ * @param[in] seed      the seed
+ * @param[in] settings  knob settings as key=value text
+ * @return the rendered audio
+ */
 std::vector<float> renderStudy(int block, double seconds, uint64_t seed, const char* settings = "")
 {
     auto e = std::make_unique<Engine>();
@@ -1886,8 +1945,17 @@ struct StemRun {
     std::vector<float> m_sum;   ///< the stems' sum
     std::vector<float> m_pre;   ///< the mix as it enters the master
 };
-/** Renders @p beats from @p from of a set with block size @p block: the output, and with @p stems the stems' sum and the
- *  mix as it enters the master (Engine::setPremasterTap). */
+/**
+ * Renders @p beats from @p from of a set with block size @p block: the output, and with @p stems the stems' sum and the
+ *  mix as it enters the master (Engine::setPremasterTap).
+ * @param[in] set    the set
+ * @param[in] knobs  the knobs
+ * @param[in] from   the first beat
+ * @param[in] beats  how many beats
+ * @param[in] block  the block size
+ * @param[in] stems  true to render the stems too
+ * @return the run
+ */
 StemRun renderStems(const SetScore& set, const ParamStore& knobs, double from, double beats, int block, bool stems)
 {
     auto e = std::make_unique<Engine>();
@@ -1958,8 +2026,16 @@ void testStems()
           "the mix with stems is the mix without, bit for bit", fmt("%zu samples", with.m_out.size() / 2));
 }
 
-/** Renders @p seconds of @p score from beat @p from, live or not, with @p knobs ("perform.mute_kick=1"): the output and
- *  the kick's stem. */
+/**
+ * Renders @p seconds of @p score from beat @p from, live or not, with @p knobs ("perform.mute_kick=1"): the output and
+ *  the kick's stem.
+ * @param[in] score    the score
+ * @param[in] live     true for live play
+ * @param[in] knobs    knob settings as key=value text
+ * @param[in] from     the first beat
+ * @param[in] seconds  how long
+ * @return the left and right channels
+ */
 std::pair<std::vector<float>, std::vector<float>> renderLive(const Score& score, bool live, const char* knobs, double from, double seconds)
 {
     auto e = std::make_unique<Engine>();
@@ -2415,7 +2491,12 @@ const TestSection Sections[] = {
 
 } // namespace
 
-/** @brief Runs every section, or those the command line names; the exit code is the number of failures. */
+/**
+ * @brief Runs every section, or those the command line names; the exit code is the number of failures.
+ * @param[in]     argc  the number of arguments
+ * @param[in,out] argv  the arguments: sections to run
+ * @return the number of failures
+ */
 int main(int argc, char** argv)
 {
     std::string only;

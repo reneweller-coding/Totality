@@ -1,6 +1,7 @@
 /**
  * @file EditorEclipse.cpp
  * @brief The Patterns tab (EditorEclipse.h).
+ * @author Rene Weller
  */
 #include "EditorEclipse.h"
 #include "EditorTheme.h"
@@ -11,7 +12,11 @@ using namespace tot;
 
 namespace {
 
-/** @brief A part's colour: the drums the corona, the tones the families. */
+/**
+ * @brief A part's colour: the drums the corona, the tones the families.
+ * @param[in] p  the part
+ * @return its colour
+ */
 juce::Colour partColour(PartE p)
 {
     using totui::Family;
@@ -25,7 +30,12 @@ juce::Colour partColour(PartE p)
     }
 }
 
-/** @brief A part's name: a percussion lane by its role ("Closed Hat"), the others as the score names them. */
+/**
+ * @brief A part's name: a percussion lane by its role ("Closed Hat"), the others as the score names them.
+ * @param[in] s     the parameters
+ * @param[in] part  the part
+ * @return its name
+ */
 juce::String partName(const ParamStore& s, int part)
 {
     const int lane = part - static_cast<int>(PartE::PERC1);

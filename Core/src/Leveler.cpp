@@ -2,6 +2,7 @@
  * @file Leveler.cpp
  * @brief Every track as loud as its style means (Leveler.h).
  * @note Copied from Ephemeris `Core/src/Leveler.cpp` (namespace eph, prefix EPH_) at d047d79 (27.09.2026).
+ * @author Rene Weller
  */
 #include "tot/Leveler.h"
 #include "tot/Dsp.h"
@@ -33,14 +34,22 @@ struct BandMeter {
     Svf m_hp[2];   ///< the two high passes
     Svf m_lp[2];   ///< the two low passes
     double m_sum = 0.0;   ///< the energy through the band
-    /** @brief Sets the band from @p lo to @p hi Hz and clears it. */
+    /**
+     * @brief Sets the band from @p lo to @p hi Hz and clears it.
+     * @param[in] lo  the band's lower edge in Hz
+     * @param[in] hi  its upper edge in Hz
+     */
     void prepare(float lo, float hi)
     {
         for (Svf& f : m_hp) { f.setQ(lo, 0.70710678f, static_cast<float>(Rate)); f.m_ic1 = f.m_ic2 = 0.0f; }
         for (Svf& f : m_lp) { f.setQ(hi, 0.70710678f, static_cast<float>(Rate)); f.m_ic1 = f.m_ic2 = 0.0f; }
         m_sum = 0.0;
     }
-    /** @brief One sample @p x through the band; with @p count its energy is summed. */
+    /**
+     * @brief One sample @p x through the band; with @p count its energy is summed.
+     * @param[in] x      the sample
+     * @param[in] count  true to sum its energy
+     */
     void run(float x, bool count)
     {
         float l, b, h;
@@ -60,6 +69,14 @@ struct PartPeaks {
  * @brief Phase 18: plays @p seconds from @p beat (after BalWarm seconds before it; the score on deck A) and keeps the
  *        loudest samples of the kick and of every part in @p peaks; with @p bands, the energies of the mix in the guard's
  *        bands (40-140 Hz, 250-1000, 1000-5000). False if @p stop said so.
+ * @param[in,out] e        the engine that plays the score
+ * @param[in]     s        the score
+ * @param[in]     beat     where the stretch begins
+ * @param[in]     seconds  how long it lasts
+ * @param[out]    peaks    receives the parts' loudest samples
+ * @param[out]    bands    receives the mix's band energies
+ * @param[in]     stop     asked now and then; true stops the reading
+ * @return false when stopped
  */
 bool readParts(Engine& e, const Score& s, double beat, double seconds, PartPeaks& peaks, double* bands, const std::function<bool()>& stop)
 {
@@ -94,7 +111,11 @@ bool readParts(Engine& e, const Score& s, double beat, double seconds, PartPeaks
     return true;
 }
 
-/** @brief Every part's loudest sample against the loudest kick of all places, dB (NaN: more than 60 dB under it). */
+/**
+ * @brief Every part's loudest sample against the loudest kick of all places, dB (NaN: more than 60 dB under it).
+ * @param[in] peaks  the parts' loudest samples
+ * @return each part against the loudest kick in dB, NaN more than 60 dB under it
+ */
 BalanceDbT against(const PartPeaks& peaks)
 {
     BalanceDbT out;
@@ -112,6 +133,12 @@ BalanceDbT against(const PartPeaks& peaks)
  *        hat-like lanes and of the percussion lanes the two loudest as found keep their windows, the third's lies 3 dB
  *        lower, the others' 6; of the lead voices (ping, bass, 303, chord) the loudest keeps its window, the others' lie
  *        4 dB lower -- one or two voices up front, the rest behind them, as a record has it.
+ * @param[in]  e      the engine
+ * @param[in]  m      the level mark
+ * @param[in]  found  the parts as measured, dB against the kick
+ * @param[out] los    receives the windows' lower edges, or null
+ * @param[out] his    receives the windows' upper edges, or null
+ * @return the corrections in dB
  */
 BalanceDbT corrections(const Engine& e, const LevelMark& m, const BalanceDbT& found, BalanceDbT* los = nullptr, BalanceDbT* his = nullptr)
 {
@@ -162,6 +189,9 @@ BalanceDbT corrections(const Engine& e, const LevelMark& m, const BalanceDbT& fo
  *        measured with the guard's filters in the loudest of three 12-second windows (Tools, 28.09.2026: Hypnotic -2.6
  *        and -4.8, Ostgut -9.9 and -6.9, Dub -9.4 and -18.2, Raw -9.2 and -11.5). The 75th took the percussion's boosts
  *        back in a third of the tracks.
+ * @param[in]  styleMix  the track's style mix
+ * @param[out] mid       receives the ceiling of the 250-1000 Hz band
+ * @param[out] highMid   receives the ceiling of the 1-5 kHz band
  */
 void guardCeilings(const std::array<float, 4>& styleMix, float& mid, float& highMid)
 {
@@ -173,8 +203,16 @@ void guardCeilings(const std::array<float, 4>& styleMix, float& mid, float& high
     for (int s = 0; s < 4; ++s) { mid += w[s] / sum * Mid[s]; highMid += w[s] / sum * HighMid[s]; }
 }
 
-/** @brief The loudness of @p seconds from @p beat of the score @p e plays (after Warm seconds before it); nothing if
- *         @p stop said so on the way. */
+/**
+ * @brief The loudness of @p seconds from @p beat of the score @p e plays (after Warm seconds before it); nothing if
+ *         @p stop said so on the way.
+ * @param[in,out] e        the engine that plays the score
+ * @param[in]     s        the score
+ * @param[in]     beat     where the stretch begins
+ * @param[in]     seconds  how long it lasts
+ * @param[in]     stop     asked now and then; true stops the measurement
+ * @return the loudness in LUFS, empty when stopped
+ */
 std::optional<float> measure(Engine& e, const Score& s, double beat, double seconds, const std::function<bool()>& stop)
 {
     const double at = s.m_tempo.secondsAt(beat);

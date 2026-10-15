@@ -1,6 +1,7 @@
 /**
  * @file Rack.cpp
  * @brief The layer tables of Dok. 8.2 and 8.3, the rolls, the cycles, the ghost chains and the rules.
+ * @author Rene Weller
  */
 #include "tot/pattern/Rack.h"
 #include "tot/compose/Style.h"
@@ -18,7 +19,11 @@ const char* const LayerNames[NumLayers] = { "kick", "ghost kick", "closed hat", 
 
 namespace {
 
-/** @brief A MIDI velocity as 0..1. */
+/**
+ * @brief A MIDI velocity as 0..1.
+ * @param[in] midi  the MIDI velocity, 0 .. 127
+ * @return the velocity, 0..1
+ */
 constexpr float V(int midi) { return static_cast<float>(midi) / 127.0f; }
 
 /**
@@ -123,7 +128,14 @@ const LayerDef Layers[NumLayers] = {
 /** @brief General MIDI notes of the layers (the ping's is its pitch, set from the plan). */
 constexpr int LayerNote[NumLayers] = { 36, 36, 42, 44, 46, 51, 39, 39, 39, 70, 45, 37, 45, 60, 57, 57, 45, 60 };
 
-/** @brief A uniform number for (seed, a, b, c), the same whatever else was rolled. */
+/**
+ * @brief A uniform number for (seed, a, b, c), the same whatever else was rolled.
+ * @param[in] seed  the seed
+ * @param[in] a     the first coordinate
+ * @param[in] b     the second coordinate
+ * @param[in] c     the third coordinate
+ * @return a uniform number in [0, 1)
+ */
 float roll(uint64_t seed, uint64_t a, uint64_t b, uint64_t c)
 {
     const uint64_t h = mixSeed(mixSeed(mixSeed(seed, a), b), c);
@@ -134,16 +146,31 @@ float roll(uint64_t seed, uint64_t a, uint64_t b, uint64_t c)
 enum SaltE : uint64_t { BASE = 11, MUT_A = 12, MUT_B = 13, MOTION = 14, VEL = 15, JITTER = 16, CYCLE = 17, FILL = 18,
                        ACID = 19 };
 
-/** @brief Whether layer @p li plays a cycle of its own period (not the sixteen-step matrix). */
+/**
+ * @brief Whether layer @p li plays a cycle of its own period (not the sixteen-step matrix).
+ * @param[in] plan  the rack plan
+ * @param[in] li    the layer's index
+ * @return true when it plays a cycle of its own period
+ */
 bool isCyclic(const RackPlan& plan, int li) { return plan.m_period[li] > 0; }
 
-/** @brief The seed of layer @p li's rolls in a block of candidate @p variant (0: the layer's own seed). */
+/**
+ * @brief The seed of layer @p li's rolls in a block of candidate @p variant (0: the layer's own seed).
+ * @param[in] plan     the rack plan
+ * @param[in] li       the layer's index
+ * @param[in] variant  the candidate (0: the layer's own seed)
+ * @return the seed of the layer's rolls
+ */
 uint64_t seedOf(const RackPlan& plan, int li, uint32_t variant)
 {
     return variant == 0 ? plan.m_layerSeed[li] : mixSeed(plan.m_layerSeed[li], 0x5641524900000000ull + variant);   // "VARI"
 }
 
-/** @brief Base velocity of a layer: its loudest step's. */
+/**
+ * @brief Base velocity of a layer: its loudest step's.
+ * @param[in] d  the layer
+ * @return its loudest step's velocity
+ */
 float baseVelocity(const LayerDef& d)
 {
     float v = 0.0f;
@@ -151,7 +178,14 @@ float baseVelocity(const LayerDef& d)
     return v > 0.0f ? v : 0.7f;
 }
 
-/** @brief Position of sixteenth @p s of bar @p bar in a cyclic layer's period. */
+/**
+ * @brief Position of sixteenth @p s of bar @p bar in a cyclic layer's period.
+ * @param[in] plan  the rack plan
+ * @param[in] li    the layer's index
+ * @param[in] bar   the bar
+ * @param[in] s     the sixteenth within it
+ * @return the position in the layer's period
+ */
 int cyclePos(const RackPlan& plan, int li, int bar, int s)
 {
     const int period = std::max(1, plan.m_period[li]);

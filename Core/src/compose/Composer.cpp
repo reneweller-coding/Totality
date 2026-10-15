@@ -1,6 +1,7 @@
 /**
  * @file Composer.cpp
  * @brief One track: form, harmony, rack, layers, candidates, events, hands, sounds (Composer.h).
+ * @author Rene Weller
  */
 #include "tot/compose/Composer.h"
 #include "tot/Presets.h"
@@ -34,7 +35,11 @@ constexpr int Bar = 4;   ///< beats per bar
 const char* const LayerUnit[NumLayers] = { "kick", "ghost", "ch", "rolling", "oh", "ride", "clap", "clapb", "clapghost",
                                              "shaker", "tom", "rim", "bass", "ping", "chord", "drone", "acid", "texture" };
 
-/** @brief The FNV-1a hash of @p s. */
+/**
+ * @brief The FNV-1a hash of @p s.
+ * @param[in] s  the text
+ * @return its FNV-1a hash
+ */
 uint64_t hashName(const std::string& s)
 {
     uint64_t h = 1469598103934665603ull;   // FNV-1a
@@ -42,14 +47,28 @@ uint64_t hashName(const std::string& s)
     return h;
 }
 
-/** @brief The seed of a unit's stream: the track's seed, the unit's name, how often it was rerolled. */
+/**
+ * @brief The seed of a unit's stream: the track's seed, the unit's name, how often it was rerolled.
+ * @param[in] seed  the track's seed
+ * @param[in] cur   the curation, or null
+ * @param[in] unit  the unit's name
+ * @param[in] name  the stream's name within the unit
+ * @return the stream's seed
+ */
 uint64_t streamSeed(uint64_t seed, const Curation* cur, const std::string& unit, const std::string& name)
 {
     const int n = cur != nullptr ? cur->count(unit + name) : 0;
     return mixSeed(mixSeed(seed, hashName(name)), static_cast<uint64_t>(n));
 }
 
-/** @brief A random stream seeded for unit @p unit's @p name (streamSeed). */
+/**
+ * @brief A random stream seeded for unit @p unit's @p name (streamSeed).
+ * @param[in] seed  the track's seed
+ * @param[in] cur   the curation, or null
+ * @param[in] unit  the unit's name
+ * @param[in] name  the stream's name within the unit
+ * @return the random stream
+ */
 Rng streamOf(uint64_t seed, const Curation* cur, const std::string& unit, const std::string& name)
 {
     Rng r;
@@ -57,18 +76,30 @@ Rng streamOf(uint64_t seed, const Curation* cur, const std::string& unit, const 
     return r;
 }
 
-/** @brief The index of layer @p id. */
+/**
+ * @brief The index of layer @p id.
+ * @param[in] id  the layer
+ * @return its index
+ */
 int L(LayerIdE id) { return static_cast<int>(id); }
 
-/** @brief Whether layer @p id plays notes of the key (bass, 303, chord, drone, texture, ping). */
+/**
+ * @brief Whether layer @p id plays notes of the key (bass, 303, chord, drone, texture, ping).
+ * @param[in] id  the layer
+ * @return true when it plays notes of the key
+ */
 bool isTonal(LayerIdE id)
 {
     return id == LayerIdE::BASS || id == LayerIdE::ACID || id == LayerIdE::CHORD || id == LayerIdE::DRONE
         || id == LayerIdE::TEXTURE || id == LayerIdE::PING;
 }
 
-/** @brief Dok. 8.5's order of entry: 0 the sub bass (with the body), 1 hats and ride, 2 clap and perc, 3 the 303 and the
- *         ping, 4 the stab, 5 pad and texture. */
+/**
+ * @brief Dok. 8.5's order of entry: 0 the sub bass (with the body), 1 hats and ride, 2 clap and perc, 3 the 303 and the
+ *         ping, 4 the stab, 5 pad and texture.
+ * @param[in] id  the layer
+ * @return its group in the order of entry, 0 .. 5
+ */
 int groupOf(LayerIdE id)
 {
     switch (id) {
@@ -93,14 +124,23 @@ const float ArchetypeW[4][static_cast<int>(ArchetypeE::COUNT)] = {
     { 0.15f, 0.10f, 0.05f, 0.30f, 0.10f, 0.00f, 0.30f },
 };
 
-/** @brief Sets layer @p id's chance in @p prof's pool (adds it where it is missing). */
+/**
+ * @brief Sets layer @p id's chance in @p prof's pool (adds it where it is missing).
+ * @param[in,out] prof    the profile
+ * @param[in]     id      the layer
+ * @param[in]     chance  its chance, 0..1
+ */
 void setChance(StyleProfile& prof, LayerIdE id, float chance)
 {
     for (LayerChance& c : prof.m_pool) if (c.m_layer == id) { c.m_chance = chance; return; }
     prof.m_pool.push_back(LayerChance{ id, chance });
 }
 
-/** @brief Phase 13: the profile as the archetype plays it -- its pool, cycles, events and forms (Composer.h). */
+/**
+ * @brief Phase 13: the profile as the archetype plays it -- its pool, cycles, events and forms (Composer.h).
+ * @param[in,out] prof  the profile, changed in place
+ * @param[in]     a     the archetype
+ */
 void applyArchetype(StyleProfile& prof, ArchetypeE a)
 {
     switch (a) {
@@ -158,7 +198,11 @@ void applyArchetype(StyleProfile& prof, ArchetypeE a)
     }
 }
 
-/** @brief The knobs the composer sets on every track (its KnobSets): every synth's sound, every knob a style names. */
+/**
+ * @brief The knobs the composer sets on every track (its KnobSets): every synth's sound, every knob a style names.
+ * @param[in] p  the parameters
+ * @return the ids of the knobs the composer sets on every track
+ */
 const std::vector<int>& managedKnobs(const ParamStore& p)
 {
     static const std::vector<int> ids = [&p] {
@@ -183,13 +227,30 @@ const std::vector<int>& managedKnobs(const ParamStore& p)
 struct TrackKnobs {
     const ParamStore& m_p;   ///< the knobs underneath
     std::map<int, float> m_value;   ///< real units
-    /** @brief The track's value of @p id where it sets one, else the knob's. */
+    /**
+     * @brief The track's value of @p id where it sets one, else the knob's.
+     * @param[in] id  the parameter
+     * @return the track's value where it sets one, else the knob's
+     */
     float get(int id) const { const auto it = m_value.find(id); return it == m_value.end() ? m_p.get(id) : it->second; }
-    /** @brief A gesture's offset: from the track's own value where it sets the knob (a KnobSet), else from the knob. */
+    /**
+     * @brief A gesture's offset: from the track's own value where it sets the knob (a KnobSet), else from the knob.
+     * @param[in] id  the parameter
+     * @param[in] v   the value the gesture reaches
+     * @return the gesture's offset in the normalised range
+     */
     float offset(int id, float v) const { return m_p.toNormalised(id, v) - m_p.toNormalised(id, get(id)); }
     /**
      * @brief A gesture on @p id from @p beat over @p length beats, from @p from to @p to (real units) in @p shape, by hand @p
      *        hand.
+     * @param[in] id      the parameter
+     * @param[in] beat    where the ramp begins
+     * @param[in] length  its length in beats
+     * @param[in] from    the value it starts at
+     * @param[in] to      the value it ends at
+     * @param[in] shape   the curve's shape
+     * @param[in] hand    the hand that makes the move (0: none)
+     * @return the gesture
      */
     Gesture ramp(int id, double beat, double length, float from, float to, GestureShapeE shape, uint8_t hand) const
     {
@@ -203,9 +264,20 @@ struct TrackKnobs {
         g.m_hand = hand;
         return g;
     }
-    /** @brief A step of @p id to @p v at @p beat. */
+    /**
+     * @brief A step of @p id to @p v at @p beat.
+     * @param[in] id    the parameter
+     * @param[in] beat  where the step is
+     * @param[in] v     the value it steps to
+     * @return the gesture
+     */
     Gesture step(int id, double beat, float v) const { return ramp(id, beat, 0.0, v, v, GestureShapeE::STEP, 0); }
-    /** @brief Back to the track's own value at @p beat. */
+    /**
+     * @brief Back to the track's own value at @p beat.
+     * @param[in] id    the parameter
+     * @param[in] beat  where it returns
+     * @return the gesture
+     */
     Gesture home(int id, double beat) const { return step(id, beat, get(id)); }
 };
 
@@ -214,7 +286,10 @@ struct LayerState {
     bool m_active[NumLayers] = {};   ///< per layer: it plays
     float m_density[NumLayers];   ///< per layer: how densely, 0..1
     LayerState() { for (float& d : m_density) d = 1.0f; }
-    /** @brief Layers sounding beside the kick; the rolling hat counts once it plays in full. */
+    /**
+     * @brief Layers sounding beside the kick; the rolling hat counts once it plays in full.
+     * @return how many layers sound beside the kick
+     */
     int count() const
     {
         int n = 0;
@@ -232,9 +307,17 @@ struct BarMods {
     uint32_t m_muteLayers = 0;  ///< Phase 8: whole layers out for the bar (bit LayerId): Mills' mutes, a breath, the centre out
 };
 
-/** @brief The bit of layer @p id in a mask. */
+/**
+ * @brief The bit of layer @p id in a mask.
+ * @param[in] id  the layer
+ * @return its bit
+ */
 uint32_t bitOf(LayerIdE id) { return 1u << static_cast<int>(id); }
-/** @brief " for n bars", for the log of what a block does. */
+/**
+ * @brief " for n bars", for the log of what a block does.
+ * @param[in] n  the number of bars
+ * @return the text
+ */
 std::string fmtBars(int n) { return " for " + std::to_string(n) + (n == 1 ? " bar" : " bars"); }
 /** @brief The centre (The Acid Mind's "removing the center"): everything but the kick and the hats. */
 constexpr uint32_t Centre = (1u << static_cast<int>(LayerIdE::CLAP_A)) | (1u << static_cast<int>(LayerIdE::CLAP_B))
@@ -252,7 +335,12 @@ constexpr uint32_t Percs = (1u << static_cast<int>(LayerIdE::CLAP_A)) | (1u << s
                           | (1u << static_cast<int>(LayerIdE::SHAKER)) | (1u << static_cast<int>(LayerIdE::TOM_CONGA))
                           | (1u << static_cast<int>(LayerIdE::RIM));
 
-/** @brief Dok. 8.9's harmony check as a filter: at most four pitch classes over what plays, the bass at most two. */
+/**
+ * @brief Dok. 8.9's harmony check as a filter: at most four pitch classes over what plays, the bass at most two.
+ * @param[in,out] plan     the rack plan, filtered in place
+ * @param[in]     pool     the layers that may play
+ * @param[in]     subOwns  true when the sub bass owns the low end
+ */
 void limitHarmony(RackPlan& plan, const std::vector<LayerIdE>& pool, bool subOwns)
 {
     const auto has = [&](LayerIdE id) { return std::find(pool.begin(), pool.end(), id) != pool.end(); };

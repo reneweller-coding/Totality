@@ -2,6 +2,7 @@
  * @file Kit.cpp
  * @brief Percussion kit: coefficients, hits, the metal table and rendering.
  * @note Adapted from Phosphene `Core/src/Perc.cpp` at 76f7100 (27.09.2026); see Kit.h for what changed.
+ * @author Rene Weller
  */
 #include "tot/synth/Kit.h"
 #include <algorithm>
@@ -34,10 +35,23 @@ constexpr float MetalNoiseTrade = 0.8f;
 constexpr double PanRms = 1.4142135623730951;
 constexpr double PanMaxAngle = 1.6;   ///< the auto-pan's widest swing, radians
 
-/** @brief The per-sample factor of a decay of 60 dB in @p seconds at rate @p sr. */
+/**
+ * @brief The per-sample factor of a decay of 60 dB in @p seconds at rate @p sr.
+ * @param[in] seconds  the time to fall by 60 dB
+ * @param[in] sr       the sample rate in Hz
+ * @return the per-sample factor
+ */
 double decayFactor(double seconds, double sr) { return std::exp(-Ln1000 / (std::max(seconds, 1.0e-4) * sr)); }
 
-/** @brief Trapezoidal SVF coefficients (Phosphene's Util.h). */
+/**
+ * @brief Trapezoidal SVF coefficients (Phosphene's Util.h).
+ * @param[in]  fc       the corner in Hz
+ * @param[in]  damping  the damping
+ * @param[in]  sr       the sample rate in Hz
+ * @param[out] a1       receives the first coefficient
+ * @param[out] a2       receives the second
+ * @param[out] a3       receives the third
+ */
 void svfCoefs(double fc, double damping, double sr, float& a1, float& a2, float& a3)
 {
     const double g = std::tan(PiD * std::clamp(fc, 10.0, 0.45 * sr) / sr);

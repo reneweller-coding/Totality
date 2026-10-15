@@ -1,6 +1,7 @@
 /**
  * @file Style.cpp
  * @brief The four profiles, their morph and the axes.
+ * @author Rene Weller
  */
 #include "tot/compose/Style.h"
 #include <algorithm>
@@ -187,9 +188,21 @@ const StyleProfile Profiles[] = {
     },
 };
 
-/** @brief @p a to @p b at @p t. */
+/**
+ * @brief @p a to @p b at @p t.
+ * @param[in] a  the start
+ * @param[in] b  the end
+ * @param[in] t  the position, 0..1
+ * @return the value between
+ */
 float lerp(float a, float b, float t) { return a + (b - a) * t; }
-/** @brief @p a to @p b at @p t, rounded. */
+/**
+ * @brief @p a to @p b at @p t, rounded.
+ * @param[in] a  the start
+ * @param[in] b  the end
+ * @param[in] t  the position, 0..1
+ * @return the value between, rounded
+ */
 int lerpi(int a, int b, float t) { return static_cast<int>(std::lround(lerp(static_cast<float>(a), static_cast<float>(b), t))); }
 
 } // namespace

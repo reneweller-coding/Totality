@@ -23,6 +23,7 @@
  * spread by Width around Pan.
  *
  * Eight voices, the oldest taken when a ninth note comes. Scalar: eight voices of a few sines are cheap.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -35,26 +36,39 @@ class Ping {
 public:
     static constexpr int Voices = 8;   ///< voices
 
-    /** @brief Prepares for a sample rate. */
+    /**
+     * @brief Prepares for a sample rate.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence. */
     void reset();
-    /** @brief Reads the effective parameter values (indexed by ping::). */
+    /**
+     * @brief Reads the effective parameter values (indexed by ping::).
+     * @param[in] v  the effective parameter values, indexed by ping::
+     */
     void update(const float* v);
     /**
      * @brief Starts a note.
-     * @param pitch    MIDI note of the carrier
-     * @param velocity 0..1
-     * @param late     samples since its ideal start (0 <= late < 1)
-     * @param serial   a number of the note (its place in the score), for its deterministic place in the stereo field
+     * @param[in] pitch     MIDI note of the carrier
+     * @param[in] velocity  0..1
+     * @param[in] late      samples since its ideal start (0 <= late < 1)
+     * @param[in] serial    a number of the note (its place in the score), for its deterministic place in the stereo
+     *                      field
      */
     void noteOn(int pitch, float velocity, double late, uint32_t serial);
     /**
      * @brief Renders @p n samples of the bus into @p L and @p R (replaced).
-     * @param sample the absolute sample of the first one (the sweep's phase)
+     * @param[out] L       receives the left channel (replaced)
+     * @param[out] R       receives the right channel (replaced)
+     * @param[in]  n       how many samples
+     * @param[in]  sample  the absolute sample of the first one (the sweep's phase)
      */
     void process(float* L, float* R, int n, int64_t sample);
-    /** @brief Whether any voice sounds. */
+    /**
+     * @brief Whether any voice sounds.
+     * @return true while any voice sounds
+     */
     bool active() const;
 
 private:

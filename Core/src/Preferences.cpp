@@ -1,6 +1,7 @@
 /**
  * @file Preferences.cpp
  * @brief The ratings and the preferences they give (Preferences.h).
+ * @author Rene Weller
  */
 #include "tot/Preferences.h"
 #include <algorithm>
@@ -13,7 +14,11 @@ namespace tot {
 
 namespace {
 
-/** @brief A weight limited to 0.25 .. 3. */
+/**
+ * @brief A weight limited to 0.25 .. 3.
+ * @param[in] f  the weight
+ * @return the weight limited to 0.25 .. 3
+ */
 float clampFactor(float f) { return std::clamp(f, 0.25f, 3.0f); }
 
 } // namespace

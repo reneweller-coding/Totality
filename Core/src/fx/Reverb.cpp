@@ -3,6 +3,7 @@
  * @brief FDN reverb implementation.
  * @note Copied from Phosphene `Core/src/Reverb.cpp` at 9a2f615 (24.09.2026); namespace eph, prefix EPH_.
  * @note Copied from Ephemeris `Core/src/fx/Reverb.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
+ * @author Rene Weller
  */
 #include "tot/fx/Reverb.h"
 #include "tot/Clock.h"
@@ -12,7 +13,11 @@
 namespace tot {
 
 namespace {
-/** @brief The smallest power of two at least @p n. */
+/**
+ * @brief The smallest power of two at least @p n.
+ * @param[in] n  the lower bound
+ * @return the smallest power of two at least n
+ */
 int pow2At(int n) { int p = 1; while (p < n) p <<= 1; return p; }
 constexpr double PiD = 3.14159265358979323846;   ///< pi
 
@@ -31,7 +36,14 @@ constexpr double PiD = 3.14159265358979323846;   ///< pi
  */
 constexpr int Left[8] = { 1, 0, 0, 1, 0, 1, 1, 0 };
 
-/** @brief Linear-interpolated read @p delay samples behind the write position @p w. */
+/**
+ * @brief Linear-interpolated read @p delay samples behind the write position @p w.
+ * @param[in] buf    the ring
+ * @param[in] mask   its length minus one
+ * @param[in] w      the write position
+ * @param[in] delay  how many samples behind it, fractional
+ * @return the interpolated sample
+ */
 inline float ringRead(const float* buf, int mask, int w, float delay)
 {
     // In double: a float write index of 2^17 resolves only 1/64 of a sample.

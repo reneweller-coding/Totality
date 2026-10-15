@@ -2,6 +2,7 @@
  * @file Presets.cpp
  * @brief The factory presets: sixteen groups per engine, sixty-four presets per group (Presets.h).
  * @note The builder is Ephemeris' (Core/src/Presets.cpp at d047d79); the groups, their ranges and their styles are Totality's.
+ * @author Rene Weller
  */
 #include "tot/Presets.h"
 #include <algorithm>
@@ -36,11 +37,18 @@ struct Engine {
     std::vector<Group> m_groups;   ///< its sixteen groups
 };
 
-/** @brief The bit of role @p r in Group::roles. */
+/**
+ * @brief The bit of role @p r in Group::roles.
+ * @param[in] r  the role
+ * @return its bit
+ */
 constexpr uint32_t bit(PercRoleE r) { return 1u << static_cast<int>(r); }
 
 // --- The kick ----------------------------------------------------------------------------------------------------------
-/** @brief The kick's names and groups. */
+/**
+ * @brief The kick's names and groups.
+ * @return the kick's names and groups
+ */
 const Engine& kickEngine()
 {
     namespace k = kick;
@@ -126,7 +134,10 @@ const Engine& kickEngine()
 }
 
 // --- The rumble ----------------------------------------------------------------------------------------------------------
-/** @brief The rumble's names and groups. */
+/**
+ * @brief The rumble's names and groups.
+ * @return the rumble's names and groups
+ */
 const Engine& rumbleEngine()
 {
     namespace r = rumble;
@@ -205,7 +216,10 @@ const Engine& rumbleEngine()
 }
 
 // --- The sub bass ----------------------------------------------------------------------------------------------------------
-/** @brief The sub bass's names and groups. */
+/**
+ * @brief The sub bass's names and groups.
+ * @return the sub bass's names and groups
+ */
 const Engine& subEngine()
 {
     namespace s = sub;
@@ -283,7 +297,10 @@ const Engine& subEngine()
 }
 
 // --- A lane of the kit ----------------------------------------------------------------------------------------------------------
-/** @brief A kit lane's names and groups. */
+/**
+ * @brief A kit lane's names and groups.
+ * @return a kit lane's names and groups
+ */
 const Engine& percEngine()
 {
     namespace p = perc;
@@ -371,7 +388,10 @@ const Engine& percEngine()
 }
 
 // --- The ping ----------------------------------------------------------------------------------------------------------
-/** @brief The ping's names and groups. */
+/**
+ * @brief The ping's names and groups.
+ * @return the ping's names and groups
+ */
 const Engine& pingEngine()
 {
     namespace g = ping;
@@ -450,7 +470,10 @@ const Engine& pingEngine()
 }
 
 // --- The bass synth ----------------------------------------------------------------------------------------------------------
-/** @brief The bass synth's names and groups. */
+/**
+ * @brief The bass synth's names and groups.
+ * @return the bass synth's names and groups
+ */
 const Engine& bassEngine()
 {
     namespace s = synth;
@@ -529,7 +552,10 @@ const Engine& bassEngine()
 }
 
 // --- The 303 ----------------------------------------------------------------------------------------------------------
-/** @brief The 303's names and groups. */
+/**
+ * @brief The 303's names and groups.
+ * @return the 303's names and groups
+ */
 const Engine& acidEngine()
 {
     namespace s = synth;
@@ -608,7 +634,10 @@ const Engine& acidEngine()
 }
 
 // --- The dub chord ----------------------------------------------------------------------------------------------------------
-/** @brief The dub chord's names and groups. */
+/**
+ * @brief The dub chord's names and groups.
+ * @return the dub chord's names and groups
+ */
 const Engine& chordEngine()
 {
     namespace c = chord;
@@ -689,7 +718,10 @@ const Engine& chordEngine()
 }
 
 // --- The drone ----------------------------------------------------------------------------------------------------------
-/** @brief The drone's names and groups. */
+/**
+ * @brief The drone's names and groups.
+ * @return the drone's names and groups
+ */
 const Engine& droneEngine()
 {
     namespace d = drone;
@@ -759,7 +791,10 @@ const Engine& droneEngine()
 }
 
 // --- The texture (its amounts scaled so it stays about as loud as the default's: it sits under everything) ----------------------------------------------------------------------------------------------------------
-/** @brief The texture's names and groups. */
+/**
+ * @brief The texture's names and groups.
+ * @return the texture's names and groups
+ */
 const Engine& textureEngine()
 {
     namespace t = texture;
@@ -821,7 +856,11 @@ const Engine& textureEngine()
     return e;
 }
 
-/** @brief The names and groups of module @p m, null for a module without presets. */
+/**
+ * @brief The names and groups of module @p m, null for a module without presets.
+ * @param[in] m  the module
+ * @return its names and groups, null for a module without presets
+ */
 const Engine* engineOf(ModuleE m)
 {
     switch (m) {
@@ -839,7 +878,13 @@ const Engine* engineOf(ModuleE m)
     }
 }
 
-/** @brief The 1024 presets of module @p m: per group, the 64 of its adjectives and nouns, their knobs drawn along the axes. */
+/**
+ * @brief The 1024 presets of module @p m: per group, the 64 of its adjectives and nouns, their knobs drawn along the
+ *        axes.
+ * @param[in] m  the module
+ * @param[in] e  its names and groups
+ * @return its 1024 presets
+ */
 std::vector<SoundPreset> build(ModuleE m, const Engine& e)
 {
     ParamStore store;

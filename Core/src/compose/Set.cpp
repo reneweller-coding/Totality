@@ -1,6 +1,7 @@
 /**
  * @file Set.cpp
  * @brief The set composer (Set.h).
+ * @author Rene Weller
  */
 #include "tot/compose/Set.h"
 #include "tot/Dsp.h"
@@ -21,7 +22,11 @@ namespace {
 
 constexpr double Bar = 4.0;   ///< beats per bar
 
-/** @brief The FNV-1a hash of @p s. */
+/**
+ * @brief The FNV-1a hash of @p s.
+ * @param[in] s  the text
+ * @return its FNV-1a hash
+ */
 uint64_t hashName(const std::string& s)
 {
     uint64_t h = 1469598103934665603ull;   // FNV-1a
@@ -32,6 +37,9 @@ uint64_t hashName(const std::string& s)
 /**
  * @brief The profile at energy @p e on the ladder Dub, Hypnotic, Ostgut, Raw (morphed between neighbours), centred on the
  *        knobs' style: energy 0.5 is that style, the set's energy moves it up to about a rung and a fifth either way.
+ * @param[in] e  the energy, 0..1
+ * @param[in] p  the knobs
+ * @return the style profile at that energy
  */
 StyleProfile ladderProfile(float e, const ParamStore& p)
 {
@@ -45,7 +53,12 @@ StyleProfile ladderProfile(float e, const ParamStore& p)
     return axisProfile(s, p.get(p.id(ModuleE::COMPOSE, 0, compose::DUB_SHARE)), p.get(p.id(ModuleE::COMPOSE, 0, compose::HYPNOTIC_SHARE)), p);
 }
 
-/** @brief Appends @p src, moved @p offset beats later, to @p dst (tempo and length are the caller's). */
+/**
+ * @brief Appends @p src, moved @p offset beats later, to @p dst (tempo and length are the caller's).
+ * @param[in,out] dst     the score, appended to
+ * @param[in]     src     the score appended
+ * @param[in]     offset  how many beats later it goes
+ */
 void appendShifted(Score& dst, const Score& src, double offset)
 {
     for (NoteEvent n : src.m_notes) { n.m_beat += offset; dst.m_notes.push_back(n); }
@@ -57,7 +70,14 @@ void appendShifted(Score& dst, const Score& src, double offset)
     for (SoundPick s : src.m_sounds) { s.m_beat += offset; dst.m_sounds.push_back(s); }
 }
 
-/** @brief A step of knob @p id to @p value at @p beat, as an offset from the knob in @p p. */
+/**
+ * @brief A step of knob @p id to @p value at @p beat, as an offset from the knob in @p p.
+ * @param[in] p      the knobs
+ * @param[in] id     the knob
+ * @param[in] beat   where the step is
+ * @param[in] value  the value it steps to
+ * @return the gesture
+ */
 Gesture stepOf(const ParamStore& p, int id, double beat, float value)
 {
     Gesture g;
@@ -69,7 +89,18 @@ Gesture stepOf(const ParamStore& p, int id, double beat, float value)
     return g;
 }
 
-/** @brief A ramp of knob @p id from @p beat over @p length beats, @p from to @p to in @p shape, as offsets from the knob. */
+/**
+ * @brief A ramp of knob @p id from @p beat over @p length beats, @p from to @p to in @p shape, as offsets from the
+ *        knob.
+ * @param[in] p       the knobs
+ * @param[in] id      the knob
+ * @param[in] beat    where the ramp begins
+ * @param[in] length  its length in beats
+ * @param[in] from    the value it starts at
+ * @param[in] to      the value it ends at
+ * @param[in] shape   the curve's shape
+ * @return the gesture
+ */
 Gesture rampOf(const ParamStore& p, int id, double beat, double length, float from, float to, GestureShapeE shape)
 {
     Gesture g;
@@ -85,6 +116,10 @@ Gesture rampOf(const ParamStore& p, int id, double beat, double length, float fr
 /**
  * @brief Before each piece on a deck, every knob any piece on that deck moves goes back to the knob (a Step to offset 0
  *        at the piece's start, written before the piece's own), so no piece inherits the last one's sounds.
+ * @param[in,out] deck      the deck's score, appended to
+ * @param[in]     pieces    the pieces on the deck: their start and their gestures
+ * @param[in]     mixFirst  the first mixer parameter
+ * @param[in]     mixEnd    one past the last
  */
 void homeBetween(Score& deck, const std::vector<std::pair<double, std::vector<Gesture>>>& pieces, int mixFirst, int mixEnd)
 {

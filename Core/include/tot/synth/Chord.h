@@ -14,6 +14,7 @@
  * The echo, the springs and the plate follow on the sends (Dub.h). Every modulation's phase comes from the absolute
  * sample the engine passes, and the bus's coefficients change on an absolute raster of 16 samples: a bar alone sounds as
  * the bar in sequence.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -27,19 +28,36 @@ class ChordSynth {
 public:
     static constexpr int Voices = 8;   ///< two chords of four tones overlapping
 
-    /** @brief Prepares for a sample rate. */
+    /**
+     * @brief Prepares for a sample rate.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence. */
     void reset();
-    /** @brief Reads the effective parameter values (indexed by chord::). */
+    /**
+     * @brief Reads the effective parameter values (indexed by chord::).
+     * @param[in] v  the effective parameter values, indexed by chord::
+     */
     void update(const float* v);
-    /** @brief Starts a tone. @param late samples since its ideal start */
+    /**
+     * @brief Starts a tone.
+     * @param[in] pitch     the MIDI note
+     * @param[in] velocity  the velocity, 0..1
+     * @param[in] late      samples since its ideal start
+     */
     void noteOn(int pitch, float velocity, double late);
-    /** @brief Releases every voice playing @p pitch. */
+    /**
+     * @brief Releases every voice playing @p pitch.
+     * @param[in] pitch  the MIDI note
+     */
     void noteOff(int pitch);
     /**
      * @brief Renders @p n samples of the bus into @p L and @p R (replaced).
-     * @param sample the absolute sample of the first one (the modulations' phase)
+     * @param[out] L       receives the left channel (replaced)
+     * @param[out] R       receives the right channel (replaced)
+     * @param[in]  n       how many samples
+     * @param[in]  sample  the absolute sample of the first one (the modulations' phase)
      */
     void process(float* L, float* R, int n, int64_t sample);
 
@@ -58,7 +76,10 @@ private:
         uint32_t m_age = 0;              ///< when it started, in notes (the oldest is taken)
         uint32_t m_n = 0;                ///< samples since it started
     };
-    /** @brief Sets the bus's band pass and the dip for the absolute sample @p sample (the sweep's phase). */
+    /**
+     * @brief Sets the bus's band pass and the dip for the absolute sample @p sample (the sweep's phase).
+     * @param[in] sample  the absolute sample
+     */
     void setBus(int64_t sample);
     double m_sr = 48000.0;   ///< the sample rate, Hz
     Voice m_v[Voices];   ///< the voices

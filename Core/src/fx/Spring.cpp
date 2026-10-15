@@ -2,6 +2,7 @@
  * @file Spring.cpp
  * @brief Two dispersive springs.
  * @note Copied from Ephemeris `Core/src/fx/Spring.cpp` at d047d79 (27.09.2026); namespace tot, prefix TOT_.
+ * @author Rene Weller
  */
 #include "tot/fx/Spring.h"
 #include <algorithm>

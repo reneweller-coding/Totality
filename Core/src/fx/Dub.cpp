@@ -1,6 +1,7 @@
 /**
  * @file Dub.cpp
  * @brief The dub chain and the multiband duck.
+ * @author Rene Weller
  */
 #include "tot/fx/Dub.h"
 #include "tot/Params.h"

@@ -38,6 +38,7 @@
  * **Streams.** Every part is drawn on its own stream of the seed: `form`, `harmony`, `rack` (and `rack.<layer>`),
  * `layers`, `blocks` (and `block<n>`), `events`, `hands`, `sounds` (SetFile.h). A set asks for a track with its own
  * tempo, key, form, owner and energy (TrackRequest) and names its units `track<n>.`.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -144,12 +145,13 @@ struct TrackInfo {
 
 /**
  * @brief Writes one track, beat 0 its first bar.
- * @param p        the knobs
- * @param seed     the track's seed
- * @param req      what a set asks (all defaults: a track alone)
- * @param curation rerolls, or null
- * @param unit     prefix of this track's units in @p curation ("" alone, "track3." in a set)
- * @param info     receives what the track tells, or null
+ * @param[in]  p         the knobs
+ * @param[in]  seed      the track's seed
+ * @param[in]  req       what a set asks (all defaults: a track alone)
+ * @param[in]  curation  rerolls, or null
+ * @param[in]  unit      prefix of this track's units in @p curation ("" alone, "track3." in a set)
+ * @param[out] info      receives what the track tells, or null
+ * @return the track's score
  */
 Score composeTrack(const ParamStore& p, uint64_t seed, const TrackRequest& req = TrackRequest{}, const Curation* curation = nullptr,
                    const std::string& unit = std::string(), TrackInfo* info = nullptr);
@@ -160,10 +162,19 @@ extern const char* const UnitNames[9];
 /**
  * @brief Phase 13: an archetype for a track of profile @p prof, drawn with @p u (0..1) by the style's weights; never
  *        @p exclude (a set's last track's kind, -1: none).
+ * @param[in] prof     the profile
+ * @param[in] u        the draw, 0..1
+ * @param[in] exclude  the archetype never drawn, -1 for none
+ * @param[in] prefs    the ratings' weights, or null
+ * @return the archetype
  */
 ArchetypeE pickArchetype(const StyleProfile& prof, float u, int exclude = -1, const Preferences* prefs = nullptr);
 
-/** @brief The Camelot label of a minor key on pitch class @p key ("8A" for A). */
+/**
+ * @brief The Camelot label of a minor key on pitch class @p key ("8A" for A).
+ * @param[in] key  the key's root, 0 .. 11
+ * @return its Camelot label
+ */
 std::string camelotOf(int key);
 
 } // namespace tot

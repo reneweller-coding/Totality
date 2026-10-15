@@ -3,6 +3,7 @@
  * @brief The Style tab (PLAN 10.1): the profile the knobs describe (compose.style, its morph and the axes, or a style of
  *        the user's own) as its numbers, the references' measurements per style (PLAN 13.4, the corridor the profiles
  *        are fitted to), and the custom style's knobs.
+ * @author Rene Weller
  */
 #pragma once
 #include "PluginEditor.h"
@@ -12,11 +13,17 @@
 /** @brief The Style tab. */
 class StylePage final : public juce::Component, private juce::Timer {
 public:
-    /** @brief The tab for @p p. */
+    /**
+     * @brief The tab for @p p.
+     * @param[in,out] p  the processor
+     */
     explicit StylePage(TotalityProcessor& p);
     /** @brief The profile's numbers and the button on top, the custom style's knobs under them. */
     void resized() override;
-    /** @brief The style's profile beside the references' medians. */
+    /**
+     * @brief The style's profile beside the references' medians.
+     * @param[in,out] g  the graphics context to draw into
+     */
     void paint(juce::Graphics& g) override;
 
 private:

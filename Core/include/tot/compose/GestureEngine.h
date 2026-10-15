@@ -17,6 +17,7 @@
  *
  * @note Copied from Ephemeris `Core/include/eph/compose/GestureEngine.h` (namespace eph, prefix EPH_) at d047d79
  *       (27.09.2026); the grid and the techno timing added.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -52,13 +53,13 @@ struct HandStyle {
 
 /**
  * @brief Plays two hands over a stretch of a track and writes their gestures into the score.
- * @param score   the score (gestures are appended; tempo map read)
- * @param knobs   the knobs, with their ranges and weights
- * @param style   timing
- * @param energy  the energy at a beat, 0..1
- * @param start   first beat (the grid counts from here)
- * @param end     last beat; no movement runs past it
- * @param rng     the stream of the hands
+ * @param[in,out] score   the score (gestures are appended; tempo map read)
+ * @param[in]     knobs   the knobs, with their ranges and weights
+ * @param[in]     style   timing
+ * @param[in]     energy  the energy at a beat, 0..1
+ * @param[in]     start   first beat (the grid counts from here)
+ * @param[in]     end     last beat; no movement runs past it
+ * @param[in,out] rng     the stream of the hands
  */
 void playHands(Score& score, const std::vector<HandKnob>& knobs, const HandStyle& style,
                const std::function<float(double)>& energy, double start, double end, Rng& rng);

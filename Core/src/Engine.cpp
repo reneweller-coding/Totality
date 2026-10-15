@@ -2,6 +2,7 @@
  * @file Engine.cpp
  * @brief The engine: the decks, the DJ mixer, the master.
  * @note The raster and the event splitting follow Ephemeris `Core/src/Engine.cpp` at d047d79 (27.09.2026).
+ * @author Rene Weller
  */
 #include "tot/Engine.h"
 #include "tot/Profile.h"

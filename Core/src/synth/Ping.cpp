@@ -1,6 +1,7 @@
 /**
  * @file Ping.cpp
  * @brief The ping voices: FM, the low-pass gate, the wandering band pass.
+ * @author Rene Weller
  */
 #include "tot/synth/Ping.h"
 #include "tot/Params.h"

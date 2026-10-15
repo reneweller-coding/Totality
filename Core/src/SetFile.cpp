@@ -2,6 +2,7 @@
  * @file SetFile.cpp
  * @brief The `.totset` text form.
  * @note Copied from Ephemeris `Core/src/SetFile.cpp` (namespace eph) at d047d79 (27.09.2026).
+ * @author Rene Weller
  */
 #include "tot/SetFile.h"
 #include "tot/Params.h"

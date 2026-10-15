@@ -1,6 +1,7 @@
 /**
  * @file EditorPerform.cpp
  * @brief The live pages (EditorPerform.h).
+ * @author Rene Weller
  */
 #include "EditorPerform.h"
 #include "tot/Presets.h"
@@ -14,7 +15,11 @@ namespace {
 const char* const MuteNames[perform::Mutes] = { "Kick", "Sub", "Hats", "Perc", "Ping", "Bass", "Pads" };
 const char* const KeyOf[perform::Mutes] = { "C3", "C#3", "D3", "D#3", "E3", "F3", "F#3" };   ///< the key that toggles each mute
 
-/** @brief Gain @p g in dB, -120 for silence. */
+/**
+ * @brief Gain @p g in dB, -120 for silence.
+ * @param[in] g  the gain
+ * @return the gain in dB, -120 for silence
+ */
 float toDb(float g) { return g > 1e-6f ? 20.0f * std::log10(g) : -120.0f; }
 
 } // namespace

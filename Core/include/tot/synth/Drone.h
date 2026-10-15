@@ -16,6 +16,7 @@
  *  - eroded noise: noise band-passed at 900 Hz whose level a slow random walk moves, the "Rausch-Erosion".
  * Left and right from their own random streams, blended towards mono by Width. It fades in and out with its notes (the
  * score marks where it plays) over two seconds.
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -27,21 +28,42 @@ namespace tot {
 /** @brief The drone voice. */
 class Drone {
 public:
-    /** @brief Sets the sample rate and falls silent. */
+    /**
+     * @brief Sets the sample rate and falls silent.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence: the envelope closed, the filters cleared. */
     void reset();
-    /** @brief Reads the effective parameter values (indexed by drone::) and the tempo (the sweep's period is in bars). */
+    /**
+     * @brief Reads the effective parameter values (indexed by drone::) and the tempo (the sweep's period is in bars).
+     * @param[in] v  the effective parameter values, indexed by drone::
+     */
     void update(const float* v);
-    /** @brief Starts @p pitch (MIDI, moved by Octave) at @p velocity 0..1, or glides there while a note sounds. */
+    /**
+     * @brief Starts @p pitch (MIDI, moved by Octave) at @p velocity 0..1, or glides there while a note sounds.
+     * @param[in] pitch     the MIDI note
+     * @param[in] velocity  the velocity, 0..1
+     */
     void noteOn(int pitch, float velocity);
     /** @brief Lets the note go: the release begins. */
     void noteOff();
-    /** @brief Sets the sweep for the absolute beat @p beat (the engine's raster cell). */
+    /**
+     * @brief Sets the sweep for the absolute beat @p beat (the engine's raster cell).
+     * @param[in] beat  the absolute beat
+     */
     void at(double beat);
-    /** @brief Renders @p n samples into @p L and @p R (replaced). */
+    /**
+     * @brief Renders @p n samples into @p L and @p R (replaced).
+     * @param[out] L  receives the left channel (replaced)
+     * @param[out] R  receives the right channel (replaced)
+     * @param[in]  n  how many samples
+     */
     void process(float* L, float* R, int n);
-    /** @brief Whether it sounds (the envelope is open). */
+    /**
+     * @brief Whether it sounds (the envelope is open).
+     * @return true while the envelope is open
+     */
     bool active() const { return m_amp.isActive(); }
 
 private:
@@ -67,15 +89,29 @@ private:
 /** @brief The texture. */
 class Texture {
 public:
-    /** @brief Sets the sample rate and falls silent. */
+    /**
+     * @brief Sets the sample rate and falls silent.
+     * @param[in] sampleRate  the sample rate in Hz
+     */
     void prepare(double sampleRate);
     /** @brief Silence: the streams and filters started again, the gate closed. */
     void reset();
-    /** @brief Reads the effective parameter values (indexed by texture::). */
+    /**
+     * @brief Reads the effective parameter values (indexed by texture::).
+     * @param[in] v  the effective parameter values, indexed by texture::
+     */
     void update(const float* v);
-    /** @brief Fades in (@p on) or out over two seconds. */
+    /**
+     * @brief Fades in (@p on) or out over two seconds.
+     * @param[in] on  true to fade in, false to fade out
+     */
     void gate(bool on) { m_on = on; }
-    /** @brief Renders @p n samples into @p L and @p R (replaced). */
+    /**
+     * @brief Renders @p n samples into @p L and @p R (replaced).
+     * @param[out] L  receives the left channel (replaced)
+     * @param[out] R  receives the right channel (replaced)
+     * @param[in]  n  how many samples
+     */
     void process(float* L, float* R, int n);
 
 private:

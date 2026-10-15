@@ -1,6 +1,7 @@
 /**
  * @file SubBass.cpp
  * @brief The sub bass voice.
+ * @author Rene Weller
  */
 #include "tot/synth/SubBass.h"
 #include "tot/Params.h"

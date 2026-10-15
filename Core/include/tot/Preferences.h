@@ -8,6 +8,7 @@
  * groups' fits (pickPreset) by them, so the liked kinds and sounds come more often and the disliked ones seldom; none is
  * ever ruled out or forced. The ratings live in a file of the player's (the plugin: Documents/Totality/ratings.tsv, one
  * rating a line); a saved set does not carry them, so it plays back the same only with use_ratings off.
+ * @author Rene Weller
  */
 #pragma once
 #include <map>
@@ -29,7 +30,11 @@ struct Rating {
 struct Preferences {
     float m_archetype[7] = { 1, 1, 1, 1, 1, 1, 1 };   ///< a factor per Archetype
     std::map<std::string, float> m_groups;             ///< a factor per preset group (1 where absent)
-    /** @brief The factor of preset group @p name. */
+    /**
+     * @brief The factor of preset group @p name.
+     * @param[in] name  the preset group
+     * @return its factor
+     */
     float group(const std::string& name) const
     {
         const auto it = m_groups.find(name);
@@ -37,13 +42,26 @@ struct Preferences {
     }
 };
 
-/** @brief The preferences @p ratings give (Preferences.h). */
+/**
+ * @brief The preferences @p ratings give (Preferences.h).
+ * @param[in] ratings  the ratings
+ * @return the weights
+ */
 Preferences preferencesFrom(const std::vector<Rating>& ratings);
 
-/** @brief Reads the ratings from @p path (none if it does not exist). */
+/**
+ * @brief Reads the ratings from @p path (none if it does not exist).
+ * @param[in] path  the ratings file
+ * @return the ratings, empty when the file is missing
+ */
 std::vector<Rating> loadRatings(const std::string& path);
 
-/** @brief Appends @p r to the ratings in @p path. */
+/**
+ * @brief Appends @p r to the ratings in @p path.
+ * @param[in] path  the ratings file
+ * @param[in] r     the rating
+ * @return false when the file cannot be written
+ */
 bool appendRating(const std::string& path, const Rating& r);
 
 } // namespace tot

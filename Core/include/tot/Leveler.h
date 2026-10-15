@@ -26,6 +26,7 @@
  *
  * @note Copied from Ephemeris `Core/include/eph/Leveler.h` (namespace eph, prefix EPH_) at d047d79 (27.09.2026); the
  *       pieces are tracks here, the targets the styles' (PLAN 8.5, measured against the references).
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Params.h"
@@ -51,8 +52,10 @@ struct LevelReading {
 
 /**
  * @brief Measures every track of @p score (its LevelMarks) with the knobs of @p params and sets their corrections.
- * @param seconds how much of each loudest part is measured
- * @param stop    asked between blocks: true breaks off, and @p score is left as it was
+ * @param[in,out] score    the score; its marks receive the corrections
+ * @param[in]     params   the knobs
+ * @param[in]     seconds  how much of each loudest part is measured
+ * @param[in]     stop     asked between blocks: true breaks off, and @p score is left as it was
  * @return what was found, a reading per track (nothing if broken off)
  */
 std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, double seconds = 20.0,
@@ -62,6 +65,10 @@ std::vector<LevelReading> levelScore(Score& score, const ParamStore& params, dou
  * @brief Levels every track of a set: each deck's tracks as levelScore does (a deck alone, without the mixer's moves); a
  *        mark without a target (a live loop on the third deck, Set.h) takes the correction of the track whose loudest
  *        part it names.
+ * @param[in,out] set      the set; its decks' marks receive the corrections
+ * @param[in]     params   the knobs
+ * @param[in]     seconds  how much of each loudest part is measured
+ * @param[in]     stop     asked between blocks: true breaks off
  * @return the readings of decks A and B, in deck order
  */
 std::vector<LevelReading> levelSet(SetScore& set, const ParamStore& params, double seconds = 20.0,
@@ -70,10 +77,19 @@ std::vector<LevelReading> levelSet(SetScore& set, const ParamStore& params, doub
 /**
  * @brief Phase 18: the window of part @p part's loudest sample against the kick's, dB, for a track of @p styleMix; a lane
  *        (0 .. 11) by its @p role (PercRole), a tonal voice (BalPart) by itself.
+ * @param[in]  styleMix  the track's style mix
+ * @param[in]  part      the part
+ * @param[in]  role      its role
+ * @param[out] lo        receives the window's lower edge in dB
+ * @param[out] hi        receives its upper edge in dB
  */
 void balanceWindow(const std::array<float, 4>& styleMix, int part, int role, float& lo, float& hi);
 
-/** @brief The loudness the loudest part of a track of style @p style should measure, LUFS (PLAN 8.5). */
+/**
+ * @brief The loudness the loudest part of a track of style @p style should measure, LUFS (PLAN 8.5).
+ * @param[in] style  the style
+ * @return its target loudness in LUFS
+ */
 float styleTargetLufs(int style);
 
 } // namespace tot

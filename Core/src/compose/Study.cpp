@@ -1,6 +1,7 @@
 /**
  * @file Study.cpp
  * @brief The study: blocks, operations per style, the reduction, micro-automation, delay throws, the loudness mark.
+ * @author Rene Weller
  */
 #include "tot/compose/Study.h"
 #include "tot/Dsp.h"
@@ -13,7 +14,18 @@ namespace tot {
 
 namespace {
 
-/** @brief An automation curve from @p fromValue to @p toValue (real units) as offsets from the knob's position. */
+/**
+ * @brief An automation curve from @p fromValue to @p toValue (real units) as offsets from the knob's position.
+ * @param[in] p          the knobs
+ * @param[in] id         the knob
+ * @param[in] beat       where the ramp begins
+ * @param[in] length     its length in beats
+ * @param[in] fromValue  the value it starts at
+ * @param[in] toValue    the value it ends at
+ * @param[in] shape      the curve's shape
+ * @param[in] hand       the hand that makes the move (0: none)
+ * @return the gesture
+ */
 Gesture ramp(const ParamStore& p, int id, double beat, double length, float fromValue, float toValue,
              GestureShapeE shape = GestureShapeE::LINEAR, uint8_t hand = 0)
 {
@@ -29,7 +41,12 @@ Gesture ramp(const ParamStore& p, int id, double beat, double length, float from
     return g;
 }
 
-/** @brief Back to the knob at @p beat. */
+/**
+ * @brief Back to the knob at @p beat.
+ * @param[in] id    the knob
+ * @param[in] beat  where it returns
+ * @return the gesture
+ */
 Gesture home(int id, double beat)
 {
     Gesture g;
@@ -40,17 +57,28 @@ Gesture home(int id, double beat)
     return g;
 }
 
-/** @brief The index of layer @p id. */
+/**
+ * @brief The index of layer @p id.
+ * @param[in] id  the layer
+ * @return its index
+ */
 int L(LayerIdE id) { return static_cast<int>(id); }
 
-/** @brief Whether a layer is tonal (none in the first and last 32 bars, Dok. 8.5). */
+/**
+ * @brief Whether a layer is tonal (none in the first and last 32 bars, Dok. 8.5).
+ * @param[in] id  the layer
+ * @return true when it is tonal
+ */
 bool tonal(LayerIdE id)
 {
     return id == LayerIdE::BASS || id == LayerIdE::ACID || id == LayerIdE::CHORD || id == LayerIdE::DRONE
         || id == LayerIdE::TEXTURE || id == LayerIdE::PING;
 }
 
-/** @brief Accepts every layer. */
+/**
+ * @brief Accepts every layer.
+ * @return true
+ */
 bool anyLayer(LayerIdE) { return true; }
 
 } // namespace

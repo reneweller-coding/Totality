@@ -1,6 +1,7 @@
 /**
  * @file PluginEditor.cpp
  * @brief The plugin's panel.
+ * @author Rene Weller
  */
 #include "PluginEditor.h"
 #include "EditorEclipse.h"
@@ -23,7 +24,12 @@ const juce::Colour Dim = totui::colour::Dim;           ///< the skin's dim ink
 const juce::Colour Accent = totui::colour::Accent;     ///< the skin's accent
 const juce::Colour Onset = totui::colour::Onset;       ///< the onsets' red
 
-/** @brief Colour of a block by its marker: the edges dark, the body brighter towards the peak, a reduction the motion's teal. */
+/**
+ * @brief Colour of a block by its marker: the edges dark, the body brighter towards the peak, a reduction the motion's
+ *        teal.
+ * @param[in] name  the block's marker
+ * @return its colour
+ */
 juce::Colour blockColour(const juce::String& name)
 {
     using totui::Family;
@@ -35,10 +41,17 @@ juce::Colour blockColour(const juce::String& name)
     return tone(Family::SOURCE, 0.72f);
 }
 
-/** @brief The documents folder of Totality. */
+/**
+ * @brief The documents folder of Totality.
+ * @return the folder
+ */
 juce::File documents() { return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Totality"); }
 
-/** @brief The small tabs of a page: the page itself, or the first SubTabs inside it (the Mixer's MixerPage holds its). */
+/**
+ * @brief The small tabs of a page: the page itself, or the first SubTabs inside it (the Mixer's MixerPage holds its).
+ * @param[in,out] c  the page
+ * @return its small tabs, null when it has none
+ */
 frame::SubTabs* findSubTabs(juce::Component* c)
 {
     if (c == nullptr) return nullptr;
@@ -49,14 +62,26 @@ frame::SubTabs* findSubTabs(juce::Component* c)
 }
 
 
-/** @brief A synth's name in the presets' folder and the browser: its parameters' key without the lane's number ("bass", "perc"). */
+/**
+ * @brief A synth's name in the presets' folder and the browser: its parameters' key without the lane's number ("bass",
+ *        "perc").
+ * @param[in] s  the parameters
+ * @param[in] m  the synth
+ * @return its name for the presets
+ */
 juce::String synthKey(const ParamStore& s, ModuleE m)
 {
     const std::string& k = s.key(s.id(m, 0, 0));
     return juce::String(k.substr(0, k.find('.'))).trimCharactersAtEnd("0123456789");
 }
 
-/** @brief "perc3.decay" -> "Perc 3", "kick.tune" -> "Kick": the module instance a store id belongs to, for the palette and the info line. */
+/**
+ * @brief "perc3.decay" -> "Perc 3", "kick.tune" -> "Kick": the module instance a store id belongs to, for the palette
+ *        and the info line.
+ * @param[in] s   the parameters
+ * @param[in] id  the store id
+ * @return the module instance's label
+ */
 juce::String moduleLabel(const ParamStore& s, int id)
 {
     const std::string& k = s.key(id);
@@ -67,10 +92,20 @@ juce::String moduleLabel(const ParamStore& s, int id)
     return digits.isEmpty() ? nice : nice + " " + digits;
 }
 
-/** @brief The folder of the player's own presets of synth @p m (Documents/Totality/Presets/<synth>). */
+/**
+ * @brief The folder of the player's own presets of synth @p m (Documents/Totality/Presets/\<synth\>).
+ * @param[in] s  the parameters
+ * @param[in] m  the synth
+ * @return the folder
+ */
 juce::File userPresetFolder(const ParamStore& s, ModuleE m) { return documents().getChildFile("Presets").getChildFile(synthKey(s, m)); }
 
-/** @brief The player's own presets of synth @p m, by name. */
+/**
+ * @brief The player's own presets of synth @p m, by name.
+ * @param[in] s  the parameters
+ * @param[in] m  the synth
+ * @return the preset files, sorted by name
+ */
 juce::Array<juce::File> userPresets(const ParamStore& s, ModuleE m)
 {
     juce::Array<juce::File> files = userPresetFolder(s, m).findChildFiles(juce::File::findFiles, false, "*.preset");
@@ -78,7 +113,14 @@ juce::Array<juce::File> userPresets(const ParamStore& s, ModuleE m)
     return files;
 }
 
-/** @brief A preset of the player's own as the knobs of instance @p instance (store id, real value). */
+/**
+ * @brief A preset of the player's own as the knobs of instance @p instance (store id, real value).
+ * @param[in] s         the parameters
+ * @param[in] m         the synth
+ * @param[in] instance  its instance
+ * @param[in] f         the preset file
+ * @return the knobs and their values
+ */
 std::vector<std::pair<int, float>> userPresetKnobs(const ParamStore& s, ModuleE m, int instance, const juce::File& f)
 {
     std::vector<std::pair<int, float>> out;
@@ -100,7 +142,15 @@ std::vector<std::pair<int, float>> userPresetKnobs(const ParamStore& s, ModuleE 
     return out;
 }
 
-/** @brief Writes the knobs a preset sets (the synth's own, not the mix's) of instance @p instance as one of the player's presets. */
+/**
+ * @brief Writes the knobs a preset sets (the synth's own, not the mix's) of instance @p instance as one of the player's
+ *        presets.
+ * @param[in] s         the parameters
+ * @param[in] m         the synth
+ * @param[in] instance  its instance
+ * @param[in] name      the preset's name
+ * @return false when the file cannot be written
+ */
 bool saveUserPreset(const ParamStore& s, ModuleE m, int instance, const juce::String& name)
 {
     juce::String text;
@@ -115,7 +165,15 @@ bool saveUserPreset(const ParamStore& s, ModuleE m, int instance, const juce::St
     return f.getParentDirectory().createDirectory().wasOk() && f.replaceWithText(text);
 }
 
-/** @brief The knobs of menu id @p menuId of synth @p m (a factory preset's index + 1, or PresetBar::Yours + one of the player's). */
+/**
+ * @brief The knobs of menu id @p menuId of synth @p m (a factory preset's index + 1, or PresetBar::Yours + one of the
+ *        player's).
+ * @param[in] s         the parameters
+ * @param[in] m         the synth
+ * @param[in] instance  its instance
+ * @param[in] menuId    the menu id
+ * @return the knobs and their values
+ */
 std::vector<std::pair<int, float>> knobsOf(const ParamStore& s, ModuleE m, int instance, int menuId)
 {
     std::vector<std::pair<int, float>> out;
@@ -131,7 +189,12 @@ std::vector<std::pair<int, float>> knobsOf(const ParamStore& s, ModuleE m, int i
     return out;
 }
 
-/** @brief Whether the knobs stand where @p values put them (within a thousandth of each one's range). */
+/**
+ * @brief Whether the knobs stand where @p values put them (within a thousandth of each one's range).
+ * @param[in] s       the parameters
+ * @param[in] values  the knobs and their values
+ * @return true when every knob stands there
+ */
 bool knobsAt(const ParamStore& s, const std::vector<std::pair<int, float>>& values)
 {
     for (const auto& [id, v] : values) {
@@ -1656,7 +1719,7 @@ void TotalityEditor::timerCallback()
     // moves the playhead there first.
     if (m_shotPath.isNotEmpty() && !m_proc.isComposing() && m_shotTicks == 0)
         if (const char* at = std::getenv("TOT_SHOT_AT")) m_proc.seekTo(std::atof(at));
-    // TOT_PAGE_REPORT=<file> (01.10.2026): how far every page reaches past the window, a line each (Frame.h, pageReport),
+    // TOT_PAGE_REPORT=\<file\> (01.10.2026): how far every page reaches past the window, a line each (Frame.h, pageReport),
     // then quit -- which page still scrolls at the usual size.
     if (const char* report = std::getenv("TOT_PAGE_REPORT"); report != nullptr && !m_proc.isComposing()) {
         static int reportTicks = 0;

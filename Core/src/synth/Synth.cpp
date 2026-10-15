@@ -1,6 +1,7 @@
 /**
  * @file Synth.cpp
  * @brief The mono synth.
+ * @author Rene Weller
  */
 #include "tot/synth/Synth.h"
 #include "tot/Params.h"

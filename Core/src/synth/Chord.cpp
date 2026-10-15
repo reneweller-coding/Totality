@@ -1,6 +1,7 @@
 /**
  * @file Chord.cpp
  * @brief The dub chord's voices and bus.
+ * @author Rene Weller
  */
 #include "tot/synth/Chord.h"
 #include "tot/Params.h"

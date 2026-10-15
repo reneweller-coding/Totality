@@ -35,6 +35,7 @@
  * 0.45 of the low end in the hypnotic records). With the sub there the band under 80 Hz gains 0.8 to 2.4 dB per beat
  * over the kick alone, and the sub's phase stays within 1.3 degrees of the kick's tail (testRumble, f0 46 .. 61 Hz,
  * halls of 1 and 3.5 s).
+ * @author Rene Weller
  */
 #pragma once
 #include "tot/Dsp.h"
@@ -48,39 +49,59 @@ namespace tot {
 /** @brief The rumble generator. */
 class Rumble {
 public:
-    /** @brief Allocates for a sample rate and the longest block process() will see. */
+    /**
+     * @brief Allocates for a sample rate and the longest block process() will see.
+     * @param[in] sampleRate  the sample rate in Hz
+     * @param[in] maxBlock    the longest block process() will see
+     */
     void prepare(double sampleRate, int maxBlock);
     /** @brief Silence. */
     void reset();
     /**
      * @brief Reads the effective parameter values.
-     * @param v  values indexed by rumble::
-     * @param f0 the kick's tuned end pitch, Hz
+     * @param[in] v   values indexed by rumble::
+     * @param[in] f0  the kick's tuned end pitch, Hz
      */
     void update(const float* v, float f0);
     /**
      * @brief A kick starts.
-     * @param late        how many samples ago it ideally started (0 <= late < 1)
-     * @param asymptote   the kick's asymptotic phase c (Kick::asymptoticPhase), cycles
-     * @param f0          the kick's end pitch, Hz
+     * @param[in] late       how many samples ago it ideally started (0 <= late < 1)
+     * @param[in] asymptote  the kick's asymptotic phase c (Kick::asymptoticPhase), cycles
+     * @param[in] f0         the kick's end pitch, Hz
      */
     void kick(double late, double asymptote, double f0);
     /**
      * @brief Renders @p n samples (at most the maxBlock given to prepare()).
-     * @param kickBody the kick's body after its EQ (Kick::process, @c body)
-     * @param out      receives the rumble, mono (replaced)
+     * @param[in]  kickBody  the kick's body after its EQ (Kick::process, @c body)
+     * @param[out] out       receives the rumble, mono (replaced)
+     * @param[in]  n         how many samples, at most maxBlock
      */
     void process(const float* kickBody, float* out, int n);
-    /** @brief The clip at four times the rate (the default) or at the rate (the Quest's quality, PLAN 11: the band is
-     *         low-passed, its harmonics stay far under Nyquist). */
+    /**
+     * @brief The clip at four times the rate (the default) or at the rate (the Quest's quality, PLAN 11: the band is
+     *         low-passed, its harmonics stay far under Nyquist).
+     * @param[in] on  true to clip at four times the rate
+     */
     void setOversampling(bool on) { m_oversample = on; }
-    /** @brief The band's part of the last block alone, for the tests (mono, before the level). */
+    /**
+     * @brief The band's part of the last block alone, for the tests (mono, before the level).
+     * @return the band's part of the last block
+     */
     const std::vector<float>& lastBand() const { return m_band; }
-    /** @brief The sub's part of the last block alone, for the tests (before the level). */
+    /**
+     * @brief The sub's part of the last block alone, for the tests (before the level).
+     * @return the sub's part of the last block
+     */
     const std::vector<float>& lastSub() const { return m_subOut; }
-    /** @brief The hall's return in front of the clip, of the last block (for the calibration). */
+    /**
+     * @brief The hall's return in front of the clip, of the last block (for the calibration).
+     * @return the hall's return of the last block, in front of the clip
+     */
     const std::vector<float>& lastHall() const { return m_pre; }
-    /** @brief The sub's current phase in cycles (wrapped), for the tests. */
+    /**
+     * @brief The sub's current phase in cycles (wrapped), for the tests.
+     * @return the sub's current phase in cycles, wrapped
+     */
     double subPhase() const { return m_subPhase; }
 
 private:
