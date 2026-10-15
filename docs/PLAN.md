@@ -20,6 +20,20 @@ Websuchen zu Behauptungen der Ergänzung (Quellen am Ende). Zahlen tragen die Ke
 aus einer zitierten Quelle, **[A]** daraus abgeleitet, **[I]** inferiert und zu kalibrieren. Was hier neu vorgeschlagen
 wird, ist [I], bis es gemessen ist.
 
+
+## Die Wege durchs Panel (15.10.2026, aus Empyrean, Frame.h)
+
+Nutzer: „Bitte baue alles ein, die Tests erst am Ende.“ -- die GUI-Verbesserungen und ASIO in allen fünf Instrumenten:
+- **Frame.h** (Vorlage hier, in alle sechs kopiert): WindowKeeper (Fensterzustand in <App>.frame "window"), Settings::value,
+  IconButton Search/Night/Compare, Keys::palette (Strg+K), CommandPalette, InfoLine (frameId-Eigenschaft für eigene
+  Regler), Tour, PresetBrowser (Favoriten/zuletzt in den Settings), revealControl (Tabs, SubTabs, Abschnitte, Instanzen
+  über Revealer), ModArc + LiveRings-Bögen, ModAccess/ModulationAtKnob, Vorlage slotMatrix (mx/mod-Slots).
+- **ASIO**: JUCE_ASIO=1, das SDK aus _Sources/ASIO-SDK (sonst JUCEs Kopie), nur Windows.
+- **Zoom** gab es schon: der Inhalt skaliert mit dem Fenster ("Window size" 75-200 %).
+- Prozessor: applyKnobs (ein Undo-Schritt), previewKnobs/endPreview (Vorhören im Browser).
+- Eigene Presets je Synth: Documents/Totality/Presets/<synth>/*.preset (knob=value), Stern bei Änderung.
+- Keine Modulationsmatrix: keine Bögen am Knopf.
+
 ## Stand der Umsetzung
 
 **01.10.2026: Phase 21, Track oder Mix, der Zoom und der Anfang eines Mixes.** Der Nutzer: "In der GUI ist es etwas

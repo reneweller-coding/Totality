@@ -153,6 +153,18 @@ public:
     int composedPreset(tot::Module m, int instance) const;
     /** @brief Puts factory preset @p index of @p m on instance @p instance's knobs, through the host's parameters. */
     void applyPreset(tot::Module m, int instance, int index);
+    /**
+     * @brief Sets the knobs @p values (store id, real value) through the host's parameters as one undo step named @p what
+     *        (15.10.2026: a preset of the player's own, a value typed into the command palette).
+     */
+    void applyKnobs(const juce::String& what, const std::vector<std::pair<int, float>>& values);
+    /**
+     * @brief Plays @p values (store id, real value) while a preset is listened to in the browser -- in the store only: no
+     *        undo step, nothing to the host --; endPreview() takes them back.
+     */
+    void previewKnobs(const std::vector<std::pair<int, float>>& values);
+    /** @brief Back to the knobs as they were before previewKnobs (nothing when no preview plays). */
+    void endPreview();
     /** @brief The length of what plays, in beats and seconds (as composed). */
     void length(double& beats, double& seconds) const;
 
@@ -395,6 +407,7 @@ private:
     uint32_t toldSounds_ = 0;                        ///< the engine's soundsVersion() the host was last told of
     frame::UndoHistory history_;                     ///< undo and redo (message thread)
     bool restoring_ = false;                         ///< an undo or the headset moves knobs: no step of their own
+    std::vector<std::pair<int, float>> previewSaved_;   ///< the knobs a preview replaced (store id, real value)
     frame::Headset headset_;                         ///< the Quest's hands (message thread)
     juce::TimedCallback headsetTick_{ [this] { pollHeadset(); } };   ///< polls the headset 30 times a second
 };

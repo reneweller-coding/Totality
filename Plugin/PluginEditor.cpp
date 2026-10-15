@@ -8,6 +8,8 @@
 #include "EditorStyle.h"
 #include "tot/Presets.h"
 #include "TotalityData.h"
+#include <algorithm>
+#include <cmath>
 #include <cstdlib>
 
 using namespace tot;
@@ -46,53 +48,217 @@ frame::SubTabs* findSubTabs(juce::Component* c)
     return nullptr;
 }
 
+
+/** @brief A synth's name in the presets' folder and the browser: its parameters' key without the lane's number ("bass", "perc"). */
+juce::String synthKey(const ParamStore& s, Module m)
+{
+    const std::string& k = s.key(s.id(m, 0, 0));
+    return juce::String(k.substr(0, k.find('.'))).trimCharactersAtEnd("0123456789");
+}
+
+/** @brief "perc3.decay" -> "Perc 3", "kick.tune" -> "Kick": the module instance a store id belongs to, for the palette and the info line. */
+juce::String moduleLabel(const ParamStore& s, int id)
+{
+    const std::string& k = s.key(id);
+    const juce::String p(k.substr(0, k.find('.')));
+    const juce::String name = p.trimCharactersAtEnd("0123456789");
+    const juce::String digits = p.substring(name.length());
+    const juce::String nice = name.substring(0, 1).toUpperCase() + name.substring(1);
+    return digits.isEmpty() ? nice : nice + " " + digits;
+}
+
+/** @brief The folder of the player's own presets of synth @p m (Documents/Totality/Presets/<synth>). */
+juce::File userPresetFolder(const ParamStore& s, Module m) { return documents().getChildFile("Presets").getChildFile(synthKey(s, m)); }
+
+/** @brief The player's own presets of synth @p m, by name. */
+juce::Array<juce::File> userPresets(const ParamStore& s, Module m)
+{
+    juce::Array<juce::File> files = userPresetFolder(s, m).findChildFiles(juce::File::findFiles, false, "*.preset");
+    std::sort(files.begin(), files.end(), [](const juce::File& a, const juce::File& b) { return a.getFileName().compareIgnoreCase(b.getFileName()) < 0; });
+    return files;
+}
+
+/** @brief A preset of the player's own as the knobs of instance @p instance (store id, real value). */
+std::vector<std::pair<int, float>> userPresetKnobs(const ParamStore& s, Module m, int instance, const juce::File& f)
+{
+    std::vector<std::pair<int, float>> out;
+    const int n = ParamStore::moduleCount(m);
+    for (const juce::String& line : juce::StringArray::fromLines(f.loadFileAsString())) {
+        const juce::String l = line.trim();
+        if (l.isEmpty() || l.startsWithChar('#') || !l.containsChar('=')) continue;
+        const juce::String key = l.upToFirstOccurrenceOf("=", false, false).trim();
+        const float v = l.fromFirstOccurrenceOf("=", false, false).trim().getFloatValue();
+        for (int i = 0; i < n; ++i) {
+            const int id = s.id(m, instance, i);
+            const std::string& k = s.key(id);
+            if (juce::String(k.substr(k.find('.') + 1)) == key) {
+                out.emplace_back(id, v);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
+/** @brief Writes the knobs a preset sets (the synth's own, not the mix's) of instance @p instance as one of the player's presets. */
+bool saveUserPreset(const ParamStore& s, Module m, int instance, const juce::String& name)
+{
+    juce::String text;
+    text << "# Totality: a " << synthKey(s, m) << " preset of the player's own -- knob=value, the synth's own knobs (not the mix's)\n";
+    for (int i = 0; i < ParamStore::moduleCount(m); ++i) {
+        if (presetLeaves(m, i)) continue;
+        const int id = s.id(m, instance, i);
+        const std::string& k = s.key(id);
+        text << juce::String(k.substr(k.find('.') + 1)) << "=" << juce::String(s.get(id), 6) << "\n";
+    }
+    const juce::File f = userPresetFolder(s, m).getChildFile(juce::File::createLegalFileName(name.trim()) + ".preset");
+    return f.getParentDirectory().createDirectory().wasOk() && f.replaceWithText(text);
+}
+
+/** @brief The knobs of menu id @p menuId of synth @p m (a factory preset's index + 1, or PresetBar::kYours + one of the player's). */
+std::vector<std::pair<int, float>> knobsOf(const ParamStore& s, Module m, int instance, int menuId)
+{
+    std::vector<std::pair<int, float>> out;
+    if (menuId > PresetBar::kYours) {
+        const juce::Array<juce::File> yours = userPresets(s, m);
+        const int k = menuId - PresetBar::kYours - 1;
+        if (k >= 0 && k < yours.size()) out = userPresetKnobs(s, m, instance, yours[k]);
+        return out;
+    }
+    const std::vector<SoundPreset>& list = factoryPresets(m);
+    if (menuId >= 1 && menuId <= static_cast<int>(list.size()))
+        for (const auto& [k, v] : presetKnobs(m, instance, list[static_cast<size_t>(menuId - 1)])) out.emplace_back(s.id(m, instance, k), v);
+    return out;
+}
+
+/** @brief Whether the knobs stand where @p values put them (within a thousandth of each one's range). */
+bool knobsAt(const ParamStore& s, const std::vector<std::pair<int, float>>& values)
+{
+    for (const auto& [id, v] : values) {
+        const ParamDesc& d = s.desc(id);
+        if (std::abs(s.get(id) - v) > 0.001f * std::max(1.0e-6f, d.maxValue - d.minValue)) return false;
+    }
+    return true;
+}
+
 } // namespace
 
 // ---------------------------------------------------------------------------------------------------
 
 PresetBar::PresetBar(TotalityProcessor& p, Module m, int instance) : proc_(p), module_(m), instance_(instance)
 {
-    const std::vector<SoundPreset>& list = factoryPresets(m);
+    fillMenu();
+    menu_.onChange = [this] {
+        const int id = menu_.getSelectedId();
+        if (id <= 0) return;
+        if (id > kYours) proc_.applyKnobs("preset " + menu_.getText(), knobsOf(proc_.store(), module_, instance_, id));
+        else proc_.applyPreset(module_, instance_, id - 1);
+        chosen(id);
+    };
+    auto step = [this](int by) {
+        const int n = static_cast<int>(factoryPresets(module_).size());
+        const int at = menu_.getSelectedId() >= 1 && menu_.getSelectedId() <= n ? menu_.getSelectedId() - 1 : (by > 0 ? -1 : 0);
+        choose(((at + by) % n + n) % n);
+    };
+    prev_.onClick = [step] { step(-1); };
+    next_.onClick = [step] { step(1); };
+    prev_.setTooltip("the preset before");
+    next_.setTooltip("the next preset");
+    browse_.onClick = [this] {
+        if (auto* ed = findParentComponentOfClass<TotalityEditor>())
+            ed->browsePresets(module_, instance_, [safe = juce::Component::SafePointer<PresetBar>(this)](int id) { if (safe != nullptr) safe->chosen(id); });
+    };
+    save_.onClick = [this] { saveAs(); };
+    star_.setColour(juce::Label::textColourId, totui::colour::accent);
+    star_.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    star_.setJustificationType(juce::Justification::centred);
+    star_.setTooltip("The knobs have moved from the preset (the disk saves the sound as one of your own)");
+    composed_.setColour(juce::Label::textColourId, totui::colour::dim);
+    composed_.setTooltip("The preset the composer chose for this synth in the track that plays (compose.pick_sounds; reroll sounds "
+                         "draws others). Its values stand on the knobs; turn one and the sound follows.");
+    for (juce::Component* c : { static_cast<juce::Component*>(&menu_), static_cast<juce::Component*>(&prev_), static_cast<juce::Component*>(&next_),
+                                static_cast<juce::Component*>(&browse_), static_cast<juce::Component*>(&save_), static_cast<juce::Component*>(&star_),
+                                static_cast<juce::Component*>(&composed_) })
+        addAndMakeVisible(c);
+    startTimerHz(4);
+}
+
+void PresetBar::fillMenu()
+{
+    const int was = menu_.getSelectedId();
+    menu_.clear(juce::dontSendNotification);
     juce::PopupMenu* root = menu_.getRootMenu();
+    const juce::Array<juce::File> yours = userPresets(proc_.store(), module_);
+    if (!yours.isEmpty()) {
+        juce::PopupMenu sub;
+        for (int k = 0; k < yours.size(); ++k) sub.addItem(kYours + k + 1, yours[k].getFileNameWithoutExtension());
+        root->addSubMenu("Yours", sub);
+        root->addSeparator();
+    }
+    const std::vector<SoundPreset>& list = factoryPresets(module_);
     for (size_t g = 0; g < list.size(); g += 64) {
         juce::PopupMenu sub;
         for (size_t i = g; i < g + 64 && i < list.size(); ++i) sub.addItem(static_cast<int>(i) + 1, list[i].name);
         root->addSubMenu(list[g].group, sub);
     }
     menu_.setTextWhenNothingSelected(juce::String(static_cast<int>(list.size())) + " presets");
-    menu_.onChange = [this] { if (menu_.getSelectedId() > 0) proc_.applyPreset(module_, instance_, menu_.getSelectedId() - 1); };
-    prev_.onClick = [this] { const int n = static_cast<int>(factoryPresets(module_).size()); choose(((std::max(1, menu_.getSelectedId()) - 2) + n) % n); };
-    next_.onClick = [this] { const int n = static_cast<int>(factoryPresets(module_).size()); choose(menu_.getSelectedId() % n); };
-    prev_.setTooltip("the preset before");
-    next_.setTooltip("the next preset");
-    composed_.setColour(juce::Label::textColourId, totui::colour::dim);
-    composed_.setTooltip("The preset the composer chose for this synth in the track that plays (compose.pick_sounds; reroll sounds "
-                         "draws others). Its values stand on the knobs; turn one and the sound follows.");
-    for (juce::Component* c : { static_cast<juce::Component*>(&menu_), static_cast<juce::Component*>(&prev_), static_cast<juce::Component*>(&next_),
-                                static_cast<juce::Component*>(&composed_) })
-        addAndMakeVisible(c);
-    startTimerHz(4);
+    if (was > 0) menu_.setSelectedId(was, juce::dontSendNotification);
 }
 
 void PresetBar::choose(int index)
 {
-    menu_.setSelectedId(index + 1, juce::dontSendNotification);
     proc_.applyPreset(module_, instance_, index);
+    chosen(index + 1);
+}
+
+void PresetBar::chosen(int menuId)
+{
+    menu_.setSelectedId(menuId, juce::dontSendNotification);
+    loaded_ = menuId;
+    loadedKnobs_ = knobsOf(proc_.store(), module_, instance_, menuId);
+    if (menu_.getText().isNotEmpty()) frame::PresetBrowser::played("Totality", synthKey(proc_.store(), module_), menu_.getText());
+    star_.setText({}, juce::dontSendNotification);
+}
+
+void PresetBar::saveAs()
+{
+    ask_ = std::make_unique<juce::AlertWindow>("Save a preset", "The sound of this " + synthKey(proc_.store(), module_)
+                                                   + " as a preset of your own (Documents/Totality/Presets):", juce::MessageBoxIconType::NoIcon);
+    ask_->addTextEditor("name", loaded_ > kYours ? menu_.getText() : juce::String("My ") + synthKey(proc_.store(), module_));
+    ask_->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    ask_->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+    ask_->enterModalState(true, juce::ModalCallbackFunction::create([this](int r) {
+        const juce::String name = ask_ != nullptr ? ask_->getTextEditorContents("name").trim() : juce::String();
+        ask_.reset();
+        if (r != 1 || name.isEmpty()) return;
+        if (!saveUserPreset(proc_.store(), module_, instance_, name)) {
+            juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon, "Totality", "The preset could not be written.");
+            return;
+        }
+        fillMenu();
+        const juce::Array<juce::File> yours = userPresets(proc_.store(), module_);
+        for (int k = 0; k < yours.size(); ++k)
+            if (yours[k].getFileNameWithoutExtension() == juce::File::createLegalFileName(name)) chosen(kYours + k + 1);
+    }), false);
 }
 
 void PresetBar::timerCallback()
 {
     const int index = proc_.composedPreset(module_, instance_);
-    if (index == shown_) return;
-    shown_ = index;
-    const std::vector<SoundPreset>& list = factoryPresets(module_);
-    if (index >= 0 && index < static_cast<int>(list.size())) {
-        composed_.setText("this track: " + juce::String(list[static_cast<size_t>(index)].name) + " (" + list[static_cast<size_t>(index)].group + ")",
-                          juce::dontSendNotification);
-        menu_.setSelectedId(index + 1, juce::dontSendNotification);   // what plays, until another is chosen
-    } else {
-        composed_.setText("this track: the knobs' own sound", juce::dontSendNotification);
+    if (index != shown_) {
+        shown_ = index;
+        const std::vector<SoundPreset>& list = factoryPresets(module_);
+        if (index >= 0 && index < static_cast<int>(list.size())) {
+            composed_.setText("this track: " + juce::String(list[static_cast<size_t>(index)].name) + " (" + list[static_cast<size_t>(index)].group + ")",
+                              juce::dontSendNotification);
+            chosen(index + 1);   // what plays, until another is chosen
+        } else {
+            composed_.setText("this track: the knobs' own sound", juce::dontSendNotification);
+        }
     }
+    // The star: the knobs have moved from the preset they came from.
+    const bool moved = !loadedKnobs_.empty() && !knobsAt(proc_.store(), loadedKnobs_);
+    if (star_.getText().isNotEmpty() != moved) star_.setText(moved ? "*" : "", juce::dontSendNotification);
 }
 
 void PresetBar::resized()
@@ -101,10 +267,14 @@ void PresetBar::resized()
     auto row = r.removeFromTop(28);
     prev_.setBounds(row.removeFromLeft(28));
     row.removeFromLeft(4);
-    menu_.setBounds(row.removeFromLeft(280));
+    menu_.setBounds(row.removeFromLeft(260));
     row.removeFromLeft(4);
     next_.setBounds(row.removeFromLeft(28));
-    row.removeFromLeft(10);
+    row.removeFromLeft(4);
+    browse_.setBounds(row.removeFromLeft(30));
+    save_.setBounds(row.removeFromLeft(30));
+    star_.setBounds(row.removeFromLeft(16));
+    row.removeFromLeft(6);
     composed_.setBounds(row);
 }
 
@@ -310,6 +480,37 @@ void ParamPage::refit()
 }
 
 int ParamPage::top() const { return instances_ > 1 || split_ ? 32 : 0; }
+
+void ParamPage::reveal(juce::Component& part)
+{
+    // The box holding it, and its section in front.
+    for (size_t b = 0; b < boxes_.size(); ++b)
+        for (const Cell& c : boxes_[b].cells) {
+            juce::Component* comp = controls_[c.control];
+            if (comp != &part && !comp->isParentOf(&part)) continue;
+            if (split_ && b < sectionOf_.size() && sectionOf_[b] != section_.current()) {
+                section_.setCurrent(sectionOf_[b]);
+                applySection();
+                refit();
+            }
+            return;
+        }
+}
+
+bool ParamPage::bringId(int id)
+{
+    if (instances_ <= 1) return false;
+    const ParamStore& s = proc_.store();
+    if (id < 0 || id >= s.count()) return false;
+    const Module m = s.moduleOf(id);
+    const int inst = s.instanceOf(id);
+    for (const auto& g : groups_)
+        if (g.first == m && inst >= 0 && inst < instances_) {
+            instance_.setSelectedId(inst + 1, juce::sendNotificationSync);   // build() makes that lane's controls
+            return true;
+        }
+    return false;
+}
 
 juce::String ParamPage::describe() const
 {
@@ -1100,7 +1301,8 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
         for (int i = 0; i < tabs_.getNumTabs(); ++i)
             if (tabs_.getTabNames()[i] == "Perform") tabs_.setCurrentTabIndex(i);
     };
-    for (auto* b : { &undo_, &redo_, &help_, &settings_ }) body_.addAndMakeVisible(b);
+    search_.onClick = [this] { openPalette(); };
+    for (auto* b : { &undo_, &redo_, &search_, &help_, &settings_ }) body_.addAndMakeVisible(b);
     body_.addChildComponent(headsetIcon_);
     // Phase 17: rate the track under the playhead; with Favor Ratings (the Set page) the ratings weigh what comes.
     like_.onClick = [this] { rated_ = proc_.rate(1); ratedTicks_ = 60; };
@@ -1148,6 +1350,14 @@ TotalityEditor::TotalityEditor(TotalityProcessor& p) : juce::AudioProcessorEdito
     tabs_.addTab("Style", kPanel, new StylePage(proc_), true);
     tabs_.setOutline(0);
     body_.addAndMakeVisible(tabs_);
+    // The family's ways around the panel (15.10.2026, Frame.h): the info line at the bottom, and over everything while
+    // open the command palette, the preset browser and the first steps.
+    info_ = std::make_unique<frame::InfoLine>(totui::skin(), body_);
+    info_->describe = [this](int id, juce::String& name, juce::String& text) { return describeControl(id, name, text); };
+    body_.addAndMakeVisible(*info_);
+    for (juce::Component* c : { static_cast<juce::Component*>(&palette_), static_cast<juce::Component*>(&browser_), static_cast<juce::Component*>(&tour_) })
+        body_.addChildComponent(c);
+    tour_.onDone = [] { frame::Settings::of("Totality").setValue("tourDone", "1"); };
     frame::keepKeysForEditor(body_);
     setWantsKeyboardFocus(true);
 
@@ -1209,6 +1419,8 @@ void TotalityEditor::parentHierarchyChanged()
         if (window != nullptr)
             window->setTitleBarButtonsRequired(juce::DocumentWindow::minimiseButton | juce::DocumentWindow::maximiseButton
                                                    | juce::DocumentWindow::closeButton, false);
+        // The standalone's window back where it was left (15.10.2026; not in the screenshot and report modes).
+        if (std::getenv("TOT_SHOT") == nullptr && std::getenv("TOT_PAGE_REPORT") == nullptr) safe->window_.attach(*safe, "Totality");
         safe->layoutBody();
     });
 }
@@ -1253,6 +1465,7 @@ bool TotalityEditor::keyPressed(const juce::KeyPress& key)
     k.save = [this] { if (auto* e = exportPage()) e->save(); };
     k.open = [this] { if (auto* e = exportPage()) e->load(); };
     k.exportFile = [this] { if (auto* e = exportPage()) e->exportWith(0); };
+    k.palette = [this] { openPalette(); };
     return frame::handleKey(key, k);
 }
 
@@ -1303,6 +1516,10 @@ void TotalityEditor::showSettings()
         m.linkStatus = [this] { return proc_.linkStatus(); };
     m.jamStatus = [this] { return proc_.jamStatus(); };   // the family jam (02.10.2026), plugin and standalone
     m.about = [] { return juce::String("Hypnotic Berlin techno, composed and synthesised.\ngithub.com/reneweller-coding/Totality"); };
+    m.moreItems = [this](juce::PopupMenu& pm) {
+        pm.addItem("Search: any control, preset or action (Ctrl+K) ...", [this] { openPalette(); });
+        pm.addItem("First steps (the tour) ...", [this] { startTour(); });
+    };
     m.show(settings_);
 }
 
@@ -1349,9 +1566,16 @@ void TotalityEditor::layoutBody()
     h.status = &status_;
     h.curation = &rerolls_;
     h.update = &update_;
-    h.tools = { &headsetIcon_, nullptr, &undo_, &redo_, nullptr, &help_, &settings_ };
+    h.tools = { &headsetIcon_, nullptr, &undo_, &redo_, nullptr, &search_, &help_, &settings_ };
     frame::layoutHeader(area, h);
     headerBottom_ = area.getY();
+    // The info line along the bottom (15.10.2026); the overlays over the whole body.
+    if (info_ != nullptr) {
+        info_->setBounds(area.removeFromBottom(frame::InfoLine::kHeight));
+        area.removeFromBottom(4);
+    }
+    for (juce::Component* c : { static_cast<juce::Component*>(&palette_), static_cast<juce::Component*>(&browser_), static_cast<juce::Component*>(&tour_) })
+        c->setBounds(body_.getLocalBounds());
     // The overview, unless the settings fold it away (01.10.2026): then the pages get its height.
     const bool overview = frame::Settings::of("Totality").overview();
     arrange_.setVisible(overview);
@@ -1363,6 +1587,13 @@ void TotalityEditor::layoutBody()
 
 void TotalityEditor::timerCallback()
 {
+    // The first steps on the first start (not in an automated run: the screenshots, the report, TOT_MUTE).
+    if (tourTicks_ >= 0 && ++tourTicks_ > 25) {
+        tourTicks_ = -1;
+        if (shotPath_.isEmpty() && std::getenv("TOT_PAGE_REPORT") == nullptr && !proc_.muteForced()
+            && frame::Settings::of("Totality").value("tourDone").isEmpty())
+            startTour();
+    }
     if (ratedTicks_ > 0) --ratedTicks_;
     if (shotHands_) proc_.headset().inject(proc_.headset().hands());
     status_.setText(ratedTicks_ > 0 && rated_.isNotEmpty() ? rated_ : proc_.status(), juce::dontSendNotification);
@@ -1456,4 +1687,160 @@ void TotalityEditor::timerCallback()
         shotPath_ = {};
         if (juce::JUCEApplicationBase::isStandaloneApp()) juce::JUCEApplicationBase::quit();
     }
+}
+
+// --------------------------------------------------------------------------------------------------- ways around the panel
+
+void TotalityEditor::openPalette()
+{
+    if (browser_.isVisible()) browser_.close();
+    palette_.open(paletteCommands());
+}
+
+bool TotalityEditor::revealId(int id) { return frame::revealControl(tabs_, id, kAccent); }
+
+std::vector<frame::CommandPalette::Command> TotalityEditor::paletteCommands()
+{
+    using Command = frame::CommandPalette::Command;
+    std::vector<Command> out;
+    auto action = [&out](const juce::String& title, const juce::String& detail, std::function<void()> f) {
+        out.push_back({ title, detail, "Action", false, [f](const juce::String&) { f(); } });
+    };
+    action("Play / stop", "Space", [this] { proc_.setPlaying(!proc_.isPlaying()); });
+    action("Compose track", "a single track, its length in the header", [this] { proc_.chooseMix(false); proc_.compose(); });
+    action("Compose DJ mix", "a set of tracks on two decks", [this] { proc_.chooseMix(true); proc_.compose(); });
+    action("New seed", "another track from the same settings", [this] { proc_.newSeed(); });
+    action("Undo", "Ctrl+Z", [this] { proc_.undo(); });
+    action("Redo", "Ctrl+Y", [this] { proc_.redo(); });
+    action("Mute / unmute the output", "the speaker", [this] { proc_.setMuted(!proc_.muted()); });
+    action("I like this track", "a thumb up", [this] { rated_ = proc_.rate(1); ratedTicks_ = 60; });
+    action("Not this one", "a thumb down", [this] { rated_ = proc_.rate(-1); ratedTicks_ = 60; });
+    action("Save the set", "Ctrl+S", [this] { if (auto* e = exportPage()) e->save(); });
+    action("Open a set", "Ctrl+O", [this] { if (auto* e = exportPage()) e->load(); });
+    action("Export WAV + MIDI + cues", "Ctrl+E", [this] { if (auto* e = exportPage()) e->exportWith(0); });
+    action("Help", "F1: the manual by topic", [this] { showHelp(true); });
+    action("Settings", "the window, the headset, the jam, Link", [this] { showSettings(); });
+    action("First steps", "the tour of the panel", [this] { startTour(); });
+    action("Overview above the tabs", "show it or fold it away", [] {
+        auto& s = frame::Settings::of("Totality");
+        s.setOverview(!s.overview());
+    });
+    if (standalone()) action("Full screen", "F11", [this] { toggleFullScreen(); });
+    // The pages, and the small tabs of the pages of several.
+    const juce::StringArray names = tabs_.getTabNames();
+    for (int t = 0; t < tabs_.getNumTabs(); ++t) {
+        out.push_back({ names[t], "page", "Page", false, [this, t](const juce::String&) { tabs_.setCurrentTabIndex(t); } });
+        if (auto* st = findSubTabs(tabs_.getTabContentComponent(t)))
+            for (int j = 0; j < st->count(); ++j)
+                out.push_back({ names[t] + ": " + st->name(j), "page", "Page", false, [this, t, j](const juce::String&) {
+                                   tabs_.setCurrentTabIndex(t);
+                                   if (auto* s2 = findSubTabs(tabs_.getTabContentComponent(t))) s2->show(j);
+                               } });
+    }
+    // Every control: its page opens and it lights up; a number after its name sets it.
+    const ParamStore& s = proc_.store();
+    for (int id = 0; id < s.count(); ++id) {
+        if (proc_.parameter(id) == nullptr) continue;
+        const ParamDesc& d = s.desc(id);
+        const bool number = d.curve != Curve::Choice && d.curve != Curve::Toggle;
+        out.push_back({ d.name, moduleLabel(s, id), "Control", number, [this, id](const juce::String& n) {
+                           if (n.isNotEmpty()) proc_.applyKnobs(juce::String(proc_.store().desc(id).name), { { id, n.getFloatValue() } });
+                           revealId(id);
+                           if (info_ != nullptr) info_->showControl(id);
+                       } });
+    }
+    // Every preset of every synth (the kit's on the lane the Drums page shows), the player's own first.
+    int lane = 0;
+    for (int t = 0; t < tabs_.getNumTabs(); ++t)
+        if (names[t] == "Drums")
+            if (auto* sp = dynamic_cast<ScrollingPage*>(tabs_.getTabContentComponent(t))) lane = sp->page().instance();
+    for (int mi = 0; mi < static_cast<int>(Module::Count); ++mi) {
+        const auto m = static_cast<Module>(mi);
+        if (!hasPresets(m)) continue;
+        const int inst = m == Module::Perc ? lane : 0;
+        const juce::String where = moduleLabel(s, s.id(m, inst, 0));
+        const juce::Array<juce::File> yours = userPresets(s, m);
+        for (int k = 0; k < yours.size(); ++k)
+            out.push_back({ yours[k].getFileNameWithoutExtension(), where + " preset, yours", "Yours", false, [this, m, inst, k](const juce::String&) {
+                               const juce::Array<juce::File> files = userPresets(proc_.store(), m);
+                               if (k >= files.size()) return;
+                               proc_.applyKnobs("preset " + files[k].getFileNameWithoutExtension(), userPresetKnobs(proc_.store(), m, inst, files[k]));
+                               frame::PresetBrowser::played("Totality", synthKey(proc_.store(), m), files[k].getFileNameWithoutExtension());
+                               revealId(proc_.store().id(m, inst, 0));
+                           } });
+        const std::vector<SoundPreset>& list = factoryPresets(m);
+        for (size_t i = 0; i < list.size(); ++i)
+            out.push_back({ list[i].name, where + " preset, " + list[i].group, "Preset", false, [this, m, inst, i](const juce::String&) {
+                               proc_.applyPreset(m, inst, static_cast<int>(i));
+                               frame::PresetBrowser::played("Totality", synthKey(proc_.store(), m), factoryPresets(m)[i].name);
+                               revealId(proc_.store().id(m, inst, 0));
+                           } });
+    }
+    return out;
+}
+
+bool TotalityEditor::describeControl(int id, juce::String& name, juce::String& text)
+{
+    const ParamStore& s = proc_.store();
+    if (id < 0 || id >= s.count()) return false;
+    const ParamDesc& d = s.desc(id);
+    auto fmt = [&d](float v) {
+        return juce::String(v, std::abs(v) >= 100.0f ? 0 : std::abs(v) >= 10.0f ? 1 : 2) + (d.unit[0] != 0 ? juce::String(" ") + d.unit : juce::String());
+    };
+    name = d.name;
+    text = moduleLabel(s, id) + "    now " + juce::String(s.format(id));
+    if (d.curve != Curve::Choice && d.curve != Curve::Toggle) {
+        text << "    " << fmt(d.minValue) << " .. " << fmt(d.maxValue) << ", default " << fmt(s.defaultValue(id));
+        // Where it plays now, when the score's automation (a section, a ramp) moves it away from where it stands.
+        const float played = proc_.playedNormalised(id);
+        if (!std::isnan(played) && std::abs(played - s.toNormalised(id, s.get(id))) > 0.004f)
+            text << "    plays at " << fmt(s.fromNormalised(id, played)) << " (the score moves it)";
+    }
+    if (const int cc = proc_.controllerFor(id); cc >= 0) text << "    MIDI CC " << cc;
+    text << "    [" << juce::String(s.key(id)) << "]";
+    return true;
+}
+
+void TotalityEditor::browsePresets(Module m, int instance, std::function<void(int)> chosen)
+{
+    if (palette_.isVisible()) palette_.close();
+    const ParamStore& s = proc_.store();
+    frame::PresetBrowser::Bank bank;
+    bank.key = synthKey(s, m);
+    bank.title = moduleLabel(s, s.id(m, instance, 0)) + " presets";
+    const juce::Array<juce::File> yours = userPresets(s, m);
+    for (int k = 0; k < yours.size(); ++k)
+        bank.entries.push_back({ yours[k].getFileNameWithoutExtension(), "Yours", {}, PresetBar::kYours + k + 1, true, {} });
+    const std::vector<SoundPreset>& list = factoryPresets(m);
+    for (size_t i = 0; i < list.size(); ++i) bank.entries.push_back({ list[i].name, list[i].group, {}, static_cast<int>(i) + 1, false, {} });
+    bank.preview = [this, m, instance](const frame::PresetBrowser::Entry& e) { proc_.previewKnobs(knobsOf(proc_.store(), m, instance, e.index)); };
+    bank.endPreview = [this] { proc_.endPreview(); };
+    bank.choose = [this, m, instance, chosen](const frame::PresetBrowser::Entry& e) {
+        if (e.index > PresetBar::kYours) proc_.applyKnobs("preset " + e.name, knobsOf(proc_.store(), m, instance, e.index));
+        else proc_.applyPreset(m, instance, e.index - 1);
+        if (chosen) chosen(e.index);
+    };
+    browser_.open(std::move(bank));
+}
+
+void TotalityEditor::startTour()
+{
+    if (helpView_ != nullptr && helpView_->isVisible()) showHelp(false);
+    std::vector<frame::Tour::Step> steps;
+    steps.push_back({ &style_, "The style", "What the next track is composed in -- Hypnotic, Ostgut, Dub, Raw Peak -- with its key and scale beside it." });
+    steps.push_back({ &compose_, "Compose", "Composes a track (or a DJ mix, with DJ mix chosen) from the knobs, the seed and the rerolls. The die beside it: "
+                                            "a new seed, another track from the same settings." });
+    steps.push_back({ &play_, "Play", "Plays and stops (Space). The speaker beside it silences the output." });
+    if (arrange_.isVisible())
+        steps.push_back({ &arrange_, "The overview", "The track's blocks (or the mix's tracks on their decks), a lane per group lit where it plays. "
+                                                     "Click to jump there, the wheel zooms." });
+    steps.push_back({ &tabs_.getTabbedButtonBar(), "The pages", "Every part of the instrument: the set, the arrangement, the patterns, the sounds "
+                                                                "(each synth with 1024 presets and your own), the mixer, Perform for playing live, Export." });
+    steps.push_back({ &search_, "Search", "Ctrl+K: any knob, preset or action by a few letters -- its page opens and it lights up. A number after a "
+                                          "knob's name sets it (\"cutoff 800\")." });
+    if (info_ != nullptr)
+        steps.push_back({ info_.get(), "The info line", "What the control under the mouse is: its value, its range, where the score plays it, its MIDI controller." });
+    steps.push_back({ &help_, "Help", "F1: the manual by topic, and the knobs of the page in front." });
+    steps.push_back({ &settings_, "Settings", "The window's size, the headset, the family jam, Ableton Link -- and these first steps again." });
+    tour_.start(std::move(steps));
 }

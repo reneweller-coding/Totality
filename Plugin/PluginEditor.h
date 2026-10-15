@@ -15,6 +15,10 @@
  * window's size, `TOT_SHOT_AT` (a beat) jumps there first; with `TOT_PLAY` set, the meters then show that place.
  * `TOT_SHOT_ZOOM` ("from:to", beats) zooms the Arrange tab's view to that window.
  *
+ * The family's ways around the panel (15.10.2026, Frame.h, from Empyrean): the search (Ctrl+K, the command palette), the
+ * info line at the bottom, the first steps, the preset browser with the player's own presets, and the standalone's
+ * window back where it was left.
+ *
  * @note After Ephemeris' Plugin/PluginEditor.h at d047d79 (27.09.2026).
  */
 #pragma once
@@ -29,36 +33,53 @@
 /**
  * @brief A synth's factory presets (tot/Presets.h): a menu of the 1024 in their sixteen groups, a step back and forth, and
  *        the preset the composer chose for the track that plays -- the menu follows it while you have not chosen another.
+ *        Since 15.10.2026 also the player's own (Documents/Totality/Presets/<synth>, saved with the disk), the browser
+ *        (the magnifier) and a star while the knobs have moved from the preset.
  */
 class PresetBar final : public juce::Component, private juce::Timer {
 public:
     /** @brief The presets of instance @p instance of module @p m, chosen through @p p. */
     PresetBar(TotalityProcessor& p, tot::Module m, int instance);
-    /** @brief The step buttons either side of the menu, the composed preset under them. */
+    /** @brief The step buttons either side of the menu, the browser, the disk, the composed preset beside them. */
     void resized() override;
     /** @brief Nothing of its own: its children draw. */
     void paint(juce::Graphics& g) override;
+    /** @brief Shows menu item @p menuId as chosen (a factory preset's index + 1, or kYours + one of the player's). */
+    void chosen(int menuId);
+    static constexpr int kYours = 10000;   ///< the menu ids of the player's own presets start above this
 
 private:
-    /** @brief Follows the composer's choice while no other preset was chosen by hand. */
+    /** @brief Follows the composer's choice while no other preset was chosen by hand; the star. */
     void timerCallback() override;
     /** @brief Applies preset @p index (an undo step) and shows it. */
     void choose(int index);
+    /** @brief The menu anew: the player's own first, then the factory's groups. */
+    void fillMenu();
+    /** @brief Asks for a name and saves the knobs as one of the player's presets. */
+    void saveAs();
     TotalityProcessor& proc_;   ///< the processor: its presets and its undo
     tot::Module module_;   ///< the synth module
     int instance_;   ///< its instance
     int shown_ = -2;   ///< the composer's preset the label shows
+    int loaded_ = -1;   ///< the menu id of the preset the knobs came from (-1: none known)
+    std::vector<std::pair<int, float>> loadedKnobs_;   ///< the knobs that preset put (store id, real value): the star compares
     juce::ComboBox menu_;   ///< the presets in their groups
     juce::TextButton prev_{ "<" };   ///< the preset before
     juce::TextButton next_{ ">" };   ///< the preset after
+    /** @brief Opens the preset browser on this synth's presets. */
+    frame::IconButton browse_{ frame::IconButton::Icon::Search, "Browse the presets: by name, group, favourites, recently played; hold a row's triangle to listen" };
+    /** @brief Saves the sound as a preset of the player's own. */
+    frame::IconButton save_{ frame::IconButton::Icon::Save, "Save this sound as a preset of your own (Documents/Totality/Presets)" };
+    juce::Label star_;   ///< "*" while the knobs have moved from the preset
     juce::Label composed_;   ///< the preset the composer chose
+    std::unique_ptr<juce::AlertWindow> ask_;   ///< the name dialog while it is open
 };
 
 /**
  * @brief The parameters of module instances as knobs, menus and switches, in titled groups: every control with the
  *        frame's right-click menu (MIDI learn, forget, default), a double click to its default, and the live ring.
  */
-class ParamPage final : public juce::Component {
+class ParamPage final : public juce::Component, public frame::Revealer {
 public:
     /**
      * @brief A page for the modules in @p groups.
@@ -77,6 +98,12 @@ public:
     void setAvailableHeight(int h) { available_ = h; }
     /** @brief The page's parameters in words, group by group (the help's topic for the tab). */
     juce::String describe() const;
+    /** @brief The instance shown (the lane of the kit), 0 for a page of one. */
+    int instance() const { return instances_ > 1 ? instance_.getSelectedId() - 1 : 0; }
+    /** @brief Shows the section holding @p part (the search found it there). */
+    void reveal(juce::Component& part) override;
+    /** @brief Shows the instance whose controls hold store id @p id (a lane of the kit); false when none of them does. */
+    bool bringId(int id) override;
 
 private:
     /** @brief Makes the controls of every group (once, in the constructor). */
@@ -285,8 +312,13 @@ public:
     ~TotalityEditor() override;                           ///< stops the refresh timer
     void paint(juce::Graphics& g) override;            ///< the background
     void resized() override;                           ///< scales the body to the window
-    void parentHierarchyChanged() override;            ///< the standalone's title bar gets a maximise button
+    void parentHierarchyChanged() override;            ///< the standalone's title bar gets a maximise button, the window its place
     bool keyPressed(const juce::KeyPress& key) override;   ///< the frame's keys (frame::handleKey)
+    /**
+     * @brief Opens the preset browser on instance @p instance of synth @p m; @p chosen hears the menu id taken (a factory
+     *        preset's index + 1, or PresetBar::kYours + one of the player's).
+     */
+    void browsePresets(tot::Module m, int instance, std::function<void(int)> chosen);
 
 private:
     /** @brief Follows the processor: the status, the play button, the rerolls, the update link; the screenshots. */
@@ -300,6 +332,13 @@ private:
     void showHelp(bool on);                            ///< the help over the tabs (F1)
     void showSettings();                               ///< the settings menu
     ExportPage* exportPage() const;                    ///< the Export tab's page
+    void openPalette();                                ///< the command palette (Ctrl+K)
+    std::vector<frame::CommandPalette::Command> paletteCommands();   ///< what the palette can do: actions, pages, controls, presets
+    void startTour();                                  ///< the first steps, from the first
+    /** @brief The info line's words for store id @p id: its name, its value, its range, its key. */
+    bool describeControl(int id, juce::String& name, juce::String& text);
+    /** @brief Shows the control of store id @p id (its tab, sub-tab, section, lane) and lights it; false when no page has it. */
+    bool revealId(int id);
     TotalityProcessor& proc_;   ///< the processor
     frame::LookAndFeel lnf_{ totui::skin() };          ///< first, so it outlives every component that uses it
     juce::TooltipWindow tooltips_{ nullptr, 700 };   ///< the tooltips, after 700 ms
@@ -345,4 +384,12 @@ private:
     juce::String shotPath_;   ///< TOT_SHOT: where the screenshot goes, empty none
     int shotTicks_ = 0;   ///< ticks until the screenshot is taken
     bool shotHands_ = false;                           ///< TOT_SHOT_HEADSET: the headset's hands kept alive
+    /** @brief The command palette's button (Ctrl+K). */
+    frame::IconButton search_{ frame::IconButton::Icon::Search, "Search (Ctrl+K): any control, preset or action by a few letters" };
+    std::unique_ptr<frame::InfoLine> info_;            ///< the info line at the bottom: what the control under the mouse is
+    frame::CommandPalette palette_{ totui::skin() };   ///< the command palette, over everything while open
+    frame::PresetBrowser browser_{ totui::skin(), "Totality" };   ///< the preset browser, over everything while open
+    frame::Tour tour_{ totui::skin() };                ///< the first steps
+    frame::WindowKeeper window_;                       ///< the standalone's window back where it was left
+    int tourTicks_ = 0;                                ///< ticks until the first start's tour (-1: considered)
 };
