@@ -1,0 +1,3 @@
+# Commits git blame passes over (git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# Format: CGVR-Layout mit clang-format (120 Spalten)
+4bc97eccb7a7da45a8bfe4748691dfc39840f391
