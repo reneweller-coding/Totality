@@ -402,5 +402,7 @@ tot_render composes and renders without a window, the same samples the plugin pl
     tot_render --list                  every parameter with its value
     tot_render --bench --quality quest how fast, at the headset's quality
 
+Totality Sets, a small program beside the instrument (in the Start menu, or TotalitySets.exe in its folder), does the same with a window: the four styles and the sets you saved (.totset files in Documents/Totality and its folders), each with the length of its rendering. Choose one or several (Ctrl, Shift), what to render -- a track (its length) or a DJ set of half an hour to three hours (its arc) --, the format (WAV or FLAC at 24 bits, Ogg Vorbis or MP3 at 320 kbit/s) and the folder (Documents/Totality/Renders at first), and Render: one after another, faster than real time, with the progress, the speed and the time left. New dice composes everything anew; the same dice give the same tracks. A saved set plays as it was saved.
+
 The evaluation (Tools/eval_report.py) measures rendered tracks as the references were measured and writes a report of
 what lies outside their corridor.

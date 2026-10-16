@@ -21,6 +21,18 @@ aus einer zitierten Quelle, **[A]** daraus abgeleitet, **[I]** inferiert und zu 
 wird, ist [I], bis es gemessen ist.
 
 
+## Totality Sets, die Render-App der Familie (16.10.2026, 1.4.0)
+
+Nutzer (in Empyrean, nach Empyrean Journeys): „Können wir solche ein Zusatz-Progrämmchen auch für die anderen
+Synthesizer bauen? (Dort die Parameter eben angepasst, wenn diese keine Journeys haben).“
+- **Tools/renderapp:** der Baukasten der Familie (RenderKit.h/.cpp, RenderWindow.h/.cpp, Mp3Writer.h/.cpp, kanonisch in
+  Empyrean, unverändert kopiert) und Totalitys `Source.cpp`: die vier Stile und die gespeicherten `.totset` aus
+  Documents/Totality (rekursiv; exakt wiedergegeben: Seed, Längen, Rerolls, Regler). Wahl „What“ (ein Track, DJ-Set 30
+  min .. 3 h), „Track“ (compose.minutes 5 .. 16), „Arc“ (set.dramaturgy). Länge je Zeile = komponiert (composeTrack/
+  composeSet, eine Stunde Set in 0,2 s) + 2 s wie tot_render; die Aufnahme: komponieren, levelScore/levelSet, prepare
+  48 kHz/512, load/loadSet -- dieselben Samples wie tot_render. Der Würfel mischt den Namen hinein (seedFor).
+- **[M]** mit voller CPU (die Pegelmessung in Empyrean lief daneben): 12,5 .. 15x Echtzeit; Selbsttest mit Leveler 3 min.
+
 ## Die Wege durchs Panel (15.10.2026, aus Empyrean, Frame.h)
 
 Nutzer: „Bitte baue alles ein, die Tests erst am Ende.“ -- die GUI-Verbesserungen und ASIO in allen fünf Instrumenten:

@@ -123,17 +123,21 @@ $art = Join-Path $build "Plugin\Totality_artefacts\Release"
 Copy-Item (Join-Path $art "Standalone\Totality.exe") $stage
 Copy-Item -Recurse (Join-Path $art "VST3\Totality.vst3") $stage
 Copy-Item $render $stage
+# Totality Sets, the render app beside the instrument (Tools/renderapp).
+$sets = Get-ChildItem -Recurse (Join-Path $build "Tools\renderapp") -Filter TotalitySets.exe | Select-Object -First 1
+if (-not $sets) { throw "no TotalitySets.exe in the build" }
+Copy-Item $sets.FullName $stage
 Copy-Item (Join-Path $root "docs\manual\Totality-Manual.pdf") $stage
 Copy-Item (Join-Path $deploy "totality.ico") $stage
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $stage "LICENSE.txt")
 Copy-Item (Join-Path $root "README.md") (Join-Path $stage "README.txt")
 
 # 5. Check: the files, and no dependency on the dynamic MSVC runtime.
-$expected = @("Totality.exe", "tot_render.exe", "Totality.vst3", "Totality-Manual.pdf", "totality.ico", "LICENSE.txt", "README.txt")
+$expected = @("Totality.exe", "tot_render.exe", "TotalitySets.exe", "Totality.vst3", "Totality-Manual.pdf", "totality.ico", "LICENSE.txt", "README.txt")
 foreach ($f in $expected) { if (-not (Test-Path (Join-Path $stage $f))) { throw "missing in the stage: $f" } }
 $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($dumpbin) {
-    $binaries = @((Join-Path $stage "Totality.exe"), (Join-Path $stage "tot_render.exe")) +
+    $binaries = @((Join-Path $stage "Totality.exe"), (Join-Path $stage "tot_render.exe"), (Join-Path $stage "TotalitySets.exe")) +
                 @(Get-ChildItem -Recurse (Join-Path $stage "Totality.vst3") -Filter *.vst3 -File | ForEach-Object { $_.FullName })
     foreach ($b in $binaries) {
         $deps = & $dumpbin.FullName /DEPENDENTS $b | Select-String -Pattern "(?i)((vcruntime|msvcp)\d+.*|libmmd|svml_disp\w*|libirngmd|libiomp\w*)\.dll"

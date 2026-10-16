@@ -54,12 +54,14 @@ Name: "de"; MessagesFile: "compiler:Languages\German.isl"
 en.CompStandalone=Standalone application
 en.CompVst3=VST3 plug-in (for a DAW)
 en.CompRender=Offline renderer (tot_render, command line)
+en.CompSets=Totality Sets (tracks and DJ sets into WAV, FLAC, Ogg Vorbis or MP3)
 en.CompManual=Manual (PDF)
 en.TaskDesktop=Create a desktop shortcut
 en.NoAvx2=This processor reports no AVX2 support.%n%nTotality is built for AVX2, which every x86-64 processor since 2013 has. Without it, it will not start.%n%nInstall anyway?
 de.CompStandalone=Eigenstaendiges Programm
 de.CompVst3=VST3-Plugin (fuer eine DAW)
 de.CompRender=Offline-Renderer (tot_render, Kommandozeile)
+de.CompSets=Totality Sets (Tracks und DJ-Sets als WAV, FLAC, Ogg Vorbis oder MP3)
 de.CompManual=Handbuch (PDF)
 de.TaskDesktop=Verknuepfung auf dem Desktop anlegen
 de.NoAvx2=Dieser Prozessor meldet keine AVX2-Unterstuetzung.%n%nTotality ist fuer AVX2 gebaut, das jeder x86-64-Prozessor seit 2013 hat. Ohne AVX2 startet es nicht.%n%nTrotzdem installieren?
@@ -72,6 +74,7 @@ Name: "custom"; Description: "Custom"; Flags: iscustom
 Name: "standalone"; Description: "{cm:CompStandalone}"; Types: full custom; Flags: fixed
 Name: "vst3";       Description: "{cm:CompVst3}";       Types: full custom
 Name: "render";     Description: "{cm:CompRender}";     Types: full custom
+Name: "sets";       Description: "{cm:CompSets}";       Types: full custom
 Name: "manual";     Description: "{cm:CompManual}";     Types: full custom
 
 [Tasks]
@@ -89,12 +92,14 @@ Source: "{#Stage}\totality.ico";          DestDir: "{app}";                 Flag
 Source: "{#Stage}\README.txt";             DestDir: "{app}";                 Flags: ignoreversion isreadme; Components: standalone
 Source: "{#Stage}\LICENSE.txt";            DestDir: "{app}";                 Flags: ignoreversion; Components: standalone
 Source: "{#Stage}\tot_render.exe";         DestDir: "{app}";                 Flags: ignoreversion; Components: render
+Source: "{#Stage}\TotalitySets.exe";       DestDir: "{app}";                 Flags: ignoreversion; Components: sets
 Source: "{#Stage}\Totality-Manual.pdf";   DestDir: "{app}";                 Flags: ignoreversion; Components: manual
 Source: "{#Stage}\Totality.vst3\*";       DestDir: "{autocf}\VST3\Totality.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: vst3
 
 [Icons]
 Name: "{autoprograms}\{#AppName}";          Filename: "{app}\Totality.exe"; IconFilename: "{app}\totality.ico"
 Name: "{autoprograms}\{#AppName} Manual";   Filename: "{app}\Totality-Manual.pdf"; Components: manual
+Name: "{autoprograms}\{#AppName} Sets";     Filename: "{app}\TotalitySets.exe"; IconFilename: "{app}\totality.ico"; Components: sets
 Name: "{autodesktop}\{#AppName}";           Filename: "{app}\Totality.exe"; IconFilename: "{app}\totality.ico"; Tasks: desktopicon
 
 [Run]

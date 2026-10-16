@@ -9,7 +9,7 @@
 #
 # Built after Ephemeris's root CMakeLists.txt at d047d79 (27.09.2026); the rules below are its rules.
 cmake_minimum_required(VERSION 3.22)
-project(Totality VERSION 1.3.0 LANGUAGES C CXX)
+project(Totality VERSION 1.4.0 LANGUAGES C CXX)
 
 # The family's layout (01.10.2026): build/<preset>, bin/<preset>, dist/, work/ -- cmake/Family.cmake,
 # CMakePresets.json and build.ps1, the same in every repository of the family.
@@ -67,6 +67,9 @@ endif()
 if(TOT_BUILD_PLUGIN)
     family_juce(${TOT_JUCE_TAG})   # ThirdParty/JUCE, the sibling Phosphene's, or fetched (cmake/Family.cmake)
     add_subdirectory(Plugin)
+    # Totality Sets: tracks and DJ sets rendered into WAV, FLAC, Ogg Vorbis or MP3, faster than real time (16.10.2026),
+    # on the family's render app (Tools/renderapp/RenderKit.h).
+    add_subdirectory(Tools/renderapp)
     # The built VST3 loaded the way a DAW loads it (Tests/vst3test.cpp). Here and not in Tests/, because the plugin
     # target has to exist first.
     if(TOT_BUILD_TOOLS)

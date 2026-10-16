@@ -174,6 +174,11 @@ bin/msvc/tot_render.exe --seed 2026 --set-minutes 120 --set "set.dramaturgy=Peak
 bin/msvc/tot_render.exe --seed 7 --reroll block4 --reroll rack.ch --save-set track.totset --plan
 ```
 
+**Totality Sets** (`TotalitySets.exe`, in the Start menu) does the same with a small window of its own: the four
+styles and the sets you saved (`.totset` in Documents/Totality), each listed with the length of its rendering, as a track
+or a DJ set of half an hour to three hours, written as WAV or FLAC (24 bit), Ogg Vorbis or MP3 (320 kbit/s), faster than
+real time; `TotalitySets --render Dub --what "DJ set, 1 hour" --format flac` without the window.
+
 A track's tempo, key, scale and low end are drawn from its style (`compose.auto`); `--bpm`, `--low` and `--form` fix
 them. Before it renders, `tot_render` measures every track -- its parts against the kick (printed as `balance`), its
 loudest part's level against the style's target; `--bench` skips that and the loudness meter (`--quality quest`: the
