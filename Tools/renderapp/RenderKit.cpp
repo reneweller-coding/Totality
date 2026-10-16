@@ -263,9 +263,33 @@ bool testItem( Source &source, Item &item )
 }
 
 /**
- * @brief Every format: a few seconds of the test row written, read back, its length and level checked.
+ * @brief A file's length and level, read back.
+ * @param[in]  formats  the readers
+ * @param[in]  file     the file
+ * @param[out] seconds  receives its length
+ * @param[out] buffer   receives its samples (null: not wanted)
+ * @return its RMS level, dBFS (-200 when it cannot be read)
+ */
+double readBack( juce::AudioFormatManager &formats, const juce::File &file, double &seconds,
+                 juce::AudioBuffer<float> *buffer )
+{
+    seconds = 0.0;
+    std::unique_ptr<juce::AudioFormatReader> reader{ formats.createReaderFor( file ) };
+    if ( !reader ) return -200.0;
+    seconds = static_cast<double>( reader->lengthInSamples ) / reader->sampleRate;
+    juce::AudioBuffer<float> buf( 2, static_cast<int>( reader->lengthInSamples ) );
+    reader->read( &buf, 0, buf.getNumSamples(), 0, true, true );
+    const double rms =
+        0.5 * ( buf.getRMSLevel( 0, 0, buf.getNumSamples() ) + buf.getRMSLevel( 1, 0, buf.getNumSamples() ) );
+    if ( buffer ) *buffer = std::move( buf );
+    return 20.0 * std::log10( std::max( rms, 1e-10 ) );
+}
+
+/**
+ * @brief Every format: the test row rendered once as the window renders it (into a WAV), read back, its length and
+ *        level checked; then the same samples written in every other format, each read back and checked.
  * @param[in,out] source   the instrument
- * @param[in]     seconds  how long each file
+ * @param[in]     seconds  how long the file
  * @return the number of formats that failed
  */
 int formatsTest( Source &source, double seconds )
@@ -282,62 +306,114 @@ int formatsTest( Source &source, double seconds )
     dir.createDirectory();
     juce::AudioFormatManager formats;
     formats.registerBasicFormats();
-    int failures = 0;
-    std::printf( "%s: %s, the test renders %s\n", source.title().toRawUTF8(), source.noun().toRawUTF8(),
-                 item.m_name.toRawUTF8() );
-    for ( int f = 0; f < static_cast<int>( FormatE::COUNT ); ++f )
-    {
-        if ( !formatAvailable( static_cast<FormatE>( f ) ) ) continue;
-        Job job;
-        job.m_item = item;
-        job.m_request = requestFrom( source, {} );
-        job.m_request.m_limit = seconds;
-        job.m_format = static_cast<FormatE>( f );
-        job.m_file = dir.getChildFile( juce::String( "test" ) + formatExtension( job.m_format ) );
-        Renderer     r;
-        juce::File   file;
-        juce::String why;
-        const bool   rendered = r.render( source, job, [] { return false; }, file, why );
-        double       length = 0.0, db = -200.0;
-        if ( rendered )
-            if ( std::unique_ptr<juce::AudioFormatReader> reader{ formats.createReaderFor( file ) } )
-            {
-                length = static_cast<double>( reader->lengthInSamples ) / reader->sampleRate;
-                juce::AudioBuffer<float> buf( 2, static_cast<int>( reader->lengthInSamples ) );
-                reader->read( &buf, 0, buf.getNumSamples(), 0, true, true );
-                const double rms = 0.5 * ( buf.getRMSLevel( 0, 0, buf.getNumSamples() ) +
-                                           buf.getRMSLevel( 1, 0, buf.getNumSamples() ) );
-                db = 20.0 * std::log10( std::max( rms, 1e-10 ) );
-            }
-        const bool ok = rendered && std::abs( length - seconds ) < 0.5 && db > -70.0;
-        if ( !ok ) ++failures;
-        std::printf( "  %s  %-26s %5.2f s, %6.1f dBFS, %.1fx real time%s%s\n", ok ? "ok  " : "FAIL",
-                     formatName( job.m_format ), length, db, r.m_speed.load(), why.isEmpty() ? "" : ": ",
-                     why.toRawUTF8() );
+    std::printf( "%s: the test renders %s\n", source.title().toRawUTF8(), item.m_name.toRawUTF8() );
+    Job job;
+    job.m_item = item;
+    job.m_request = requestFrom( source, {} );
+    job.m_request.m_limit = seconds;
+    job.m_format = FormatE::WAV;
+    job.m_file = dir.getChildFile( "test.wav" );
+    Renderer                 r;
+    juce::File               file;
+    juce::String             why;
+    const auto               t0 = std::chrono::steady_clock::now();
+    const bool               rendered = r.render( source, job, [] { return false; }, file, why );
+    const double             took = std::chrono::duration<double>( std::chrono::steady_clock::now() - t0 ).count();
+    juce::AudioBuffer<float> samples;
+    double                   length = 0.0;
+    const double             db = rendered ? readBack( formats, file, length, &samples ) : -200.0;
+    int                      failures = 0;
+    bool                     ok = rendered && std::abs( length - seconds ) < 0.5 && db > -70.0;
+    failures += ok ? 0 : 1;
+    std::printf( "  %s  %-26s %5.2f s, %6.1f dBFS, %.1fx real time (set up and rendered in %.1f s)%s%s\n",
+                 ok ? "ok  " : "FAIL", formatName( FormatE::WAV ), length, db, r.m_speed.load(), took,
+                 why.isEmpty() ? "" : ": ", why.toRawUTF8() );
+    for ( int f = 1; ok && f < static_cast<int>( FormatE::COUNT ); ++f )
+    {   // the same samples through every other writer
+        const FormatE format = static_cast<FormatE>( f );
+        if ( !formatAvailable( format ) ) continue;
+        const juce::File to = dir.getChildFile( juce::String( "test" ) + formatExtension( format ) );
+        Sink             sink;
+        juce::String     w;
+        bool             written = sink.open( format, to, source.sampleRate(), w );
+        for ( int at = 0; written && at < samples.getNumSamples(); at += Block )
+        {
+            const int n = std::min( Block, samples.getNumSamples() - at );
+            written = sink.write( samples.getReadPointer( 0, at ), samples.getReadPointer( 1, at ), n );
+        }
+        written = sink.close() && written;
+        double       len = 0.0;
+        const double level = written ? readBack( formats, to, len, nullptr ) : -200.0;
+        const bool   good = written && std::abs( len - length ) < 0.1 && std::abs( level - db ) < 1.0;
+        failures += good ? 0 : 1;
+        std::printf( "  %s  %-26s %5.2f s, %6.1f dBFS%s%s\n", good ? "ok  " : "FAIL", formatName( format ), len, level,
+                     w.isEmpty() ? "" : ": ", w.toRawUTF8() );
     }
     dir.deleteRecursively();
     return failures;
 }
 
+/** @brief The queue test's tone: a sine, rendered at about eighty times real time (a millisecond's nap a block). */
+class ToneRendering : public Rendering
+{
+public:
+    /**
+     * @brief A tone of so many seconds.
+     * @param[in] seconds  its length
+     */
+    explicit ToneRendering( double seconds ) : m_seconds( seconds ) {}
+    double seconds() const override { return m_seconds; }
+    void render( float *left, float *right, int frames ) override
+    {
+        for ( int i = 0; i < frames; ++i )
+        {
+            left[i] = right[i] = 0.25f * static_cast<float>( std::sin( m_phase ) );
+            m_phase += 2.0 * 3.14159265358979 * 220.0 / 48000.0;
+        }
+        juce::Thread::sleep( 1 );
+    }
+
+private:
+    double m_seconds;       ///< the length
+    double m_phase = 0.0;   ///< the sine's phase
+};
+
+/** @brief The queue test's source: one row, a tone as long as the request's limit. */
+class ToneSource : public Source
+{
+public:
+    juce::String product() const override { return "RenderKit"; }
+    juce::String title() const override { return "tone"; }
+    juce::String subtitle() const override { return {}; }
+    juce::String noun() const override { return "tone"; }
+    std::vector<Column> columns() const override { return {}; }
+    std::vector<Item> list() override { return { Item{ "tone", "Tone", {}, {}, false, 0, {} } }; }
+    std::vector<Option> options() const override { return {}; }
+    double length( const Item &, const Request &r ) override { return r.m_limit; }
+    juce::String describe( const Item &, const Request & ) override { return {}; }
+    std::unique_ptr<Rendering> open( const Item &, const Request &r, juce::String & ) override
+    {
+        return std::make_unique<ToneRendering>( r.m_limit );
+    }
+};
+
 /**
- * @brief The window's queue as the window drives it: two renderings one after the other, then one cancelled under way
- *        (its unfinished file removed).
- * @param[in,out] source  the instrument
+ * @brief The window's queue as the window drives it, on a tone of the kit's own: two renderings one after the other,
+ *        then one cancelled under way (its unfinished file removed).
  * @return 0 when the queue did all three right
  */
-int queueTest( Source &source )
+int queueTest()
 {
-    Item item;
-    if ( !testItem( source, item ) ) return 1;
+    ToneSource       source;
+    const Item       item = source.list().front();
     const juce::File dir =
-        juce::File::getSpecialLocation( juce::File::tempDirectory ).getChildFile( source.product() + "RenderAppQueue" );
+        juce::File::getSpecialLocation( juce::File::tempDirectory ).getChildFile( "RenderKitQueueTest" );
     dir.deleteRecursively();
     dir.createDirectory();
     std::vector<Job> jobs( 2 );
     for ( size_t k = 0; k < jobs.size(); ++k )
     {
         jobs[k].m_item = item;
-        jobs[k].m_request = requestFrom( source, {} );
         jobs[k].m_request.m_limit = 3.0;
         jobs[k].m_file = dir.getChildFile( "q" + juce::String( static_cast<int>( k ) ) + ".wav" );
     }
@@ -345,7 +421,7 @@ int queueTest( Source &source )
     juce::String name, message;
     int          waiting = 0, finished = 0;
     q.add( jobs );
-    for ( int t = 0; t < 2400 && ( q.status( name, waiting, finished ) || waiting > 0 || finished < 2 ); ++t )
+    for ( int t = 0; t < 600 && ( q.status( name, waiting, finished ) || waiting > 0 || finished < 2 ); ++t )
         juce::Thread::sleep( 50 );
     message = q.takeMessage();
     const bool both = finished == 2 && jobs[0].m_file.existsAsFile() && jobs[1].m_file.existsAsFile();
@@ -353,7 +429,7 @@ int queueTest( Source &source )
     long_.m_request.m_limit = 600.0;
     long_.m_file = dir.getChildFile( "cancelled.wav" );
     q.add( { long_ } );
-    for ( int t = 0; t < 2400 && ( q.m_renderer.m_total.load() < 100.0 || q.m_renderer.m_done.load() < 1.0 ); ++t )
+    for ( int t = 0; t < 600 && ( q.m_renderer.m_total.load() < 100.0 || q.m_renderer.m_done.load() < 1.0 ); ++t )
         juce::Thread::sleep( 25 );   // until the long one is a second in
     q.cancelAll();
     for ( int t = 0; t < 400 && q.status( name, waiting, finished ); ++t ) juce::Thread::sleep( 25 );
@@ -414,7 +490,7 @@ public:
         {
             const double seconds = argument( args, "--selftest", "6" ).getDoubleValue();
             const int    formats = formatsTest( source(), seconds > 0.0 ? seconds : 6.0 );
-            const int    queue = queueTest( source() );
+            const int    queue = queueTest();
             std::printf( formats + queue == 0 ? "render app passed\n" : "render app: %d FAILED\n", formats + queue );
             setApplicationReturnValue( formats + queue == 0 ? 0 : 1 );
             quit();
