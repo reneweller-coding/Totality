@@ -7,8 +7,8 @@ four styles, each composed into a track or a DJ set (30 minutes to three hours, 
 moment, and the sets you saved in the instrument (.totset, played back exactly: seed, lengths, rerolls, knobs). Every
 row shows the length of its rendering -- composed before a sample is rendered, so the length is exact --; several
 chosen are rendered one after another, with progress, speed and time left. WAV or FLAC at 24 bits, Ogg Vorbis or MP3 at
-320 kbit/s (MP3 through Windows' own encoder). The same samples as tot_render: composed, levelled, rendered offline. The
-family's render app (Tools/renderapp, the same in all six instruments; Empyrean has Empyrean Journeys, Noctuary
+320 kbit/s (MP3 through Windows' own encoder). The same samples as tot_render: composed (with your ratings when Use
+ratings is on, as the instrument composes), levelled, rendered offline. The family's render app (Tools/renderapp, the same in all six instruments; Empyrean has Empyrean Journeys, Noctuary
 Noctuary Journeys); `--list`, `--render`, and a self-test of every format and the queue (ctest `renderapp`).
 
 ## 1.3.0 (15.10.2026): the family plays together

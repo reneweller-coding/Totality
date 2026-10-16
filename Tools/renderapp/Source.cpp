@@ -14,6 +14,7 @@
 #include "tot/Engine.h"
 #include "tot/Leveler.h"
 #include "tot/Params.h"
+#include "tot/Preferences.h"
 #include "tot/SetFile.h"
 #include "tot/compose/Composer.h"
 #include "tot/compose/Set.h"
@@ -50,6 +51,23 @@ struct Row
     int   m_style = -1;   ///< the style (StyleE), -1 for a saved set
     Saved m_saved;        ///< the saved set
 };
+
+/**
+ * @brief The player's ratings' weights when the knobs ask for them (compose.use_ratings), as the plugin composes with
+ *        them: read from Documents/Totality/ratings.tsv.
+ * @param[in]  p    the knobs
+ * @param[out] use  receives whether they are asked for
+ * @return the weights
+ */
+tot::Preferences preferencesOf( const tot::ParamStore &p, bool &use )
+{
+    use = p.getBool( p.id( tot::ModuleE::COMPOSE, 0, tot::compose::USE_RATINGS ) );
+    if ( !use ) return {};
+    const juce::File f = juce::File::getSpecialLocation( juce::File::userDocumentsDirectory )
+                             .getChildFile( "Totality" )
+                             .getChildFile( "ratings.tsv" );
+    return tot::preferencesFrom( tot::loadRatings( f.getFullPathName().toStdString() ) );
+}
 
 /** @brief A score composed: a track or a set, its length, and what plays when. */
 struct Composed
@@ -95,7 +113,8 @@ bool knobsOf( tot::ParamStore &p, const Row &row, const renderkit::Request &r, s
     }
     if ( sf.m_minutes > 0.0 )
         p.set( p.id( ModuleE::COMPOSE, 0, compose::MINUTES ), static_cast<float>( sf.m_minutes ) );
-    if ( sf.m_set > 0.0 ) p.set( p.id( ModuleE::SET, 0, set::MINUTES ), static_cast<float>( sf.m_set ) );
+    // as the plugin's loadSet: the set's length always (0: a track), whatever the knob said when it was saved
+    p.set( p.id( ModuleE::SET, 0, set::MINUTES ), static_cast<float>( sf.m_set ) );
     cur = sf.m_curation;
     out = sf.m_seed;
     return true;
@@ -111,12 +130,14 @@ bool knobsOf( tot::ParamStore &p, const Row &row, const renderkit::Request &r, s
 Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curation &cur )
 {
     using namespace tot;
-    Composed     out;
-    const double minutes = p.get( p.id( ModuleE::SET, 0, set::MINUTES ) );
+    Composed          out;
+    bool              use = false;
+    const Preferences prefs = preferencesOf( p, use );
+    const double      minutes = p.get( p.id( ModuleE::SET, 0, set::MINUTES ) );
     if ( minutes > 0.0 )
     {
         SetInfo si;
-        out.m_set = composeSet( p, seed, minutes, &cur, &si );
+        out.m_set = composeSet( p, seed, minutes, &cur, &si, use ? &prefs : nullptr );
         out.m_isSet = true;
         const TempoMap &tm = out.m_set.m_decks[0].m_tempo;
         out.m_seconds = tm.secondsAt( out.m_set.m_lengthBeats ) + Tail;
@@ -132,9 +153,11 @@ Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curat
     }
     else
     {
-        TrackInfo info;
-        Score    &score = out.m_set.m_decks[0];
-        score = composeTrack( p, seed, TrackRequest{}, &cur, std::string(), &info );
+        TrackInfo    info;
+        Score       &score = out.m_set.m_decks[0];
+        TrackRequest req;
+        req.m_prefs = use ? &prefs : nullptr;
+        score = composeTrack( p, seed, req, &cur, std::string(), &info );
         out.m_seconds = score.m_tempo.secondsAt( score.m_lengthBeats ) + Tail;
         out.m_marks.push_back( { 0.0, juce::String( info.m_style ) + ", " + juce::String( info.m_bpm, 1 ) + " BPM, " +
                                           KeyNames[info.m_key] + " " + ScaleNames[info.m_scale] + " (" +
@@ -276,7 +299,7 @@ public:
             row.m_saved.m_file = f;
             row.m_saved.m_style =
                 StyleNames[std::clamp( p.getInt( p.id( ModuleE::COMPOSE, 0, compose::STYLE ) ), 0, 3 )];
-            row.m_saved.m_set = sf.m_set > 0.0 ? sf.m_set : p.get( p.id( ModuleE::SET, 0, set::MINUTES ) );
+            row.m_saved.m_set = sf.m_set;
             row.m_saved.m_seed = sf.m_seed;
             renderkit::Item item;
             item.m_name = f.getFileNameWithoutExtension();
