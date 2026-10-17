@@ -71,6 +71,51 @@ tot::Preferences preferencesOf( const tot::ParamStore &p, bool &use )
     return tot::preferencesFrom( tot::loadRatings( f.getFullPathName().toStdString() ) );
 }
 
+/**
+ * @brief A track's sections on the time line, as Kaleidoscope's cues know them (renderkit::CueSheet): the intro, the
+ *        bass's entry a groove, every kick-out a break and its return a drop -- a build eight bars before it --, the
+ *        outro; only those between @p from and @p to (a set's track before its swap still belongs to the one before).
+ * @param[in,out] sheet     the time line
+ * @param[in]     t         what the track's composer told
+ * @param[in]     at        the track's first beat in the score
+ * @param[in]     tm        the score's tempo map
+ * @param[in]     energy    the set's energy where the track begins (0 .. 1)
+ * @param[in]     from      s: the first moment that is the track's
+ * @param[in]     to        s: the moment it hands over
+ * @param[in]     chapters  each section a chapter as well (a track alone)
+ */
+void trackTimeline( renderkit::CueSheet &sheet, const tot::TrackInfo &t, double at, const tot::TempoMap &tm,
+                    double energy, double from, double to, bool chapters )
+{
+    const auto sec = [&]( int bar ) { return tm.secondsAt( at + 4.0 * bar ); };
+    const auto put = [&]( double when, const char *kind, double e, bool drop, const juce::String &title )
+    {
+        if ( when < from || when >= to ) return;
+        sheet.section( when, kind, e, drop );
+        if ( chapters ) sheet.chapter( when, title );
+    };
+    put( sec( 0 ), "Intro", 0.3, false, "Intro" );
+    if ( t.m_bassBar > 0 ) put( sec( t.m_bassBar ), "Groove", 0.4 + 0.4 * energy, false, "Bass in" );
+    for ( size_t r = 0; r < t.m_reductions.size() && r < t.m_returns.size(); ++r )
+    {
+        put( sec( t.m_reductions[r] ), "Break", 0.35, false, "Kick out " + juce::String( static_cast<int>( r + 1 ) ) );
+        if ( t.m_returns[r] - 8 > t.m_reductions[r] ) put( sec( t.m_returns[r] - 8 ), "Build", 0.6, false, {} );
+        put( sec( t.m_returns[r] ), "Drop", 0.6 + 0.4 * energy, true,
+             "Return " + juce::String( static_cast<int>( r + 1 ) ) );
+    }
+    if ( t.m_outroBar > 0 && t.m_outroBar < t.m_bars ) put( sec( t.m_outroBar ), "Outro", 0.3, false, "Outro" );
+}
+
+/**
+ * @brief A key as the cues name it.
+ * @param[in] t  what the track's composer told
+ * @return "A Aeolian"
+ */
+juce::String keyName( const tot::TrackInfo &t )
+{
+    return juce::String( tot::KeyNames[t.m_key] ) + " " + tot::ScaleNames[t.m_scale];
+}
+
 /** @brief A score composed: a track or a set, its length, and what plays when. */
 struct Composed
 {
@@ -126,12 +171,14 @@ bool knobsOf( tot::ParamStore &p, const Row &row, const renderkit::Request &r, s
 
 /**
  * @brief Composes what the knobs ask for, as the plugin does: a set when set.minutes is above 0, else a track.
- * @param[in] p     the knobs
- * @param[in] seed  the seed
- * @param[in] cur   the rerolls
+ * @param[in]  p      the knobs
+ * @param[in]  seed   the seed
+ * @param[in]  cur    the rerolls
+ * @param[out] sheet  receives the time line -- a set's tracks as chapters, a track's sections -- (null: not asked)
  * @return the score, its length and its marks
  */
-Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curation &cur )
+Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curation &cur,
+                  renderkit::CueSheet *sheet = nullptr )
 {
     using namespace tot;
     Composed          out;
@@ -145,6 +192,19 @@ Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curat
         out.m_isSet = true;
         const TempoMap &tm = out.m_set.m_decks[0].m_tempo;
         out.m_seconds = tm.secondsAt( out.m_set.m_lengthBeats ) + Tail;
+        for ( size_t i = 0; sheet != nullptr && i < si.m_tracks.size(); ++i )
+        {   // each track from its swap (the first from the start) to the next one's: its key, its sections, a chapter
+            const SetTrack &t = si.m_tracks[i];
+            const double    from = i == 0 ? 0.0 : tm.secondsAt( t.m_swapIn );
+            const double    to = i + 1 < si.m_tracks.size() ? tm.secondsAt( si.m_tracks[i + 1].m_swapIn ) : 1.0e12;
+            sheet->key( from, keyName( t.m_info ) );
+            sheet->chapter( from, "Track " + juce::String( static_cast<int>( i + 1 ) ) + ": " +
+                                      juce::String( t.m_info.m_style ) + ", " +
+                                      juce::String( std::lround( t.m_info.m_bpm ) ) + " BPM, " + keyName( t.m_info ) );
+            if ( i > 0 ) sheet->section( from, "Groove", 0.4 + 0.4 * t.m_energy );
+            trackTimeline( *sheet, t.m_info, t.m_start, tm, t.m_energy, from, to, false );
+        }
+        if ( sheet != nullptr ) sheet->grid( [&tm]( double b ) { return tm.secondsAt( b ); }, out.m_set.m_lengthBeats );
         for ( size_t i = 0; i < si.m_tracks.size(); ++i )
         {
             const SetTrack &t = si.m_tracks[i];
@@ -163,6 +223,13 @@ Composed compose( const tot::ParamStore &p, std::uint64_t seed, const tot::Curat
         req.m_prefs = use ? &prefs : nullptr;
         score = composeTrack( p, seed, req, &cur, std::string(), &info );
         out.m_seconds = score.m_tempo.secondsAt( score.m_lengthBeats ) + Tail;
+        if ( sheet != nullptr )
+        {   // a track alone: its sections as chapters
+            sheet->key( 0.0, keyName( info ) );
+            trackTimeline( *sheet, info, 0.0, score.m_tempo, 0.7, 0.0, 1.0e12, true );
+            const TempoMap &tm = score.m_tempo;
+            sheet->grid( [&tm]( double b ) { return tm.secondsAt( b ); }, score.m_lengthBeats );
+        }
         out.m_marks.push_back( { 0.0, juce::String( info.m_style ) + ", " + juce::String( info.m_bpm, 1 ) + " BPM, " +
                                           KeyNames[info.m_key] + " " + ScaleNames[info.m_scale] + " (" +
                                           juce::String( info.m_camelot ) + ")" } );
@@ -193,7 +260,7 @@ public:
             m_engine.reset();
             return;
         }
-        Composed c = compose( p, s, cur );
+        Composed c = compose( p, s, cur, &m_sheet );
         // The Leveler: the loudest part of every track to the style's target, before a sample is written (tot_render).
         if ( c.m_isSet )
             levelSet( c.m_set, p );
@@ -229,8 +296,10 @@ public:
             if ( at <= m_time ) s = what;
         return s;
     }
+    void timeline( renderkit::CueSheet &sheet ) const override { sheet = m_sheet; }
 
 private:
+    renderkit::CueSheet                          m_sheet;           ///< its time line, as composed
     std::unique_ptr<tot::Engine>                 m_engine;          ///< the instrument offline
     double                                       m_seconds = 0.0;   ///< the length
     std::vector<std::pair<double, juce::String>> m_marks;           ///< s -> what begins there
