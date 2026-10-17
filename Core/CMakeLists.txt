@@ -30,6 +30,7 @@ add_library(TotalityCore STATIC
     src/compose/Composer.cpp
     src/compose/Set.cpp
     src/SetFile.cpp
+    src/FactorySets.cpp
     src/Deck.cpp
     src/Engine.cpp
     src/Cue.cpp

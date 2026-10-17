@@ -524,6 +524,11 @@ public:
      * @param[in] chosen    hears the menu id of the preset taken
      */
     void browsePresets( tot::ModuleE m, int instance, std::function<void( int )> chosen );
+    /**
+     * @brief Opens the preset browser on the DJ sets: the factory's 256 (tot/FactorySets.h, by the style they start
+     *        in and their arc) and the player's own (.totset in Documents/Totality). The one taken is composed.
+     */
+    void browseSets();
 
 private:
     /** @brief Follows the processor: the status, the play button, the rerolls, the update link; the screenshots. */
@@ -609,6 +614,7 @@ private:
     juce::Label       m_lengthLabel;                  ///< the length's name
     bool              m_lengthOfMix = false;          ///< the slider shows set.minutes (else compose.minutes)
     bool              m_syncing = false;              ///< the slider is set from its parameter, not by a hand
+    juce::TextButton  m_sets{ "Sets" };               ///< the DJ sets: the factory's and the player's own
     juce::TextButton  m_compose{ "Compose track" };   ///< composes a track or a mix
     frame::IconButton m_seed{ frame::IconButton::IconE::DICE, "New seed" };   ///< a new seed, then composes: a die
     frame::IconButton m_play{ frame::IconButton::IconE::PLAY,

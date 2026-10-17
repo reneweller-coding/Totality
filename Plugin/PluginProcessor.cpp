@@ -6,6 +6,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "tot/Export.h"
+#include "tot/FactorySets.h"
 #include "tot/Leveler.h"
 #include "tot/Midi.h"
 #include "tot/Presets.h"
@@ -1079,10 +1080,23 @@ bool TotalityProcessor::saveSet( const juce::File &file )
 
 bool TotalityProcessor::loadSet( const juce::File &file )
 {
+    if ( !file.existsAsFile() ) return false;
+    return loadSetText( file.getFileName(), file.loadFileAsString().toStdString() );
+}
+
+bool TotalityProcessor::loadFactorySet( int index )
+{
+    if ( index < 0 || index >= numFactorySets() ) return false;
+    const FactorySet &f = factorySet( index );
+    return loadSetText( f.m_name, f.m_text );
+}
+
+bool TotalityProcessor::loadSetText( const juce::String &name, const std::string &text )
+{
     SetFile     sf;
     std::string err;
-    beginStep( "load " + file.getFileName() );
-    if ( !tot::loadSet( file.getFullPathName().toRawUTF8(), sf, store(), &err ) )
+    beginStep( "load " + name );
+    if ( !tot::loadSetText( text, sf, store(), &err ) )
     {
         endStep();
         return false;

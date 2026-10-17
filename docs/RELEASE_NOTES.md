@@ -2,14 +2,22 @@
 
 ## 1.4.0 (16.10.2026, not released)
 
+**256 DJ sets to begin with.** The Sets button in the header opens the browser on the factory's DJ sets -- each of the
+four styles through the seven arcs, nine sets an arc, and a night of twelve hours each: from a warm-up of an hour to a
+marathon -- and on your own `.totset` files; the one taken is composed and plays. Each is a set as you would save it: a
+seed and the set's knobs (its arc and length, the styles following the energy or kept, a track's time, the blends, the
+live loops, the FX breaks, the DJ's hand). Totality Sets lists them too, and so Heliacal. In the browser a group under
+a section now shows that section's alone.
+
 **Totality Sets.** A small program beside the instrument (Start menu, TotalitySets.exe) that renders into files: the
 four styles, each composed into a track or a DJ set (30 minutes to three hours, with its arc) with the dice of the
 moment, and the sets you saved in the instrument (.totset, played back exactly: seed, lengths, rerolls, knobs). Every
 row shows the length of its rendering -- composed before a sample is rendered, so the length is exact --; several
 chosen are rendered one after another, with progress, speed and time left. WAV or FLAC at 24 bits, Ogg Vorbis or MP3 at
 320 kbit/s (MP3 through Windows' own encoder). The same samples as tot_render: composed (with your ratings when Use
-ratings is on, as the instrument composes), levelled, rendered offline. The family's render app (Tools/renderapp, the same in all six instruments; Empyrean has Empyrean Journeys, Noctuary
-Noctuary Journeys); `--list`, `--render`, and a self-test of every format and the queue (ctest `renderapp`).
+ratings is on, as the instrument composes), levelled, rendered offline. The family's render app (Tools/renderapp,
+the same in all six instruments; Empyrean has Empyrean Journeys, Noctuary has Noctuary Journeys); `--list`, `--render`,
+`--catalog` (what it offers as JSON, for Heliacal), and a self-test of every format and the queue (ctest `renderapp`).
 
 ## 1.3.0 (15.10.2026): the family plays together
 

@@ -69,6 +69,8 @@ track's own score cues (the bars, the sections, the drops). `Tools/demo/make_dem
 
 ## Sets
 
+* **256 sets to begin with:** the Sets button opens the factory's DJ sets -- each of the four styles through the seven
+  arcs, from a warm-up of an hour to a night of twelve -- and your own; the one taken is composed and plays.
 * **One long recomposition**, up to twelve hours: seven dramaturgies of tempo and energy, tracks in neighbouring
   Camelot keys, the tempo drifting by at most 1 BPM a track, about twenty tracks an hour.
 * **Blends as a Berlin DJ mixes:** the highs first, the mids over the last 16 bars, the bass swapped hard on a 32-bar
@@ -175,7 +177,8 @@ bin/msvc/tot_render.exe --seed 7 --reroll block4 --reroll rack.ch --save-set tra
 ```
 
 **Totality Sets** (`TotalitySets.exe`, in the Start menu) does the same with a small window of its own: the four
-styles and the sets you saved (`.totset` in Documents/Totality), each listed with the length of its rendering, as a track
+styles, the factory's 256 DJ sets and the sets you saved (`.totset` in Documents/Totality), each listed with the length
+of its rendering, as a track
 or a DJ set of half an hour to three hours, written as WAV or FLAC (24 bit), Ogg Vorbis or MP3 (320 kbit/s), faster than
 real time; `TotalitySets --render Dub --what "DJ set, 1 hour" --format flac` without the window.
 

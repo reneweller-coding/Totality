@@ -7,6 +7,7 @@
 #include "EditorEclipse.h"
 #include "EditorPerform.h"
 #include "EditorStyle.h"
+#include "tot/FactorySets.h"
 #include "tot/Presets.h"
 #include "TotalityData.h"
 #include <algorithm>
@@ -1619,6 +1620,11 @@ TotalityEditor::TotalityEditor( TotalityProcessor &p )
     showLength( m_proc.mixChosen() );
 
     m_compose.onClick = [this] { m_proc.compose(); };
+    m_sets.onClick = [this] { browseSets(); };
+    m_sets.setTooltip(
+        "The DJ sets: the factory's 256 -- by the style they start in and their arc, from a warm-up to a "
+        "night of twelve hours -- and yours. The one taken is composed and plays." );
+    m_body.addAndMakeVisible( m_sets );
     m_seed.onClick = [this] { m_proc.newSeed(); };
     m_play.onClick = [this] { m_proc.setPlaying( !m_proc.isPlaying() ); };
     m_compose.setTooltip( "Compose with the knobs as they stand, the seed and the rerolls" );
@@ -1762,6 +1768,7 @@ TotalityEditor::TotalityEditor( TotalityProcessor &p )
                      sz.fromFirstOccurrenceOf( "x", false, false ).getIntValue() );
         }
         if ( std::getenv( "TOT_SHOT_HELP" ) != nullptr ) showHelp( true );
+        if ( std::getenv( "TOT_SHOT_SETS" ) != nullptr ) browseSets();   // the DJ sets' browser (17.10.2026)
         if ( std::getenv( "TOT_SHOT_HEADSET" ) != nullptr )
         {   // the headset's controls in the pictures: hands as if one sent them
             frame::Hands hands;
@@ -1992,7 +1999,7 @@ void TotalityEditor::layoutBody()
     h.m_modes = { { &m_trackMode, 64 }, { &m_mixMode, 72 } };
     h.m_lengthLabel = &m_lengthLabel;
     h.m_length = &m_length;
-    h.m_actions = { { &m_compose, 116 }, { &m_seed, frame::IconWidth } };
+    h.m_actions = { { &m_sets, 56 }, { &m_compose, 116 }, { &m_seed, frame::IconWidth } };
     h.m_play = &m_play;
     h.m_mute = &m_mute;
     h.m_like = &m_like;
@@ -2338,6 +2345,33 @@ void TotalityEditor::browsePresets( ModuleE m, int instance, std::function<void(
         else
             m_proc.applyPreset( m, instance, e.m_index - 1 );
         if ( chosen ) chosen( e.m_index );
+    };
+    m_browser.open( std::move( bank ) );
+}
+
+void TotalityEditor::browseSets()
+{
+    if ( m_palette.isVisible() ) m_palette.close();
+    frame::PresetBrowser::Bank bank;
+    bank.m_key = "sets";
+    bank.m_title = "DJ sets";
+    // the player's own first, numbered after the factory's
+    juce::Array<juce::File> yours = documents().findChildFiles( juce::File::findFiles, true, "*.totset" );
+    yours.sort();
+    const int factory = numFactorySets();
+    for ( int k = 0; k < yours.size(); ++k )
+        bank.m_entries.push_back( { yours[k].getFileNameWithoutExtension(), "Yours", {}, factory + k, true, {} } );
+    for ( int i = 0; i < factory; ++i )
+    {
+        const FactorySet &f = factorySet( i );
+        bank.m_entries.push_back( { f.m_name, f.m_group, f.m_section, i, false, f.m_note } );
+    }
+    bank.m_choose = [this, yours, factory]( const frame::PresetBrowser::Entry &e )
+    {
+        if ( e.m_index >= factory )
+            m_proc.loadSet( yours[e.m_index - factory] );
+        else
+            m_proc.loadFactorySet( e.m_index );
     };
     m_browser.open( std::move( bank ) );
 }

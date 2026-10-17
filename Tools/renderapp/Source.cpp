@@ -12,6 +12,7 @@
  */
 #include "RenderKit.h"
 #include "tot/Engine.h"
+#include "tot/FactorySets.h"
 #include "tot/Leveler.h"
 #include "tot/Params.h"
 #include "tot/Preferences.h"
@@ -45,11 +46,12 @@ struct Saved
     std::uint64_t m_seed = 1;   ///< its seed
 };
 
-/** @brief What a row is: a style, or a saved set. */
+/** @brief What a row is: a style, a factory set, or a saved set. */
 struct Row
 {
-    int   m_style = -1;   ///< the style (StyleE), -1 for a saved set
-    Saved m_saved;        ///< the saved set
+    int   m_style = -1;     ///< the style (StyleE), -1 for a set
+    int   m_factory = -1;   ///< the factory set (tot/FactorySets.h), -1 for none
+    Saved m_saved;          ///< the saved set
 };
 
 /**
@@ -79,7 +81,7 @@ struct Composed
 };
 
 /**
- * @brief The knobs of a row: a style with the panel's lengths, or a saved set's own.
+ * @brief The knobs of a row: a style with the panel's lengths, or a set's own (the factory's, or a saved one).
  * @param[in,out] p     the knobs (fresh)
  * @param[in]     row   the row
  * @param[in]     r     the request
@@ -106,7 +108,9 @@ bool knobsOf( tot::ParamStore &p, const Row &row, const renderkit::Request &r, s
     }
     SetFile     sf;
     std::string error;
-    if ( !loadSet( row.m_saved.m_file.getFullPathName().toRawUTF8(), sf, p, &error ) )
+    const bool  read = row.m_factory >= 0 ? loadSetText( factorySet( row.m_factory ).m_text, sf, p, &error )
+                                          : loadSet( row.m_saved.m_file.getFullPathName().toRawUTF8(), sf, p, &error );
+    if ( !read )
     {
         why = error;
         return false;
@@ -285,6 +289,23 @@ public:
             row.m_style = s;
             add( std::move( item ), std::move( row ) );
         }
+        // the factory's DJ sets (tot/FactorySets.h): played as they are, the dice their own
+        for ( int i = 0; i < numFactorySets(); ++i )
+        {
+            const FactorySet &f = factorySet( i );
+            renderkit::Item   item;
+            item.m_name = f.m_name;
+            item.m_kind = "Factory set";
+            item.m_dice = false;
+            item.m_cells.add( juce::String( f.m_group ) + " set" );
+            item.m_cells.add( f.m_section );
+            item.m_cells.add( {} );
+            item.m_keys = { std::nan( "" ), std::nan( "" ), std::nan( "" ) };
+            item.m_detail = juce::String( f.m_note ) + " " + f.m_group + " " + f.m_section;
+            Row row;
+            row.m_factory = i;
+            add( std::move( item ), std::move( row ) );
+        }
         const juce::File docs =
             juce::File::getSpecialLocation( juce::File::userDocumentsDirectory ).getChildFile( "Totality" );
         juce::Array<juce::File> files = docs.findChildFiles( juce::File::findFiles, true, "*.totset" );
@@ -343,6 +364,8 @@ public:
     }
     double length( const renderkit::Item &item, const renderkit::Request &r ) override
     {
+        if ( const int f = row( item )->m_factory; f >= 0 && tot::factorySet( f ).m_seconds > 0.0 )
+            return tot::factorySet( f ).m_seconds;   // measured when the bank was made (Tools/sets/make_sets.py)
         tot::ParamStore p;
         tot::Curation   cur;
         std::uint64_t   seed = 1;
@@ -353,6 +376,11 @@ public:
     juce::String describe( const renderkit::Item &item, const renderkit::Request &r ) override
     {
         const std::shared_ptr<const Row> rw = row( item );
+        if ( rw->m_factory >= 0 )
+        {
+            const tot::FactorySet &f = tot::factorySet( rw->m_factory );
+            return juce::String( "A DJ set of the factory: " ) + f.m_group + ", from " + f.m_section + "\n" + f.m_note;
+        }
         if ( rw->m_style < 0 )
         {
             const Saved &s = rw->m_saved;
