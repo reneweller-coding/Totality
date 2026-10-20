@@ -216,14 +216,15 @@ const ParamDesc MixParams[mix::COUNT] = {
 
 /**
  * The master (PLAN 8.4, 8.5): a glue compressor (threshold -16 dB and a gentle ratio after Dok. 8.7), a soft
- * clipper at four times the rate, a true-peak limiter at -1 dBTP (Dok.: at most -0.5), the side mono under 120 Hz.
+ * clipper at four times the rate, a true-peak limiter at -2 dBTP (Dok.: at most -0.5; -2 for AAC and Opus,
+ * 20.10.2026), the side mono under 120 Hz.
  */
 const ParamDesc MasterParams[master::COUNT] = {
     { "level", "Level", "dB", -24.0f, 12.0f, 0.0f, CurveE::LINEAR },
     { "threshold", "Glue Threshold", "dB", -40.0f, 0.0f, -16.0f, CurveE::LINEAR },
     { "ratio", "Glue Ratio", "", 1.0f, 10.0f, 2.0f, CurveE::LOG },
     { "clip", "Clip Drive", "dB", 0.0f, 9.0f, 2.0f, CurveE::LINEAR },
-    { "ceiling", "Ceiling", "dBTP", -6.0f, 0.0f, -1.0f, CurveE::LINEAR },
+    { "ceiling", "Ceiling", "dBTP", -6.0f, 0.0f, -2.0f, CurveE::LINEAR },   // -2: a loud master survives AAC and Opus
     { "mono_below", "Mono Below", "Hz", 40.0f, 250.0f, 120.0f, CurveE::LOG },
     { "tilt", "Tilt", "dB", -12.0f, 12.0f, 10.0f, CurveE::LINEAR },   // fitted: +10.5 (Erg. 2, MixParams)
     { "cut", "Vinyl Cut", "", 0.0f, 1.0f, 0.0f, CurveE::TOGGLE },
