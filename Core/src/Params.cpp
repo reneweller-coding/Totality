@@ -228,6 +228,7 @@ const ParamDesc MasterParams[master::COUNT] = {
     { "mono_below", "Mono Below", "Hz", 40.0f, 250.0f, 120.0f, CurveE::LOG },
     { "tilt", "Tilt", "dB", -12.0f, 12.0f, 10.0f, CurveE::LINEAR },   // fitted: +10.5 (Erg. 2, MixParams)
     { "cut", "Vinyl Cut", "", 0.0f, 1.0f, 0.0f, CurveE::TOGGLE },
+    { "resonance", "Resonance", "", 0.0f, 1.0f, 0.4f, CurveE::LINEAR },   // moderate: a dense mix's own peaks
 };
 
 /**

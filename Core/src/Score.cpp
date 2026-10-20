@@ -85,6 +85,17 @@ BalanceDbT Score::balanceAt( double beat ) const
     return b;
 }
 
+ToneDbT Score::toneAt( double beat ) const
+{
+    ToneDbT t{};
+    for ( const LevelMark &m : m_levels )
+    {
+        if ( m.m_beat > beat ) break;
+        t = m.m_toneDb;
+    }
+    return t;
+}
+
 float Score::trimAt( double beat ) const
 {
     float t = 0.0f;

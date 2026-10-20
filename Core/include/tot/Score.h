@@ -180,6 +180,9 @@ constexpr int BalLanes = 12;                                    ///< the kit's l
 constexpr int BalParts = static_cast<int>( BalPartE::COUNT );   ///< how many parts the balance corrects
 /** @brief A correction per part, dB (0: none). */
 using BalanceDbT = std::array<float, BalParts>;
+constexpr int ToneBands = 5;   ///< 20.10.2026: the tone trims' bands -- sub, lows, low mids, mids, highs (ToneEq)
+/** @brief A tone trim per band, dB (0: none). */
+using ToneDbT = std::array<float, ToneBands>;
 extern const char *const
     BalPartNames[BalParts];   ///< "perc1" .. "perc12", "ping", "bass", "acid", "chord", "drone", "texture", "room"
 
@@ -194,6 +197,7 @@ struct LevelMark
     float      m_targetLufs = -11.0f;   ///< what that part should measure (the style's, PLAN 8.5)
     float      m_trimDb = 0.0f;         ///< the correction (levelScore); 0 until measured
     BalanceDbT m_balDb{};   ///< Phase 18: the parts' corrections against the kick (levelScore); 0 until measured
+    ToneDbT    m_toneDb{};  ///< 20.10.2026: the track's tone trims (levelScore; ToneEq on its bus); 0 until measured
     std::array<float, 4>
         m_styleMix{};   ///< the track's styles (StyleProfile::styleMix), for the parts' windows; 0: Hypnotic's
     int m_front =
@@ -265,6 +269,12 @@ struct Score
      * @return the parts' corrections there in dB
      */
     BalanceDbT balanceAt( double beat ) const;
+    /**
+     * @brief The tone trims at @p beat, dB: the latest mark's (none before the first).
+     * @param[in] beat  the position in beats
+     * @return the tone trims there in dB
+     */
+    ToneDbT toneAt( double beat ) const;
     /** @brief Sorts every list by beat (stable, so equal beats keep the order they were written in). */
     void sort();
     /**

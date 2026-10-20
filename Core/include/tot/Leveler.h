@@ -20,6 +20,15 @@
  * mix's 250-1000 Hz and 1-5 kHz against its 40-140 Hz in the same places and, over the references' 90th percentile of
  * the style, takes the room's return down (to -12 dB) and then the boosts.
  *
+ * 20.10.2026, the tone: after the guard, the loudest part's bands against its kick band (40-140 Hz), read as the
+ * references were (Welch on the mid signal: Tools/analyze_ref.py's bands_db -- 20-60 Hz, 60-250, 250-1000, 1-5 kHz,
+ * 5-16 kHz) in the guard's places, held against the range of the style's references (toneEdges): a band outside it is
+ * brought to the edge, a band inside it may stay or move within it -- six to eleven records a style make a median too
+ * uncertain to aim at -- by the smallest tone trims (LevelMark::toneDb, ToneEq on the track bus, at most 3 dB) that
+ * do it, fitted on the measured spectrum through the shelves' and bells' exact response, all bands at once (they
+ * overlap). The trims are known before the track plays and hold for all of it: an equaliser set for the track, not
+ * one that chases the arrangement.
+ *
  * The correction is part of the score: live and offline play it alike, and a score saved or exported carries it. The
  * measuring renders about 50 seconds per track: tot_render does it before it renders, the plugin while the track already
  * plays -- the correction follows and glides in (Engine::setLevelTrims).
@@ -50,6 +59,8 @@ struct LevelReading
     BalanceDbT m_lo{};      ///< the lower ends of the windows they were set for (ranked), dB
     BalanceDbT m_hi{};      ///< the upper ends, dB
     bool       m_guarded = false;   ///< the guard took the room or boosts down (the mids stood over the references')
+    ToneDbT    m_bands{};           ///< 20.10.2026: the loudest part's bands against its kick band as composed, dB
+    ToneDbT    m_tone{};            ///< the tone trims set, dB
 };
 
 /**
@@ -86,6 +97,15 @@ std::vector<LevelReading> levelSet( SetScore &set, const ParamStore &params, dou
  * @param[out] hi        receives its upper edge in dB
  */
 void balanceWindow( const std::array<float, 4> &styleMix, int part, int role, float &lo, float &hi );
+
+/**
+ * @brief 20.10.2026: the range of the references' bands (bands_db: against 40-140 Hz, dB) for a track of @p styleMix --
+ *        per style its median and half the pooled interquartile range either side, blended by the mix.
+ * @param[in]  styleMix  the track's style mix
+ * @param[out] lo        receives the lower edges, a band each
+ * @param[out] hi        receives the upper edges
+ */
+void toneEdges( const std::array<float, 4> &styleMix, ToneDbT &lo, ToneDbT &hi );
 
 /**
  * @brief The loudness the loudest part of a track of style @p style should measure, LUFS (PLAN 8.5).

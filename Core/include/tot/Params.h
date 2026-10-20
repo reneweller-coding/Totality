@@ -283,6 +283,8 @@ enum : int
     // low pass, mono under 150 Hz).
     TILT,
     CUT,
+    // 20.10.2026: the resonance suppressor (fx/Resonance.h), between the cut and the clipper.
+    RESONANCE,
     COUNT
 };
 }

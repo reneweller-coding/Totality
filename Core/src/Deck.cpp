@@ -13,6 +13,14 @@
 namespace tot
 {
 
+// The tone trims' bands (20.10.2026), one per band the Leveler reads: a low shelf under the sub, a bell over the kick's
+// fundamental, broad bells on the low mids and the mids (two octaves and more), a high shelf.
+const ToneBand DeckToneBands[ToneBands] = { { ToneBandE::LOW_SHELF, 45.0f, 0.7071f },
+                                            { ToneBandE::BELL, 160.0f, 1.0f },
+                                            { ToneBandE::BELL, 500.0f, 0.67f },
+                                            { ToneBandE::BELL, 2200.0f, 0.57f },
+                                            { ToneBandE::HIGH_SHELF, 6500.0f, 0.7071f } };
+
 namespace
 {
 constexpr double PiD = 3.141592653589793;   ///< pi
@@ -50,6 +58,10 @@ void Deck::prepare( const ParamStore *params, double sampleRate, int index )
     const float fs = static_cast<float>( sampleRate );
     m_tiltCoef = 1.0f - std::exp( -2.0f * Pi * 1000.0f / fs );
     m_trimCoef = 1.0f - std::exp( -1.0f / ( 1.0f * fs ) );   // a correction glides in over about a second
+    m_toneEq.prepare( sampleRate, DeckToneBands, ToneBands );
+    m_toneCoef = m_trimCoef;
+    m_toneNow.fill( 0.0f );
+    m_toneTarget.fill( 0.0f );
     for ( int p = 0; p < BalParts; ++p ) m_balGain[p] = m_balTarget[p] = 1.0f;
     const size_t n = static_cast<size_t>( Raster );
     for ( std::vector<float> *b :
@@ -72,6 +84,7 @@ void Deck::clear()
     m_plays.clear();
     m_lateTrims.clear();
     m_lateBal.clear();
+    m_lateTone.clear();
     m_base.assign( static_cast<size_t>( m_params != nullptr ? m_params->count() : 0 ),
                    std::numeric_limits<float>::quiet_NaN() );
     m_knobCursor = 0;
@@ -88,6 +101,7 @@ void Deck::load( const Score &score )
     m_score.sort();
     m_lateTrims.reserve( m_score.m_levels.size() );
     m_lateBal.reserve( m_score.m_levels.size() );
+    m_lateTone.reserve( m_score.m_levels.size() );
     // Events on the sample grid: the first sample at or after the ideal time, and how late that is.
     int id = 0;
     for ( const NoteEvent &note : m_score.m_notes )
@@ -213,6 +227,9 @@ void Deck::seek( int64_t sample )
     m_trimGain = m_trimTarget = dbToGain( m_score.trimAt( b ) );
     const BalanceDbT bal = m_score.balanceAt( b );
     for ( int p = 0; p < BalParts; ++p ) m_balGain[p] = m_balTarget[p] = dbToGain( bal[static_cast<size_t>( p )] );
+    m_toneNow = m_toneTarget = m_score.toneAt( b );
+    m_toneEq.setGains( m_toneNow.data() );
+    m_toneState.reset();
 }
 
 float Deck::played( int id ) const
@@ -440,6 +457,15 @@ void Deck::updateCell( int64_t sample )
         if ( k < m_lateBal.size() ) bal = m_lateBal[k];
     }
     for ( int p = 0; p < BalParts; ++p ) m_balTarget[p] = dbToGain( bal[static_cast<size_t>( p )] );
+    // 20.10.2026: the tone trims, the same way.
+    m_toneTarget = m_score.toneAt( beat );
+    if ( !m_lateTone.empty() )
+    {
+        size_t k = 0;
+        for ( size_t i = 0; i < m_score.m_levels.size(); ++i )
+            if ( m_score.m_levels[i].m_beat <= beat ) k = i;
+        if ( k < m_lateTone.size() ) m_toneTarget = m_lateTone[k];
+    }
 }
 
 void Deck::watchPeaks( bool on )
@@ -615,6 +641,7 @@ void Deck::resetStems()
         for ( auto &ch : s.m_hp )
             for ( Svf &f : ch ) f.reset();
         s.m_tilt[0] = s.m_tilt[1] = 0.0f;
+        s.m_tone.reset();
     }
     for ( auto &r : m_stemPads ) r = m_padsDuck.replica();
     for ( auto &r : m_stemFx ) r = m_fxDuck.replica();
@@ -939,6 +966,19 @@ void Deck::render( int64_t sample, float *L, float *R, int n, float *const *stem
         L[i] = ( m_drumL[k] + GlueMix * ( L[i] - m_drumL[k] ) ) * m_trimGain;
         R[i] = ( m_drumR[k] + GlueMix * ( R[i] - m_drumR[k] ) ) * m_trimGain;
     }
+    // The tone trims (20.10.2026): gliding a block at a time (a hundredth of a dB a block), then the shelves and bells.
+    bool toneMoved = false;
+    for ( size_t b = 0; b < static_cast<size_t>( ToneBands ); ++b )
+    {
+        const float gap = m_toneTarget[b] - m_toneNow[b];
+        if ( gap == 0.0f ) continue;
+        m_toneNow[b] = std::fabs( gap ) < 0.002f
+                           ? m_toneTarget[b]
+                           : m_toneNow[b] + gap * std::min( 1.0f, m_toneCoef * static_cast<float>( n ) );
+        toneMoved = true;
+    }
+    if ( toneMoved ) m_toneEq.setGains( m_toneNow.data() );
+    m_toneEq.process( m_toneState, L, R, n );
     TOT_PROF_END( GLUE );
     if ( !stems ) return;
     // The stems through their own group high pass and tilt, then the glue's and the trim's gains.
@@ -964,6 +1004,7 @@ void Deck::render( int64_t sample, float *L, float *R, int n, float *const *stem
                 ch[c][i] = x * ( 1.0f + GlueMix * ( m_glueGains[i] - 1.0f ) ) * m_trimGains[i];
             }
         }
+        m_toneEq.process( b.m_tone, stemL[s], stemR[s], n );
     }
 }
 

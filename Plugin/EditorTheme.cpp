@@ -73,7 +73,7 @@ const std::vector<GroupSpec> &layoutOf( tot::ModuleE m )
         { "Ducking", F::MOTION, { "duck_low", "duck_mid" } },
     };
     static const std::vector<GroupSpec> master = {
-        { "Tone", F::FILTER, { "*tilt", "mono_below", "cut" } },
+        { "Tone", F::FILTER, { "*tilt", "mono_below", "cut", "resonance" } },
         { "Glue", F::ENVELOPE, { "threshold", "ratio" } },
         { "Out", F::SPACE, { "*level", "clip", "ceiling" } },
     };

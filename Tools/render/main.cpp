@@ -159,6 +159,25 @@ bool writeScoreJson( const std::string &path, const Score &notes, const std::vec
 }   // namespace
 
 /**
+ * @brief 20.10.2026: a reading's tone -- every band against 40-140 Hz and its trim.
+ * @param[in] r  the reading
+ * @return the tone as text
+ */
+std::string toneText( const LevelReading &r )
+{
+    static const char *const Names[ToneBands] = { "20-60", "60-250", "250-1k", "1k-5k", "5k-16k" };
+    std::string              t;
+    char                     buf[64];
+    for ( int b = 0; b < ToneBands; ++b )
+    {
+        std::snprintf( buf, sizeof buf, " %s %.1f (%+.1f)", Names[b], r.m_bands[static_cast<size_t>( b )],
+                       r.m_tone[static_cast<size_t>( b )] );
+        t += buf;
+    }
+    return t;
+}
+
+/**
  * @brief Phase 18: a reading's balance -- every part heard, its loudest sample against the kick's and its correction.
  * @param[in] r  the reading
  * @return the balance as text
@@ -473,6 +492,7 @@ int main( int argc, char **argv )
                          score.m_levels.empty() ? 0.0 : score.m_levels[0].m_peakBeat / 4.0 + 1.0, r.m_measured,
                          r.m_target, r.m_trim, r.m_after );
             std::printf( "balance against the kick (loudest sample, dB; correction):%s\n", balanceText( r ).c_str() );
+            std::printf( "tone against 40-140 Hz (dB; trim):%s\n", toneText( r ).c_str() );
         }
         for ( const BlockOp &o : score.m_ops )
         {

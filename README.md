@@ -89,9 +89,15 @@ track's own score cues (the bars, the sections, the drops). `Tools/demo/make_dem
 * **1024 factory presets per synth** in sixteen groups; the composer chooses one per synth and per kit lane for every
   track, by its style, and the knobs show them while the track plays.
 * **The mix:** multiband ducking triggered by the kick's events, a track bus with tilt and parallel glue, a DJ mixer
-  with isolators, a master with a clipper at four times the rate and a true-peak limiter, and a leveler that sets
-  every part against the kick and brings every track's loudest part to its style's loudness -- balance, width and
-  loudness fitted to 30 measured reference recordings (only their statistics are kept).
+  with isolators, a master with a resonance suppressor, a clipper at four times the rate and a true-peak limiter at
+  -2 dBTP (a loud master that survives AAC and Opus), and a leveler that sets every part against the kick and brings
+  every track's loudest part to its style's loudness -- balance, width and loudness fitted to 30 measured reference
+  recordings (only their statistics are kept).
+* **Mastering that knows the score.** Before a track plays, the leveler renders its loudest part, reads its spectrum
+  the way the references were read and fits the smallest broad equaliser that brings every band into the range of the
+  style's records -- least squares through the filters' exact response, set for the whole track instead of chasing
+  the arrangement. The resonance suppressor finds narrow peaks the layers build together and takes them down while
+  they last, with moving bells and no latency.
 
 ## Playing and export
 

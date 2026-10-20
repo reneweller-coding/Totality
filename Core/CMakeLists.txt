@@ -8,6 +8,7 @@ add_library(TotalityCore STATIC
     src/Loudness.cpp
     src/Leveler.cpp
     src/fx/Dynamics.cpp
+    src/fx/Resonance.cpp
     src/fx/Reverb.cpp
     src/synth/Kick.cpp
     src/synth/Rumble.cpp
